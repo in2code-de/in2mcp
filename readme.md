@@ -129,6 +129,7 @@ ddev createfilesarchive                     # update .ddev/data/fileadmin.tar.gz
 
 ## Changelog
 
-| Version | Date       | State | Description               |
-|---------|------------|-------|---------------------------|
-| 1.0.0   | 2026-09-02 | alpha | Initial extension release |
+| Version | Date       | State | Description                                                                              |
+|---------|------------|-------|------------------------------------------------------------------------------------------|
+| 2.0.0   | 2026-09-02 | alpha | Allow creating of any records, adjust endpoint, allow inserting images, security reviews |
+| 1.0.0   | 2026-09-02 | alpha | Initial extension release                                                                |
