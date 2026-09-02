@@ -55,11 +55,18 @@ class GetBackendUserTool extends AbstractTool
      */
     private function getPageMounts(): array
     {
-        $webMounts = $this->backendUserService->getWebMounts();
-
-        // A mount on the page tree root (uid 0) means the whole tree, which is the regular case for admins
-        if ($webMounts === [] || in_array(0, $webMounts, true)) {
+        // Only administrators see the whole tree. For everybody else an empty list of mounts is the opposite
+        // of "no restriction": without a mount no page is reachable at all.
+        if ($this->backendUserService->hasFullTreeAccess()) {
             return ['description' => 'Full page tree', 'pageUids' => []];
+        }
+
+        $webMounts = $this->backendUserService->getWebMounts();
+        if ($webMounts === []) {
+            return [
+                'description' => 'No page mounts, so this user cannot read any page',
+                'pageUids' => [],
+            ];
         }
 
         return ['description' => 'Restricted to these page trees', 'pageUids' => $webMounts];

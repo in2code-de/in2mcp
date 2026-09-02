@@ -76,14 +76,19 @@ class BackendUserService
     }
 
     /**
-     * Whether the backend user sees the whole page tree instead of dedicated mounts
+     * Whether the backend user sees the whole page tree instead of dedicated mounts, which is the case for
+     * administrators only.
+     *
+     * An empty list of page mounts must not be read as "no restriction". For an administrator it means the
+     * whole tree, because administrators carry no mounts; for everybody else it means the opposite - no page at
+     * all, which is exactly what isInWebMount() answers for such a user. TYPO3 has no setting that lifts this
+     * any more, "lockBeUserToDBmounts" was removed.
      *
      * @throws UserNotFoundException
      */
     public function hasFullTreeAccess(): bool
     {
-        $webMounts = $this->getWebMounts();
-        return $webMounts === [] || in_array(0, $webMounts, true);
+        return $this->isAdmin();
     }
 
     /**
