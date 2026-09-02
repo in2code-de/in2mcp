@@ -56,7 +56,12 @@ readonly class FileRepository
                 'm',
                 $queryBuilder->expr()->eq('m.file', $queryBuilder->quoteIdentifier('f.uid'))
             )
-            ->where($queryBuilder->expr()->eq('f.missing', $queryBuilder->createNamedParameter(0, Connection::PARAM_INT)))
+            ->where(
+                $queryBuilder->expr()->eq(
+                    'f.missing',
+                    $queryBuilder->createNamedParameter(0, Connection::PARAM_INT)
+                )
+            )
             ->orderBy('f.name')
             ->setMaxResults($this->getLimit($limit));
 

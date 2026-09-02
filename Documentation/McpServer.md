@@ -110,7 +110,7 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `search_pages`      | Pages by title, navigation title, subtitle or slug                              |
 | `get_schema`        | Page types, content element types, writable tables and the fields of a table    |
 | `get_record`        | One record of any table                                                         |
-| `find_records`      | The records of a table that are stored on a page                                |
+| `find_records`      | Records of a table by page, by field values and by language                     |
 | `search_files`      | Files of the file abstraction layer by name, path or title                      |
 
 ### Writing
@@ -122,6 +122,9 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `create_content_element` | New content element in a column of a page or inside a container  |
 | `update_content_element` | Change fields of a content element                               |
 | `create_record`          | New record of any other table, for example a form or a news entry |
+| `add_child_record`       | New record inside an inline field of another record               |
+| `localize_record`        | Translation of a record in a language                             |
+| `clear_cache`            | Clear the cache so changes show up in the frontend                |
 | `update_record`          | Change fields of a record of any table                           |
 | `add_file_from_url`      | Download a file from a public url into the file storage           |
 | `add_file_reference`     | Connect an existing file to a file field of a record             |
@@ -132,6 +135,27 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 asks first does not have to guess field names - and unknown field names are rejected with a message that points
 back to `get_schema` instead of being dropped silently. Call it with a `table` to get the fields of that table
 before writing a record with `create_record`.
+
+### Records inside other records
+
+An inline field - the pages of a form, the fields of such a page - is two things at once: its database column
+holds the **number** of children, the DataHandler expects the **list of their uids**. Reading "2" and writing
+"3" therefore does not add a child, it attaches the record with uid 3 to this parent and takes it away from
+wherever it belonged.
+
+in2mcp closes that trap from both sides. Every read replaces the counter with the real list, so `get_record`
+answers `"pages": "124,125"` and never `"pages": 2`. Every write is checked against the children of that parent
+and refused with the reason when it would steal a foreign record. And `add_child_record` creates a child the way
+the backend does, writing the child and the list of the parent in one DataHandler run - which is what keeps the
+counter correct. A child created with `create_record` alone leaves the parent at zero, and a parent whose
+counter says zero has no children as far as Extbase is concerned, however many records point at it.
+
+### Sorting
+
+`sorting` is readable on every record and on the content elements of `get_page`, so a client can tell in which
+order records actually are. It cannot be written: the sorting is the result of a position, and the position is
+set with `move_record`. Moving into a page appends at the end by default, `"position": "start"` puts the record
+first.
 
 ### Content elements in containers
 
@@ -145,8 +169,10 @@ column alone therefore does not describe a position, which is why both tools tak
 - `move_record` writes `colPos` and `containerParentUid` along with the move. The move target only decides the
   position in the sorting; column and container are ordinary fields and stay untouched when they are not given.
 
-Passing the uid of the container as `afterContentUid` does not work and never did - a container is not a sibling
-of its own children.
+The uid of a container is a valid `afterContentUid` and a valid `afterRecordUid`: the element is then placed
+behind the whole container, not in front of its children. This only works because every child of a container is
+sorted **after** its container element - the first child of an empty container column is therefore anchored
+behind the container itself, never at the top of the page.
 
 ### Files
 
@@ -246,6 +272,7 @@ authentication resets the counter, so only failing requests count. Configurable 
 | `Repository\FileRepository`    | Reads files and the references that point at them                               |
 | `Service\FileImportService`    | Downloads a file into the storage, streamed and size limited                    |
 | `Service\UrlValidationService` | The only guard on the one outgoing request this extension makes                 |
+| `Service\InlineRelationService`| Translates between the child counter and the list of child uids                 |
 
 The [official MCP PHP SDK](https://github.com/modelcontextprotocol/php-sdk) (`mcp/sdk`) handles the protocol.
 Sessions are stored in the filesystem (`var/in2mcp/mcp`), because a client sends its session id in every request.
