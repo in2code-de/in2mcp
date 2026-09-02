@@ -1,0 +1,81 @@
+{
+	"name": "in2code/in2mcp",
+	"description": "Model Context Protocol (MCP) server for TYPO3 - connect Claude, Gemini and other MCP clients to your TYPO3 installation",
+	"keywords": [
+		"typo3",
+		"mcp",
+		"ai",
+		"claude",
+		"gemini"
+	],
+	"homepage": "https://github.com/in2code-de/in2mcp",
+	"authors": [
+		{
+			"name": "Alex Kellner",
+			"email": "alexander.kellner@in2code.de",
+			"role": "Technical owner",
+			"homepage": "https://www.in2code.de"
+		}
+	],
+	"type": "typo3-cms-extension",
+	"license": "GPL-2.0-or-later",
+	"require": {
+		"php": ">=8.2.0",
+		"typo3/cms-core": "^13.4 || ^14.3"
+	},
+	"require-dev": {
+		"helhum/typo3-console": "*",
+		"typo3/cms-backend": "^13.4 || ^14.3",
+		"typo3/cms-belog": "^13.4 || ^14.3",
+		"typo3/cms-beuser": "^13.4 || ^14.3",
+		"typo3/cms-extbase": "^13.4 || ^14.3",
+		"typo3/cms-extensionmanager": "^13.4 || ^14.3",
+		"typo3/cms-filelist": "^13.4 || ^14.3",
+		"typo3/cms-fluid": "^13.4 || ^14.3",
+		"typo3/cms-fluid-styled-content": "^13.4 || ^14.3",
+		"typo3/cms-frontend": "^13.4 || ^14.3",
+		"typo3/cms-info": "^13.4 || ^14.3",
+		"typo3/cms-install": "^13.4 || ^14.3",
+		"typo3/cms-lowlevel": "^13.4 || ^14.3",
+		"typo3/cms-rte-ckeditor": "^13.4 || ^14.3",
+		"typo3/cms-scheduler": "^13.4 || ^14.3",
+		"typo3/cms-seo": "^13.4 || ^14.3",
+		"typo3/cms-setup": "^13.4 || ^14.3",
+		"typo3/cms-t3editor": "^13.4 || ^14.3",
+		"typo3/cms-tstemplate": "^13.4 || ^14.3"
+	},
+	"replace": {
+		"typo3-ter/in2mcp": "self.version"
+	},
+	"autoload": {
+		"psr-4": {
+			"In2code\\In2mcp\\": "Classes/"
+		}
+	},
+	"funding": [
+		{
+			"type": "other",
+			"url": "https://www.in2code.de/supportopensource"
+		},
+		{
+			"type": "github",
+			"url": "https://github.com/orgs/in2code-de/sponsoring"
+		}
+	],
+	"extra": {
+		"typo3/cms": {
+			"cms-package-dir": "{$vendor-dir}/typo3/cms",
+			"web-dir": ".Build/public",
+			"extension-key": "in2mcp"
+		}
+	},
+	"config": {
+		"vendor-dir": ".Build/vendor",
+		"bin-dir": ".Build/bin",
+		"sort-packages": true,
+		"allow-plugins": {
+			"typo3/class-alias-loader": true,
+			"typo3/cms-composer-installers": true
+		}
+	}
+}
