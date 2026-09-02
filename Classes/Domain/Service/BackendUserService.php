@@ -107,6 +107,32 @@ class BackendUserService
     }
 
     /**
+     * Whether the backend user may flush the whole page cache, following the same rule the backend follows
+     *
+     * @throws UserNotFoundException
+     */
+    public function mayClearPageCache(): bool
+    {
+        return $this->isAdmin()
+            || (bool)($this->getBackendUser()->getTSConfig()['options.']['clearCache.']['pages'] ?? false);
+    }
+
+    /**
+     * Whether the backend user may flush every cache. Administrators may unless it was taken away from them
+     * explicitly, which is a common setting on large production sites.
+     *
+     * @throws UserNotFoundException
+     */
+    public function mayClearAllCaches(): bool
+    {
+        $option = $this->getBackendUser()->getTSConfig()['options.']['clearCache.']['all'] ?? null;
+        if ($this->isAdmin()) {
+            return (bool)($option ?? true);
+        }
+        return (bool)$option;
+    }
+
+    /**
      * Whether the backend user reaches every file, which is the case for administrators only
      *
      * @throws UserNotFoundException
