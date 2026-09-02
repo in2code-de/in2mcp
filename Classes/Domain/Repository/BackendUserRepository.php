@@ -21,6 +21,12 @@ readonly class BackendUserRepository
 {
     public const API_KEY_FIELD = 'in2mcp_apikey';
 
+    /**
+     * Separates the user part from the secret part of an api key. It is not part of the alphabet the secret is
+     * built from, so the two can never be confused.
+     */
+    public const API_KEY_SEPARATOR = '.';
+
     private const TABLE_NAME = 'be_users';
 
     public function __construct(
@@ -36,32 +42,84 @@ readonly class BackendUserRepository
             throw new InvalidArgumentException('MCP api key must not be empty', 1756800100);
         }
 
+        [$backendUserUid, $secret] = $this->splitApiKey($apiKey);
+
+        $backendUser = $this->findByUid($backendUserUid);
+        if ($backendUser === null) {
+            return null;
+        }
+
+        if ($this->isApiKeyOfBackendUser($secret, (string)($backendUser[self::API_KEY_FIELD] ?? '')) === false) {
+            return null;
+        }
+
+        return $backendUser;
+    }
+
+    /**
+     * An api key names the backend user it belongs to, so exactly one hash has to be verified per request.
+     *
+     * Without that the only way to find the user would be to verify the key against the hash of every user
+     * that has one. Hashing is deliberately slow, so that turns the unauthenticated endpoint into a lever:
+     * every wrong key costs one full hash per api key user, and the cost grows with every editor that gets a
+     * key.
+     *
+     * @return array{0: int, 1: string} Uid of the backend user and the secret part of the key
+     * @throws InvalidArgumentException
+     */
+    private function splitApiKey(string $apiKey): array
+    {
+        $position = strpos($apiKey, self::API_KEY_SEPARATOR);
+        if ($position === false) {
+            throw new InvalidArgumentException(
+                'MCP api key has no user part. Keys created before this format are not valid any more, create'
+                . ' a new one with the command "in2mcp:apikey".',
+                1756801900
+            );
+        }
+
+        $backendUserUid = substr($apiKey, 0, $position);
+        if (MathUtility::canBeInterpretedAsInteger($backendUserUid) === false) {
+            throw new InvalidArgumentException('MCP api key has no valid user part', 1756801904);
+        }
+
+        return [(int)$backendUserUid, substr($apiKey, $position + 1)];
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function findByUid(int $uid): ?array
+    {
+        if ($uid < 1) {
+            return null;
+        }
+
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
 
         try {
-            $backendUsersWithApiKey = $queryBuilder
+            $backendUser = $queryBuilder
                 ->select('*')
                 ->from(self::TABLE_NAME)
                 ->where(
+                    $queryBuilder->expr()->eq(
+                        'uid',
+                        $queryBuilder->createNamedParameter($uid, Connection::PARAM_INT)
+                    ),
                     $queryBuilder->expr()->neq(
                         self::API_KEY_FIELD,
                         $queryBuilder->createNamedParameter('')
                     )
                 )
+                ->setMaxResults(1)
                 ->executeQuery()
-                ->fetchAllAssociative();
+                ->fetchAssociative();
         } catch (Exception $exception) {
-            $this->logger->error('MCP: Backend users could not be read: ' . $exception->getMessage());
+            $this->logger->error('MCP: Backend user could not be read: ' . $exception->getMessage());
             return null;
         }
 
-        foreach ($backendUsersWithApiKey as $backendUser) {
-            if ($this->isApiKeyOfBackendUser($apiKey, (string)($backendUser[self::API_KEY_FIELD] ?? ''))) {
-                return $backendUser;
-            }
-        }
-
-        return null;
+        return $backendUser === false ? null : $backendUser;
     }
 
     /**

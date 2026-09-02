@@ -33,14 +33,16 @@ readonly class ApiKeyService
     public function createApiKey(string $backendUserIdentifier): string
     {
         $backendUser = $this->getBackendUser($backendUserIdentifier);
-        $apiKey = $this->generateApiKey();
+        $secret = $this->generateSecret();
 
         $this->backendUserRepository->updateApiKey(
             (int)$backendUser['uid'],
-            $this->passwordHashFactory->getDefaultHashInstance('BE')->getHashedPassword($apiKey)
+            $this->passwordHashFactory->getDefaultHashInstance('BE')->getHashedPassword($secret)
         );
 
-        return $apiKey;
+        // The key names its backend user, so a request costs exactly one hash verification instead of one per
+        // api key user. Only the secret part is hashed and stored.
+        return $backendUser['uid'] . BackendUserRepository::API_KEY_SEPARATOR . $secret;
     }
 
     /**
@@ -57,7 +59,7 @@ readonly class ApiKeyService
      * A url safe alphabet without "+", "/" and "=" keeps the key free of characters that need quoting in a
      * shell, in a url or in a json configuration file.
      */
-    private function generateApiKey(): string
+    private function generateSecret(): string
     {
         return rtrim(strtr(base64_encode(random_bytes(self::KEY_BYTES)), '+/', '-_'), '=');
     }
