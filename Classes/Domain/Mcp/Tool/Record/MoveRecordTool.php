@@ -7,6 +7,7 @@ namespace In2code\In2mcp\Domain\Mcp\Tool\Record;
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\ContentRepository;
+use In2code\In2mcp\Domain\Repository\RecordRepository;
 use In2code\In2mcp\Domain\Service\DataHandlerService;
 use In2code\In2mcp\Exception\DataHandlerException;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
@@ -18,6 +19,7 @@ class MoveRecordTool extends AbstractTool
     public function __construct(
         private readonly DataHandlerService $dataHandlerService,
         private readonly ContentRepository $contentRepository,
+        private readonly RecordRepository $recordRepository,
     ) {
     }
 
@@ -29,9 +31,10 @@ class MoveRecordTool extends AbstractTool
     public function getDescription(): string
     {
         return 'Moves a record, either into a page or behind another record of the same table. Use it to sort'
-            . ' pages in the tree or content elements within a column. A content element changes its column or'
-            . ' its container in the same step, by passing "colPos" and "containerParentUid" along with the'
-            . ' move - the target alone only decides the position in the sorting.';
+            . ' pages in the tree or content elements within a column. Moving into a page appends the record at'
+            . ' the end by default; pass "position": "start" to put it first. A content element changes its'
+            . ' column or its container in the same step, by passing "colPos" and "containerParentUid" along'
+            . ' with the move - the target alone only decides the position in the sorting.';
     }
 
     public function getParameters(): array
@@ -55,13 +58,21 @@ class MoveRecordTool extends AbstractTool
             'afterRecordUid' => [
                 'type' => 'integer',
                 'description' => 'Uid of the record the moved record is placed behind. Use this or intoPageUid.'
-                    . ' It has to be a record of the same table in the same column.',
+                    . ' A container element is a valid value here: the record is then placed behind the whole'
+                    . ' container, not in front of its children.',
                 'default' => 0,
+            ],
+            'position' => [
+                'type' => 'string',
+                'description' => 'Only for "intoPageUid": whether the record is appended at the end of its'
+                    . ' column or put at the start of it',
+                'enum' => ['end', 'start'],
+                'default' => 'end',
             ],
             'colPos' => [
                 'type' => 'integer',
                 'description' => 'Content elements only: column position the element gets after the move. Pass'
-                    . ' it whenever the element changes its column, otherwise it keeps the old one.',
+                    . ' it whenever the element changes its column, otherwise it keeps the one it has.',
                 'default' => -1,
             ],
             'containerParentUid' => [
@@ -95,8 +106,10 @@ class MoveRecordTool extends AbstractTool
 
         $table = $this->getStringArgument($arguments, 'table');
         $uid = $this->getIntArgument($arguments, 'uid');
-        $target = $intoPageUid > 0 ? $intoPageUid : -$afterRecordUid;
         $update = $this->getUpdate($table, $arguments);
+        $target = $afterRecordUid > 0
+            ? -$afterRecordUid
+            : $this->getTargetInPage($table, $uid, $intoPageUid, $update, $arguments);
 
         $this->dataHandlerService->moveRecord($table, $uid, $target, $update);
 
@@ -106,10 +119,52 @@ class MoveRecordTool extends AbstractTool
             'uid' => $uid,
             'target' => $target,
             'update' => $update,
-            'record' => $table === ContentRepository::TABLE_NAME
-                ? $this->contentRepository->findByUid($uid)
-                : null,
+            'record' => $this->recordRepository->findByUid($table, $uid),
         ];
+    }
+
+    /**
+     * A positive target makes the DataHandler put the record at the very beginning of the page. Appending it
+     * therefore means anchoring it behind the last record that is already there, expressed as a negative uid.
+     *
+     * @param array<string, int> $update
+     * @throws Exception
+     * @throws ToolExecutionException
+     */
+    private function getTargetInPage(
+        string $table,
+        int $uid,
+        int $intoPageUid,
+        array $update,
+        array $arguments
+    ): int {
+        if ($this->getStringArgument($arguments, 'position') === 'start') {
+            return $intoPageUid;
+        }
+
+        if ($table !== ContentRepository::TABLE_NAME) {
+            $lastUid = $this->recordRepository->findLastUidOnPid($table, $intoPageUid);
+            return $lastUid > 0 && $lastUid !== $uid ? -$lastUid : $intoPageUid;
+        }
+
+        $record = $this->contentRepository->findByUid($uid);
+        if ($record === null) {
+            throw new ToolExecutionException(
+                'There is no content element with uid ' . $uid,
+                1756801400
+            );
+        }
+
+        // The column and the container of the moved element decide where "the end" is. They are taken from the
+        // move itself when it changes them, and from the element otherwise.
+        $colPos = $update['colPos'] ?? (int)($record['colPos'] ?? 0);
+        $containerParentUid = $update[ContentRepository::CONTAINER_PARENT_FIELD]
+            ?? (int)($record[ContentRepository::CONTAINER_PARENT_FIELD] ?? 0);
+
+        $anchorUid = $this->contentRepository->findAppendAnchorUid($intoPageUid, $colPos, $containerParentUid);
+
+        // Anchoring a record behind itself is not a move, it would leave the sorting untouched
+        return $anchorUid > 0 && $anchorUid !== $uid ? -$anchorUid : $intoPageUid;
     }
 
     /**
