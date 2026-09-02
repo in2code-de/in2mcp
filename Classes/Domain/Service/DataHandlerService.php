@@ -210,8 +210,16 @@ class DataHandlerService
     {
         $unknownFields = [];
         foreach (array_keys($fields) as $fieldName) {
-            if ($this->tcaService->isFieldOfTable($table, (string)$fieldName) === false) {
-                $unknownFields[] = (string)$fieldName;
+            $fieldName = (string)$fieldName;
+            if ($this->tcaService->isSortingField($table, $fieldName)) {
+                throw new ToolExecutionException(
+                    'The sorting of a record is not written directly, it is the result of its position. Use'
+                    . ' "move_record" to put the record where it belongs.',
+                    1756801508
+                );
+            }
+            if ($this->tcaService->isFieldOfTable($table, $fieldName) === false) {
+                $unknownFields[] = $fieldName;
             }
         }
 

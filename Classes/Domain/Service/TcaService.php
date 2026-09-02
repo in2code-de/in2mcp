@@ -101,7 +101,7 @@ class TcaService
             if (in_array($fieldName, self::IRRELEVANT_FIELDS, true)) {
                 continue;
             }
-            if (in_array($fieldName, ['uid', 'pid'], true) === false
+            if (in_array($fieldName, $this->getAlwaysKeptFields($table), true) === false
                 && array_key_exists($fieldName, $columns) === false) {
                 continue;
             }
@@ -129,6 +129,27 @@ class TcaService
     public function getTableLabel(string $table): string
     {
         return $this->translate((string)($GLOBALS['TCA'][$table]['ctrl']['title'] ?? $table));
+    }
+
+    /**
+     * Fields that are no TCA column but still belong to a record a client works with. The sorting is one of
+     * them: it is not editable, but without it a client cannot tell in which order records actually are.
+     *
+     * @return string[]
+     */
+    public function getAlwaysKeptFields(string $table): array
+    {
+        $fields = ['uid', 'pid'];
+        $sortingField = $this->getSortingField($table);
+        if ($sortingField !== null) {
+            $fields[] = $sortingField;
+        }
+        return $fields;
+    }
+
+    public function isSortingField(string $table, string $fieldName): bool
+    {
+        return $this->getSortingField($table) === $fieldName;
     }
 
     public function isFieldOfTable(string $table, string $fieldName): bool
