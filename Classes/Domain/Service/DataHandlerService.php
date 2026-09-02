@@ -305,6 +305,20 @@ class DataHandlerService
     }
 
     /**
+     * Clears caches through the DataHandler, so the "clearCache" permissions of the backend user apply and the
+     * action is logged exactly as it is when an editor uses the flush button of the backend.
+     *
+     * @throws TableNotAccessibleException
+     * @throws UserNotFoundException
+     */
+    public function clearCache(string $command): void
+    {
+        $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
+        $dataHandler->start([], [], $this->backendUserService->getBackendUser());
+        $dataHandler->clear_cacheCmd($command);
+    }
+
+    /**
      * An inline field carries the number of its children in the database and the list of their uids in the
      * DataHandler. Writing the number attaches foreign records, so the value is checked before it is handed on.
      *
