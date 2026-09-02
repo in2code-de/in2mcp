@@ -7,8 +7,7 @@ namespace In2code\In2mcp\Domain\Mcp\Tool\File;
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\FileRepository;
-use In2code\In2mcp\Domain\Service\TableAccessService;
-use In2code\In2mcp\Exception\TableNotAccessibleException;
+use In2code\In2mcp\Domain\Service\BackendUserService;
 use In2code\In2mcp\Exception\ToolExecutionException;
 use In2code\In2mcp\Exception\UserNotFoundException;
 
@@ -20,7 +19,7 @@ class SearchFilesTool extends AbstractTool
 {
     public function __construct(
         private readonly FileRepository $fileRepository,
-        private readonly TableAccessService $tableAccessService,
+        private readonly BackendUserService $backendUserService,
     ) {
     }
 
@@ -59,19 +58,22 @@ class SearchFilesTool extends AbstractTool
     }
 
     /**
+     * Files are reachable through the file mounts of the backend user, not through the table permissions of
+     * "sys_file" - an editor browses files in the filelist module without that table ever appearing in
+     * "tables_select". The search is restricted accordingly, so it cannot hand out the file inventory of the
+     * whole installation.
+     *
      * @throws Exception
-     * @throws TableNotAccessibleException
      * @throws ToolExecutionException
      * @throws UserNotFoundException
      */
     public function execute(array $arguments): array
     {
-        $this->tableAccessService->assertReadable(FileRepository::TABLE_NAME);
-
         $files = $this->fileRepository->findFiles(
             $this->getStringArgument($arguments, 'searchTerm'),
             $this->getStringArgument($arguments, 'fileExtension'),
-            $this->getIntArgument($arguments, 'limit')
+            $this->getIntArgument($arguments, 'limit'),
+            $this->backendUserService->hasFullFileAccess() ? null : $this->backendUserService->getFileMounts()
         );
 
         return ['count' => count($files), 'files' => $files];

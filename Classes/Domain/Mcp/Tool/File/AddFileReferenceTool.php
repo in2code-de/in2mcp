@@ -8,6 +8,7 @@ use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\FileRepository;
 use In2code\In2mcp\Domain\Repository\RecordRepository;
+use In2code\In2mcp\Domain\Service\BackendUserService;
 use In2code\In2mcp\Domain\Service\DataHandlerService;
 use In2code\In2mcp\Exception\DataHandlerException;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
@@ -24,6 +25,7 @@ class AddFileReferenceTool extends AbstractTool
         private readonly DataHandlerService $dataHandlerService,
         private readonly FileRepository $fileRepository,
         private readonly RecordRepository $recordRepository,
+        private readonly BackendUserService $backendUserService,
     ) {
     }
 
@@ -80,10 +82,16 @@ class AddFileReferenceTool extends AbstractTool
         $uid = $this->getIntArgument($arguments, 'uid');
         $fieldName = $this->getStringArgument($arguments, 'fieldName');
 
-        $file = $this->fileRepository->findFileByUid($fileUid);
+        // The DataHandler refuses a file outside the file mounts as well, but a lookup that already respects
+        // them keeps the answer from confirming that a file with this uid exists somewhere else.
+        $file = $this->fileRepository->findFileByUid(
+            $fileUid,
+            $this->backendUserService->hasFullFileAccess() ? null : $this->backendUserService->getFileMounts()
+        );
         if ($file === null) {
             throw new ToolExecutionException(
-                'There is no file with uid ' . $fileUid . '. Use "search_files" to find a file.',
+                'There is no file with uid ' . $fileUid . ' this backend user may use. Use "search_files" to'
+                . ' find a file.',
                 1756801032
             );
         }

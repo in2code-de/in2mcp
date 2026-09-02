@@ -7,6 +7,7 @@ namespace In2code\In2mcp\Domain\Repository;
 use Doctrine\DBAL\Exception;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 
 /**
@@ -32,8 +33,12 @@ readonly class FileRepository
      * @return array<int, array<string, mixed>>
      * @throws Exception
      */
-    public function findFiles(string $searchTerm, string $fileExtension = '', int $limit = self::DEFAULT_LIMIT): array
-    {
+    public function findFiles(
+        string $searchTerm,
+        string $fileExtension = '',
+        int $limit = self::DEFAULT_LIMIT,
+        ?array $fileMounts = null
+    ): array {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
         $queryBuilder->getRestrictions()->removeAll();
 
@@ -85,26 +90,67 @@ readonly class FileRepository
             );
         }
 
+        $this->restrictToFileMounts($queryBuilder, $fileMounts);
+
         return $queryBuilder->executeQuery()->fetchAllAssociative();
     }
 
     /**
+     * @param array<int, array{storage: int, path: string}>|null $fileMounts Null means no restriction
      * @throws Exception
      */
-    public function findFileByUid(int $uid): ?array
+    public function findFileByUid(int $uid, ?array $fileMounts = null): ?array
     {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
         $queryBuilder->getRestrictions()->removeAll();
 
-        $file = $queryBuilder
-            ->select('uid', 'name', 'identifier', 'extension', 'mime_type', 'size')
+        $queryBuilder
+            ->select('uid', 'name', 'identifier', 'extension', 'mime_type', 'size', 'storage')
             ->from(self::TABLE_NAME)
             ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, Connection::PARAM_INT)))
-            ->setMaxResults(1)
-            ->executeQuery()
-            ->fetchAssociative();
+            ->setMaxResults(1);
+
+        $this->restrictToFileMounts($queryBuilder, $fileMounts, '');
+
+        $file = $queryBuilder->executeQuery()->fetchAssociative();
 
         return $file === false ? null : $file;
+    }
+
+    /**
+     * Restricts a file query to the file mounts of the backend user. A null list means no restriction, which is
+     * the case for administrators; an empty list means no mount at all and therefore no file.
+     *
+     * @param array<int, array{storage: int, path: string}>|null $fileMounts
+     */
+    private function restrictToFileMounts(QueryBuilder $queryBuilder, ?array $fileMounts, string $alias = 'f.'): void
+    {
+        if ($fileMounts === null) {
+            return;
+        }
+
+        if ($fileMounts === []) {
+            $queryBuilder->andWhere('1 = 0');
+            return;
+        }
+
+        $constraints = [];
+        foreach ($fileMounts as $fileMount) {
+            $constraints[] = $queryBuilder->expr()->and(
+                $queryBuilder->expr()->eq(
+                    $alias . 'storage',
+                    $queryBuilder->createNamedParameter($fileMount['storage'], Connection::PARAM_INT)
+                ),
+                $queryBuilder->expr()->like(
+                    $alias . 'identifier',
+                    $queryBuilder->createNamedParameter(
+                        $queryBuilder->escapeLikeWildcards($fileMount['path']) . '%'
+                    )
+                )
+            );
+        }
+
+        $queryBuilder->andWhere($queryBuilder->expr()->or(...$constraints));
     }
 
     /**

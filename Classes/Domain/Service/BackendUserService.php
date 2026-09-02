@@ -76,6 +76,47 @@ class BackendUserService
     }
 
     /**
+     * The file mounts of the backend user, as storage uid and path inside that storage.
+     *
+     * Access to files is governed by these mounts, not by the table permissions of "sys_file": an editor
+     * browses files in the filelist module without "sys_file" ever appearing in "tables_select". A search over
+     * the files therefore has to be restricted by them, otherwise it hands out the whole file inventory of the
+     * installation - every path, every file name - to anybody with an api key.
+     *
+     * @return array<int, array{storage: int, path: string}> Empty for administrators, who see everything
+     * @throws UserNotFoundException
+     */
+    public function getFileMounts(): array
+    {
+        if ($this->isAdmin()) {
+            return [];
+        }
+
+        $fileMounts = [];
+        foreach ($this->getBackendUser()->getFileMountRecords() as $fileMountRecord) {
+            $identifier = (string)($fileMountRecord['identifier'] ?? '');
+            if (str_contains($identifier, ':') === false) {
+                continue;
+            }
+
+            [$storage, $path] = explode(':', $identifier, 2);
+            $fileMounts[] = ['storage' => (int)$storage, 'path' => rtrim($path, '/') . '/'];
+        }
+
+        return $fileMounts;
+    }
+
+    /**
+     * Whether the backend user reaches every file, which is the case for administrators only
+     *
+     * @throws UserNotFoundException
+     */
+    public function hasFullFileAccess(): bool
+    {
+        return $this->isAdmin();
+    }
+
+    /**
      * Whether the backend user sees the whole page tree instead of dedicated mounts, which is the case for
      * administrators only.
      *
