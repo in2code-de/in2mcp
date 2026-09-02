@@ -265,6 +265,46 @@ class DataHandlerService
     }
 
     /**
+     * Creates the translation of a record in a language, which is the "Translate" button of the backend.
+     *
+     * @return int Uid of the translated record
+     * @throws DataHandlerException
+     * @throws TableNotAccessibleException
+     * @throws ToolExecutionException
+     * @throws UserNotFoundException
+     */
+    public function localizeRecord(string $table, int $uid, int $languageId): int
+    {
+        $this->tableAccessService->assertWritable($table);
+
+        $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
+        $dataHandler->start(
+            [],
+            [$table => [$uid => ['localize' => $languageId]]],
+            $this->backendUserService->getBackendUser()
+        );
+        $dataHandler->process_cmdmap();
+
+        if ($dataHandler->errorLog !== []) {
+            throw new DataHandlerException(
+                'TYPO3 refused to translate the record: ' . implode(' | ', $dataHandler->errorLog),
+                1756801600
+            );
+        }
+
+        $translatedUid = (int)($dataHandler->copyMappingArray[$table][$uid] ?? 0);
+        if ($translatedUid === 0) {
+            throw new DataHandlerException(
+                'The record was not translated. It may already have a translation in this language, or the'
+                . ' table has no language configuration.',
+                1756801604
+            );
+        }
+
+        return $translatedUid;
+    }
+
+    /**
      * An inline field carries the number of its children in the database and the list of their uids in the
      * DataHandler. Writing the number attaches foreign records, so the value is checked before it is handed on.
      *
