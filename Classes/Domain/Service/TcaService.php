@@ -113,6 +113,24 @@ class TcaService
         return $cleanedRecord;
     }
 
+    /**
+     * Field that holds the manual sorting of a table, null if the table is not sortable. Records of a sortable
+     * table have to be created behind their last sibling to end up at the end instead of at the beginning.
+     */
+    public function getSortingField(string $table): ?string
+    {
+        $sortingField = $GLOBALS['TCA'][$table]['ctrl']['sortby'] ?? null;
+        return is_string($sortingField) && $sortingField !== '' ? $sortingField : null;
+    }
+
+    /**
+     * Title of a table as it is shown in the backend
+     */
+    public function getTableLabel(string $table): string
+    {
+        return $this->translate((string)($GLOBALS['TCA'][$table]['ctrl']['title'] ?? $table));
+    }
+
     public function isFieldOfTable(string $table, string $fieldName): bool
     {
         return array_key_exists($fieldName, $GLOBALS['TCA'][$table]['columns'] ?? []);

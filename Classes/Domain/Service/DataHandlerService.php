@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Service;
 
 use In2code\In2mcp\Exception\DataHandlerException;
+use In2code\In2mcp\Exception\TableNotAccessibleException;
 use In2code\In2mcp\Exception\ToolExecutionException;
 use In2code\In2mcp\Exception\UserNotFoundException;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
@@ -26,6 +27,7 @@ class DataHandlerService
 
     public function __construct(
         private readonly BackendUserService $backendUserService,
+        private readonly TableAccessService $tableAccessService,
         private readonly TcaService $tcaService,
     ) {
     }
@@ -61,12 +63,13 @@ class DataHandlerService
      * Creates a single record and returns its uid
      *
      * @throws DataHandlerException
+     * @throws TableNotAccessibleException
      * @throws UserNotFoundException
      * @throws ToolExecutionException
      */
     public function createRecord(string $table, int $pid, array $fields): int
     {
-        $this->assertWriteAllowed($table);
+        $this->tableAccessService->assertWritable($table);
         $this->assertKnownFields($table, $fields);
 
         $fields['pid'] = $pid;
@@ -85,12 +88,13 @@ class DataHandlerService
 
     /**
      * @throws DataHandlerException
+     * @throws TableNotAccessibleException
      * @throws UserNotFoundException
      * @throws ToolExecutionException
      */
     public function updateRecord(string $table, int $uid, array $fields): void
     {
-        $this->assertWriteAllowed($table);
+        $this->tableAccessService->assertWritable($table);
         $this->assertKnownFields($table, $fields);
 
         if ($fields === []) {
@@ -102,12 +106,12 @@ class DataHandlerService
 
     /**
      * @throws DataHandlerException
+     * @throws TableNotAccessibleException
      * @throws UserNotFoundException
-     * @throws ToolExecutionException
      */
     public function deleteRecord(string $table, int $uid): void
     {
-        $this->assertWriteAllowed($table);
+        $this->tableAccessService->assertWritable($table);
         $this->process([], [$table => [$uid => ['delete' => 1]]]);
     }
 
@@ -116,27 +120,13 @@ class DataHandlerService
      * "into the page with this uid".
      *
      * @throws DataHandlerException
+     * @throws TableNotAccessibleException
      * @throws UserNotFoundException
-     * @throws ToolExecutionException
      */
     public function moveRecord(string $table, int $uid, int $target): void
     {
-        $this->assertWriteAllowed($table);
+        $this->tableAccessService->assertWritable($table);
         $this->process([], [$table => [$uid => ['move' => $target]]]);
-    }
-
-    /**
-     * @throws ToolExecutionException
-     * @throws UserNotFoundException
-     */
-    private function assertWriteAllowed(string $table): void
-    {
-        if ($this->backendUserService->isTableModifyAllowed($table) === false) {
-            throw new ToolExecutionException(
-                'The backend user is not allowed to write records of type "' . $table . '"',
-                1756800812
-            );
-        }
     }
 
     /**

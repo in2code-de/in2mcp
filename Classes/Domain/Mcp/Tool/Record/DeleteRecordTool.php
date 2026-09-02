@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Mcp\Tool\Record;
 
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
-use In2code\In2mcp\Domain\Repository\ContentRepository;
-use In2code\In2mcp\Domain\Repository\PageRepository;
 use In2code\In2mcp\Domain\Service\DataHandlerService;
 
 class DeleteRecordTool extends AbstractTool
@@ -22,8 +20,8 @@ class DeleteRecordTool extends AbstractTool
 
     public function getDescription(): string
     {
-        return 'Deletes a page or a content element. TYPO3 only flags the record as deleted, so an editor can'
-            . ' still restore it from the recycler. Deleting a page deletes its subpages and content as well.';
+        return 'Deletes a record of any table. TYPO3 only flags the record as deleted, so an editor can still'
+            . ' restore it from the recycler. Deleting a page deletes its subpages and content as well.';
     }
 
     public function getParameters(): array
@@ -31,8 +29,7 @@ class DeleteRecordTool extends AbstractTool
         return [
             'table' => [
                 'type' => 'string',
-                'description' => 'Which kind of record is deleted',
-                'enum' => [PageRepository::TABLE_NAME, ContentRepository::TABLE_NAME],
+                'description' => 'Table of the record that is deleted, for example "pages" or "tt_content"',
                 'required' => true,
             ],
             'uid' => [
