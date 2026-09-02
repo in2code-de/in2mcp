@@ -133,8 +133,8 @@ class CreateContentElementTool extends AbstractTool
             return $pageUid;
         }
 
-        $lastUid = $this->contentRepository->findLastUidInColumn($pageUid, $colPos, $containerParentUid);
-        return $lastUid > 0 ? -$lastUid : $pageUid;
+        $anchorUid = $this->contentRepository->findAppendAnchorUid($pageUid, $colPos, $containerParentUid);
+        return $anchorUid > 0 ? -$anchorUid : $pageUid;
     }
 
     /**

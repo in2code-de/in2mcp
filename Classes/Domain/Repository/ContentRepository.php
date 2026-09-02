@@ -84,7 +84,10 @@ readonly class ContentRepository
             ->from(self::TABLE_NAME)
             ->where(
                 $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pageUid, Connection::PARAM_INT)),
-                $queryBuilder->expr()->eq('colPos', $queryBuilder->createNamedParameter($colPos, Connection::PARAM_INT)),
+                $queryBuilder->expr()->eq(
+                    'colPos',
+                    $queryBuilder->createNamedParameter($colPos, Connection::PARAM_INT)
+                ),
                 $queryBuilder->expr()->eq(
                     'sys_language_uid',
                     $queryBuilder->createNamedParameter($languageId, Connection::PARAM_INT)
@@ -103,6 +106,75 @@ readonly class ContentRepository
         }
 
         $uid = $queryBuilder->executeQuery()->fetchOne();
+
+        return $uid === false ? 0 : (int)$uid;
+    }
+
+    /**
+     * Uid a new or moved element has to be anchored behind to end up at the end of its column, 0 when there is
+     * nothing to anchor to and the element becomes the first one on the page.
+     *
+     * For a column of a container this is never 0: the first element of an empty container column is anchored
+     * behind the last child of the container, or behind the container element itself.
+     *
+     * @throws Exception
+     */
+    public function findAppendAnchorUid(
+        int $pageUid,
+        int $colPos,
+        int $containerParentUid = 0,
+        int $languageId = 0
+    ): int {
+        $lastUid = $this->findLastUidInColumn($pageUid, $colPos, $containerParentUid, $languageId);
+        if ($lastUid > 0) {
+            return $lastUid;
+        }
+
+        if ($containerParentUid > 0) {
+            $lastInContainer = $this->findLastUidInContainer($pageUid, $containerParentUid, $languageId);
+            return $lastInContainer > 0 ? $lastInContainer : $containerParentUid;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Uid of the last content element of a container in sorting order, over all of its columns, 0 if the
+     * container is still empty.
+     *
+     * Container extensions expect every child to sort *after* its container element. A child that ends up in
+     * front of it breaks the target calculation of the container extension for everything that follows, so a
+     * new child is always anchored behind something that already belongs to the container.
+     *
+     * @throws Exception
+     */
+    public function findLastUidInContainer(int $pageUid, int $containerParentUid, int $languageId = 0): int
+    {
+        if ($this->isContainerInstalled() === false || $containerParentUid === 0) {
+            return 0;
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
+        $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
+
+        $uid = $queryBuilder
+            ->select('uid')
+            ->from(self::TABLE_NAME)
+            ->where(
+                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pageUid, Connection::PARAM_INT)),
+                $queryBuilder->expr()->eq(
+                    self::CONTAINER_PARENT_FIELD,
+                    $queryBuilder->createNamedParameter($containerParentUid, Connection::PARAM_INT)
+                ),
+                $queryBuilder->expr()->eq(
+                    'sys_language_uid',
+                    $queryBuilder->createNamedParameter($languageId, Connection::PARAM_INT)
+                )
+            )
+            ->orderBy('sorting', 'DESC')
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchOne();
 
         return $uid === false ? 0 : (int)$uid;
     }
