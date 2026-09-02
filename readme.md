@@ -40,10 +40,15 @@ client, the OAuth situation of Gemini Enterprise and the full reference.
 
 ## Tools
 
-Reading: `get_backend_user`, `get_page_tree`, `get_page`, `search_pages`, `get_schema`
+Reading: `get_backend_user`, `get_page_tree`, `get_page`, `search_pages`, `get_schema`, `get_record`,
+`find_records`, `search_files`
 
-Writing: `create_page`, `update_page`, `create_content_element`, `update_content_element`, `delete_record`,
-`move_record`
+Writing: `create_page`, `update_page`, `create_content_element`, `update_content_element`, `create_record`,
+`update_record`, `add_file_reference`, `delete_record`, `move_record`
+
+Pages and content elements have their own tools; `create_record` and `update_record` cover every other table the
+backend user may write, for example a form or a news entry. Files cannot be uploaded - `search_files` finds files
+that already exist and `add_file_reference` connects one to a file field.
 
 ## Permissions
 
@@ -52,6 +57,10 @@ initialized like in a regular backend request, and everything afterwards runs th
 page permissions and page mounts when reading, the **DataHandler** when writing. So an MCP client can do exactly
 what that backend user can do in the backend - and nothing beyond it. Emptying the api key or disabling the user
 revokes the access immediately.
+
+There is one deliberate exception: tables that hold authentication data or internal bookkeeping (`be_users`,
+`fe_users`, `sys_log`, `sys_refindex` and their relatives) are refused for every user, administrators included,
+so an api key that leaked cannot create a backend user. See `TableAccessService::DENIED_TABLES`.
 
 ## Requirements
 

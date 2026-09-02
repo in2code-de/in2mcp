@@ -108,22 +108,50 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `get_page_tree`     | The page tree as a nested structure, rooted at the page mounts of the user      |
 | `get_page`          | One page with all fields plus its content elements grouped by column position   |
 | `search_pages`      | Pages by title, navigation title, subtitle or slug                              |
-| `get_schema`        | Page types, content element types and the fields that exist in this installation |
+| `get_schema`        | Page types, content element types, writable tables and the fields of a table    |
+| `get_record`        | One record of any table                                                         |
+| `find_records`      | The records of a table that are stored on a page                                |
+| `search_files`      | Files of the file abstraction layer by name, path or title                      |
 
 ### Writing
 
 | Tool                     | Purpose                                              |
 |--------------------------|------------------------------------------------------|
-| `create_page`            | New page below a parent page                          |
-| `update_page`            | Change fields of a page                               |
-| `create_content_element` | New content element in a column of a page             |
-| `update_content_element` | Change fields of a content element                    |
-| `delete_record`          | Delete a page or content element (recoverable)        |
-| `move_record`            | Move a page or content element                        |
+| `create_page`            | New page below a parent page                                     |
+| `update_page`            | Change fields of a page                                          |
+| `create_content_element` | New content element in a column of a page or inside a container  |
+| `update_content_element` | Change fields of a content element                               |
+| `create_record`          | New record of any other table, for example a form or a news entry |
+| `update_record`          | Change fields of a record of any table                           |
+| `add_file_reference`     | Connect an existing file to a file field of a record             |
+| `delete_record`          | Delete a record of any table (recoverable)                       |
+| `move_record`            | Move a record, including into another column or container        |
 
-`get_schema` exists because page types, content types and fields differ per installation. A client that asks
-first does not have to guess field names - and unknown field names are rejected with a message that points back
-to `get_schema` instead of being dropped silently.
+`get_schema` exists because page types, content types, tables and fields differ per installation. A client that
+asks first does not have to guess field names - and unknown field names are rejected with a message that points
+back to `get_schema` instead of being dropped silently. Call it with a `table` to get the fields of that table
+before writing a record with `create_record`.
+
+### Content elements in containers
+
+Container extensions such as `b13/container` nest content elements: a child carries the uid of its container in
+`tx_container_parent`, and the column numbers of a container are reused by **every** container of the page. The
+column alone therefore does not describe a position, which is why both tools take the container explicitly:
+
+- `create_content_element` places an element inside a container with `containerParentUid` plus the `colPos` of
+  the target column within that container. Appending looks for the last element of that column **in that
+  container**, so a second container on the same page does not attract the new element.
+- `move_record` writes `colPos` and `containerParentUid` along with the move. The move target only decides the
+  position in the sorting; column and container are ordinary fields and stay untouched when they are not given.
+
+Passing the uid of the container as `afterContentUid` does not work and never did - a container is not a sibling
+of its own children.
+
+### Files
+
+Files cannot be uploaded through MCP. `search_files` finds files that already exist in this installation and
+returns the file uid that `add_file_reference` needs. Existing files of a field are kept, a new one is appended.
+Which fields accept a file is visible in `get_schema` as fields of type `file`.
 
 ---
 
@@ -141,6 +169,15 @@ in a regular backend request, and every read and write runs through the regular 
 - New pages are created **hidden**, because that is the TCA default of TYPO3 for pages - a human decides when a
   page goes live.
 - Every write is written to `sys_log` by the DataHandler, so the backend history shows what happened.
+
+- Tables that hold authentication data or internal bookkeeping are refused for **every** user, administrators
+  included: `be_users`, `be_groups`, `be_sessions`, `fe_users`, `fe_groups`, `fe_sessions`, `sys_history`,
+  `sys_log`, `sys_refindex`, `sys_registry`, `sys_file_processedfile` and `sys_lockedrecords`. This is the one
+  deliberate deviation from "the client may do what the user may do": an api key that leaked must not be able to
+  create a backend user. The list is `TableAccessService::DENIED_TABLES`.
+
+Everything else follows `tables_modify` of the backend user, so `get_schema` reports the writable tables of
+exactly this connection.
 
 Revoking access means emptying the api key field or disabling the backend user.
 
@@ -176,6 +213,9 @@ authentication resets the counter, so only failing requests count. Configurable 
 | `Service\DataHandlerService`   | The only place that writes - always through the DataHandler                     |
 | `Service\BackendUserService`   | Single point of access to the authenticated user and its permissions            |
 | `Service\TcaService`           | Answers what page types, content types and fields exist here                    |
+| `Service\TableAccessService`   | Decides which tables may be read and written at all                             |
+| `Repository\RecordRepository`  | Reads records of any table                                                      |
+| `Repository\FileRepository`    | Reads files and the references that point at them                               |
 
 The [official MCP PHP SDK](https://github.com/modelcontextprotocol/php-sdk) (`mcp/sdk`) handles the protocol.
 Sessions are stored in the filesystem (`var/in2mcp/mcp`), because a client sends its session id in every request.
