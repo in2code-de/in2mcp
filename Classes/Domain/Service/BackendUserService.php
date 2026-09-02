@@ -6,6 +6,7 @@ namespace In2code\In2mcp\Domain\Service;
 
 use In2code\In2mcp\Exception\UserNotFoundException;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\SysLog\Type as SystemLogType;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
 
 /**
@@ -83,6 +84,19 @@ class BackendUserService
     {
         $webMounts = $this->getWebMounts();
         return $webMounts === [] || in_array(0, $webMounts, true);
+    }
+
+    /**
+     * Writes an entry into the file section of the TYPO3 log, the same way the backend does for a file
+     * operation. Record writes land there through the DataHandler already; a file that is brought into the
+     * storage has to be traceable for an administrator in exactly the same way.
+     *
+     * @param array<string, mixed> $context
+     * @throws UserNotFoundException
+     */
+    public function logFileAction(int $action, int $severity, string $message, array $context = []): void
+    {
+        $this->getBackendUser()->writelog(SystemLogType::FILE, $action, $severity, null, $message, $context);
     }
 
     /**

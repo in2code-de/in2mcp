@@ -1,2 +1,11 @@
 # cat=basic/enable/0010; type=boolean; label= Enable MCP server: Answer MCP requests on /typo3/mcp. Clients authenticate with the api key of a backend user, so every action is restricted to the permissions of that user.
 mcpServer = 0
+
+# cat=file import/enable/0100; type=boolean; label= Import files by url: Allow MCP clients to import a file from a http(s) url into the file storage. The server performs the outgoing request, so only switch this on if that is intended. Local and private addresses are refused in any case.
+fileImport = 0
+
+# cat=file import/basic/0110; type=int+; label= Maximum file size in bytes: Downloads larger than this are aborted. Default is 10 MB.
+fileImportMaximumSize = 10485760
+
+# cat=file import/basic/0120; type=string; label= Allowed hosts: Comma separated list of hosts a file may be imported from, for example "images.example.org,cdn.example.org". Empty allows every public host.
+fileImportAllowedHosts =
