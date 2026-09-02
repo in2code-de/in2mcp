@@ -17,6 +17,12 @@ readonly class ContentRepository
 {
     public const TABLE_NAME = 'tt_content';
 
+    /**
+     * Field of b13/container that connects a content element to the container it lives in. Container columns
+     * are shared by every container of a page, so the column alone does not identify a position.
+     */
+    public const CONTAINER_PARENT_FIELD = 'tx_container_parent';
+
     public function __construct(
         private ConnectionPool $connectionPool,
         private TcaService $tcaService,
@@ -56,16 +62,24 @@ readonly class ContentRepository
     }
 
     /**
-     * Uid of the last content element of a column in sorting order, 0 if the column is empty
+     * Uid of the last content element of a column in sorting order, 0 if the column is empty.
+     *
+     * A container column has to be restricted to its container as well: every container of a page uses the same
+     * column numbers, so without that restriction the last element of a foreign container would be returned and
+     * the new element would end up in the wrong place.
      *
      * @throws Exception
      */
-    public function findLastUidInColumn(int $pageUid, int $colPos, int $languageId = 0): int
-    {
+    public function findLastUidInColumn(
+        int $pageUid,
+        int $colPos,
+        int $containerParentUid = 0,
+        int $languageId = 0
+    ): int {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
         $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
 
-        $uid = $queryBuilder
+        $queryBuilder
             ->select('uid')
             ->from(self::TABLE_NAME)
             ->where(
@@ -77,11 +91,28 @@ readonly class ContentRepository
                 )
             )
             ->orderBy('sorting', 'DESC')
-            ->setMaxResults(1)
-            ->executeQuery()
-            ->fetchOne();
+            ->setMaxResults(1);
+
+        if ($this->isContainerInstalled()) {
+            $queryBuilder->andWhere(
+                $queryBuilder->expr()->eq(
+                    self::CONTAINER_PARENT_FIELD,
+                    $queryBuilder->createNamedParameter($containerParentUid, Connection::PARAM_INT)
+                )
+            );
+        }
+
+        $uid = $queryBuilder->executeQuery()->fetchOne();
 
         return $uid === false ? 0 : (int)$uid;
+    }
+
+    /**
+     * Whether b13/container is installed, which is the only reason the container field exists
+     */
+    public function isContainerInstalled(): bool
+    {
+        return $this->tcaService->isFieldOfTable(self::TABLE_NAME, self::CONTAINER_PARENT_FIELD);
     }
 
     /**

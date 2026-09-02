@@ -119,14 +119,31 @@ class DataHandlerService
      * Moves a record. A negative target uid means "behind the record with this uid", a positive one means
      * "into the page with this uid".
      *
+     * Fields given as $update are written by the move itself. This is how the backend moves a content element
+     * into another column or into a container: the target only decides the position in the sorting, the column
+     * and the container are ordinary fields that have to travel with the move.
+     *
+     * @param array<string, mixed> $update
      * @throws DataHandlerException
      * @throws TableNotAccessibleException
      * @throws UserNotFoundException
+     * @throws ToolExecutionException
      */
-    public function moveRecord(string $table, int $uid, int $target): void
+    public function moveRecord(string $table, int $uid, int $target, array $update = []): void
     {
         $this->tableAccessService->assertWritable($table);
-        $this->process([], [$table => [$uid => ['move' => $target]]]);
+
+        if ($update === []) {
+            $this->process([], [$table => [$uid => ['move' => $target]]]);
+            return;
+        }
+
+        $this->assertKnownFields($table, $update);
+        $this->process([], [$table => [$uid => ['move' => [
+            'action' => 'paste',
+            'target' => $target,
+            'update' => $update,
+        ]]]]);
     }
 
     /**
