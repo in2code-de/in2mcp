@@ -1,11 +1,18 @@
 # in2mcp - MCP Server for TYPO3
 
 Turns a TYPO3 installation into a **Model Context Protocol (MCP) server**, so that MCP clients like
-Claude (Desktop, Web, Code) or Gemini can connect to the CMS and work on it - reading the page tree,
+Claude (Desktop, Web, Code), Gemini or ChatGPT can connect to the CMS and work on it - reading the page tree,
 inspecting existing content and creating or editing records within the permissions of the connected
 backend user.
 
-> Status: **alpha** - under active development, no stable API yet.
+Example usage from Google Gemini in Browser to create a new page in your TYPO3:
+![screenshot_gemini.png](Documentation/Images/screenshot_gemini.png)
+
+Content elements created from AI in TYPO3 backend:
+![screenshot_backend_landingpage.png](Documentation/Images/screenshot_backend_landingpage.png)
+
+Ready created frontend without the need of a backend login:
+![screenshot_frontend_landingpage.png](Documentation/Images/screenshot_frontend_landingpage.png)
 
 ## Table of Contents
 
