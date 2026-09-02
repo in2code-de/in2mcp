@@ -28,6 +28,7 @@ exposes `tools`, `resources` and `prompts`, the LLM decides when to call them.
 
 ```bash
 # 1. activate the server in the extension configuration (setting "mcpServer")
+#    the endpoint is /typo3/mcp and can be renamed with the setting "mcpServerPath"
 # 2. create an api key for a backend user
 vendor/bin/typo3 in2mcp:apikey <uid|username>
 # 3. connect a client

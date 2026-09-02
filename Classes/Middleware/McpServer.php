@@ -30,12 +30,10 @@ use TYPO3\CMS\Core\Http\StreamFactory;
  * Answers requests to the MCP endpoint with the MCP server instead of the TYPO3 backend.
  *
  * The middleware is registered in the backend stack before the backend routing, because the tools need a backend
- * user and a backend context, and because a request to /typo3/mcp would otherwise end in a routing exception.
+ * user and a backend context, and because a request to the endpoint would otherwise end in a routing exception.
  */
 class McpServer implements MiddlewareInterface
 {
-    public const MCP_SERVER_PATH = '/typo3/mcp';
-
     private const AUTHENTICATION_REALM = 'TYPO3 in2mcp';
 
     public function __construct(
@@ -123,7 +121,8 @@ class McpServer implements MiddlewareInterface
 
     private function isMcpRequest(ServerRequestInterface $request): bool
     {
-        return rtrim($request->getUri()->getPath(), '/') === rtrim(self::MCP_SERVER_PATH, '/');
+        return rtrim($request->getUri()->getPath(), '/')
+            === rtrim($this->configurationService->getMcpServerPath(), '/');
     }
 
     private function initializeRequestForMcp(ServerRequestInterface $request): ServerRequestInterface

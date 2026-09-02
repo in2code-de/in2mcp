@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Command;
 
 use In2code\In2mcp\Domain\Service\ApiKeyService;
-use In2code\In2mcp\Middleware\McpServer;
+use In2code\In2mcp\Domain\Service\ConfigurationService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -21,8 +21,10 @@ use Throwable;
 )]
 class CreateApiKeyCommand extends Command
 {
-    public function __construct(private readonly ApiKeyService $apiKeyService)
-    {
+    public function __construct(
+        private readonly ApiKeyService $apiKeyService,
+        private readonly ConfigurationService $configurationService,
+    ) {
         parent::__construct();
     }
 
@@ -65,7 +67,7 @@ class CreateApiKeyCommand extends Command
         $io->writeln('');
         $output->writeln($apiKey);
         $io->writeln('');
-        $io->writeln('Use it as a request header against ' . McpServer::MCP_SERVER_PATH . ':');
+        $io->writeln('Use it as a request header against ' . $this->configurationService->getMcpServerPath() . ':');
         $io->listing([
             'Authorization: Bearer <key>',
             'X-Api-Key: <key>',

@@ -7,17 +7,17 @@ namespace In2code\In2mcp\Domain\Repository;
 use Doctrine\DBAL\Exception;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
+use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\Crypto\PasswordHashing\InvalidPasswordHashException;
 use TYPO3\CMS\Core\Crypto\PasswordHashing\PasswordHashFactory;
-use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\Crypto\Random;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Utility\MathUtility;
 
 /**
- * Finds the backend user that belongs to a given MCP api key. The keys are stored as salted hashes, so every
- * candidate has to be checked individually.
+ * Finds the backend user that belongs to a given MCP api key. A key names its user, so exactly one salted hash
+ * is verified per request - see splitApiKey() for why that matters.
  */
 readonly class BackendUserRepository
 {

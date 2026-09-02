@@ -1,5 +1,8 @@
-# cat=basic/enable/0010; type=boolean; label= Enable MCP server: Answer MCP requests on /typo3/mcp. Clients authenticate with the api key of a backend user, so every action is restricted to the permissions of that user.
+# cat=basic/enable/0010; type=boolean; label= Enable MCP server: Answer MCP requests on the endpoint below. Clients authenticate with the api key of a backend user, so every action is restricted to the permissions of that user.
 mcpServer = 0
+
+# cat=basic/enable/0020; type=string; label= Endpoint: Path of the endpoint below the TYPO3 backend, without slashes. "mcp" answers on /typo3/mcp. The endpoint always stays below the backend, because that is what makes TYPO3 treat the request as a backend request and apply the page and file permissions of the user. An empty or invalid value falls back to "mcp".
+mcpServerPath = mcp
 
 # cat=file import/enable/0100; type=boolean; label= Import files by url: Allow MCP clients to import a file from a http(s) url into the file storage. The server performs the outgoing request, so only switch this on if that is intended. Local and private addresses are refused in any case.
 fileImport = 0

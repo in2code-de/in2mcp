@@ -10,11 +10,25 @@ TYPO3 backend user and then works on the CMS **with exactly the permissions of t
 
 ### 1. Activate the server
 
-| Setting     | Description                                | Default |
-|-------------|--------------------------------------------|---------|
-| `mcpServer` | Answers MCP requests on `/typo3/mcp`       | `0`     |
+| Setting         | Description                                  | Default |
+|-----------------|----------------------------------------------|---------|
+| `mcpServer`     | Answers MCP requests on the endpoint         | `0`     |
+| `mcpServerPath` | Path of the endpoint below the TYPO3 backend | `mcp`   |
 
-The endpoint is `/typo3/mcp`. It lives in the **backend** context, because the tools need a backend user and
+The endpoint is `/typo3/mcp` by default and is configured with `mcpServerPath`, which is a path **below the
+TYPO3 backend**: `mcp` answers on `/typo3/mcp`, `intern/mcp-a7f3` answers on `/typo3/intern/mcp-a7f3`. A
+customised `$GLOBALS['TYPO3_CONF_VARS']['BE']['entryPoint']` is followed automatically, and an empty or invalid
+value falls back to `mcp`.
+
+The endpoint cannot be moved out of the backend, and that is deliberate. TYPO3 decides by the entry point
+whether a request is a backend request, and that decision is what makes `StoragePermissionsAspect` apply the
+file mounts and file permissions of the user. An endpoint below the frontend would either never reach this
+middleware at all or, if it did, run without those checks.
+
+Renaming the endpoint hides it from someone scanning for known paths. It is not a secret and not a
+replacement for the api key - treat it as one less thing an automated scanner finds, nothing more.
+
+It lives in the **backend** context, because the tools need a backend user and
 because a request to a path below `/typo3` must be answered before the backend routing rejects it.
 
 ### 2. Create an api key
@@ -310,7 +324,7 @@ authentication resets the counter, so only failing requests count. Configurable 
 
 | Class                          | Task                                                                          |
 |--------------------------------|-------------------------------------------------------------------------------|
-| `Middleware\McpServer`         | Answers `/typo3/mcp` with the MCP server instead of the backend                |
+| `Middleware\McpServer`         | Answers the configured endpoint with the MCP server instead of the backend     |
 | `ApiKeyAuthenticationService`  | TYPO3 authentication service, finds the backend user of the api key            |
 | `BackendUserAuthenticator`     | Initializes that user for the request and removes the session afterwards       |
 | `BackendUserRepository`        | Looks up the hashed api key of a backend user                                  |
