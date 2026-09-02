@@ -44,11 +44,12 @@ Reading: `get_backend_user`, `get_page_tree`, `get_page`, `search_pages`, `get_s
 `find_records`, `search_files`
 
 Writing: `create_page`, `update_page`, `create_content_element`, `update_content_element`, `create_record`,
-`update_record`, `add_file_reference`, `delete_record`, `move_record`
+`update_record`, `add_file_from_url`, `add_file_reference`, `delete_record`, `move_record`
 
 Pages and content elements have their own tools; `create_record` and `update_record` cover every other table the
-backend user may write, for example a form or a news entry. Files cannot be uploaded - `search_files` finds files
-that already exist and `add_file_reference` connects one to a file field.
+backend user may write, for example a form or a news entry. `search_files` finds files that already exist and
+`add_file_reference` connects one to a file field. `add_file_from_url` brings a new file in - it is **off by
+default**, because it makes the server perform an outgoing request that a client decides on.
 
 ## Permissions
 

@@ -123,6 +123,7 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `update_content_element` | Change fields of a content element                               |
 | `create_record`          | New record of any other table, for example a form or a news entry |
 | `update_record`          | Change fields of a record of any table                           |
+| `add_file_from_url`      | Download a file from a public url into the file storage           |
 | `add_file_reference`     | Connect an existing file to a file field of a record             |
 | `delete_record`          | Delete a record of any table (recoverable)                       |
 | `move_record`            | Move a record, including into another column or container        |
@@ -149,9 +150,35 @@ of its own children.
 
 ### Files
 
-Files cannot be uploaded through MCP. `search_files` finds files that already exist in this installation and
-returns the file uid that `add_file_reference` needs. Existing files of a field are kept, a new one is appended.
-Which fields accept a file is visible in `get_schema` as fields of type `file`.
+`search_files` finds files that already exist in this installation and returns the file uid that
+`add_file_reference` needs. Existing files of a field are kept, a new one is appended. Which fields accept a file
+is visible in `get_schema` as fields of type `file`.
+
+`add_file_from_url` brings a file that is not here yet into the storage. It is **switched off by default**: the
+server, not the client, performs the download, so this has to be a decision of the installation.
+
+| Setting                  | Purpose                                                              | Default    |
+|--------------------------|----------------------------------------------------------------------|------------|
+| `fileImport`             | Allow the import at all                                              | `0`        |
+| `fileImportMaximumSize`  | Maximum file size in bytes, larger downloads are aborted             | `10485760` |
+| `fileImportAllowedHosts` | Comma separated hosts a file may come from, empty allows every host  | empty      |
+
+What the import refuses, in this order:
+
+1. everything but `http` and `https`
+2. hosts outside `fileImportAllowedHosts`, when that list is filled
+3. hosts that resolve to a local, private, link local or carrier grade NAT address - **every** address a host
+   resolves to has to be public, and every redirect hop is validated again, so a public url cannot redirect the
+   server into the internal network
+4. more than three redirects, and relative redirect targets
+5. a `Content-Length` above the maximum, and a body that exceeds it while streaming
+6. file names with a path in them, and names the `fileDenyPattern` of the installation rejects
+
+Afterwards the file goes into the storage through `ResourceStorage::addFile()`, which applies what the backend
+applies to an upload: the file operation permissions of the user (`addFile`), the **file mounts**, the writable
+flag of the storage, the `fileDenyPattern` again and the file name sanitizing of the driver. An existing file of
+the same name is never overwritten, the new one is renamed. The import is written to the file section of
+`sys_log`, next to the uploads of the backend, and a refused url is logged there as a security notice.
 
 ---
 
@@ -216,6 +243,8 @@ authentication resets the counter, so only failing requests count. Configurable 
 | `Service\TableAccessService`   | Decides which tables may be read and written at all                             |
 | `Repository\RecordRepository`  | Reads records of any table                                                      |
 | `Repository\FileRepository`    | Reads files and the references that point at them                               |
+| `Service\FileImportService`    | Downloads a file into the storage, streamed and size limited                    |
+| `Service\UrlValidationService` | The only guard on the one outgoing request this extension makes                 |
 
 The [official MCP PHP SDK](https://github.com/modelcontextprotocol/php-sdk) (`mcp/sdk`) handles the protocol.
 Sessions are stored in the filesystem (`var/in2mcp/mcp`), because a client sends its session id in every request.
