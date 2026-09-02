@@ -1,0 +1,2 @@
+# cat=basic/enable/0010; type=boolean; label= Enable MCP server: Answer MCP requests on /typo3/mcp. Clients authenticate with the api key of a backend user, so every action is restricted to the permissions of that user.
+mcpServer = 0

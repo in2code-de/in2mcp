@@ -4,5 +4,13 @@ services:
     autoconfigure: true
     public: false
 
+  _instanceof:
+    In2code\In2mcp\Domain\Mcp\Tool\ToolInterface:
+      tags: ['in2mcp.tool']
+
   In2code\In2mcp\:
     resource: '../Classes/*'
+
+  In2code\In2mcp\Domain\Mcp\Tool\ToolRegistry:
+    arguments:
+      $tools: !tagged_iterator in2mcp.tool

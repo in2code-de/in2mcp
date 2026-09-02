@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.0">
+    <file source-language="en" datatype="plaintext" original="messages" date="2026-09-02T00:00:00Z" product-name="in2mcp">
+        <header/>
+        <body>
+            <trans-unit id="be_users.in2mcp_apikey">
+                <source>MCP api key</source>
+            </trans-unit>
+            <trans-unit id="be_users.in2mcp_apikey.description">
+                <source>A MCP client that sends this api key acts as this backend user and is restricted to its permissions. The key is stored as a hash and can not be read again, so save it right after generating it. Emptying this field or disabling the user revokes the access immediately.</source>
+            </trans-unit>
+            <trans-unit id="be_users.in2mcp_apikey.generate">
+                <source>Create random base64 string</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

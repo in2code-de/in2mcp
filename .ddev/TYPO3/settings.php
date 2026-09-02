@@ -43,6 +43,9 @@ return [
             'loginLogo' => '',
             'loginLogoAlt' => '',
         ],
+        'in2mcp' => [
+            'mcpServer' => '1',
+        ],
         'extensionmanager' => [
             'automaticInstallation' => '1',
             'offlineMode' => '0',

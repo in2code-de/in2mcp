@@ -12,6 +12,9 @@ backend user.
 - [Introduction](#introduction)
 - [Requirements](#requirements)
 - [Installation](#installation)
+- [Quick start](#quick-start)
+- [Tools](#tools)
+- [Permissions](#permissions)
 - [Contribution with DDEV](#contribution-with-ddev)
 - [Changelog](#changelog)
 
@@ -20,6 +23,35 @@ backend user.
 MCP knows three roles: a **host** (the chat application), a **client** (the connector inside the host)
 and a **server** (the system that offers the capabilities). in2mcp is the **server** part: TYPO3
 exposes `tools`, `resources` and `prompts`, the LLM decides when to call them.
+
+## Quick start
+
+```bash
+# 1. activate the server in the extension configuration (setting "mcpServer")
+# 2. create an api key for a backend user
+vendor/bin/typo3 in2mcp:apikey <uid|username>
+# 3. connect a client
+claude mcp add --transport http in2mcp https://your-domain.org/typo3/mcp --header "Api-Key: <key>"
+```
+
+For claude.ai and ChatGPT: add a custom connector with the URL, set authentication to *None* and put the key
+into a request header named `api-key`. See [Documentation/McpServer.md](Documentation/McpServer.md) for every
+client, the OAuth situation of Gemini Enterprise and the full reference.
+
+## Tools
+
+Reading: `get_backend_user`, `get_page_tree`, `get_page`, `search_pages`, `get_schema`
+
+Writing: `create_page`, `update_page`, `create_content_element`, `update_content_element`, `delete_record`,
+`move_record`
+
+## Permissions
+
+in2mcp has no permission concept of its own. The api key identifies a TYPO3 backend user, that user is
+initialized like in a regular backend request, and everything afterwards runs through the regular TYPO3 checks:
+page permissions and page mounts when reading, the **DataHandler** when writing. So an MCP client can do exactly
+what that backend user can do in the backend - and nothing beyond it. Emptying the api key or disabling the user
+revokes the access immediately.
 
 ## Requirements
 
