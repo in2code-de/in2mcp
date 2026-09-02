@@ -191,6 +191,15 @@ class TcaService
         return $relations;
     }
 
+    /**
+     * Field that holds the language of a record, null when the table is not translatable
+     */
+    public function getLanguageField(string $table): ?string
+    {
+        $languageField = $GLOBALS['TCA'][$table]['ctrl']['languageField'] ?? null;
+        return is_string($languageField) && $languageField !== '' ? $languageField : null;
+    }
+
     public function isSortingField(string $table, string $fieldName): bool
     {
         return $this->getSortingField($table) === $fieldName;

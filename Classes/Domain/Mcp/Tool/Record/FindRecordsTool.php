@@ -15,6 +15,9 @@ use In2code\In2mcp\Exception\UserNotFoundException;
 
 class FindRecordsTool extends AbstractTool
 {
+    private const ANY_PAGE = -1;
+    private const ANY_LANGUAGE = -1;
+
     public function __construct(
         private readonly RecordRepository $recordRepository,
         private readonly TableAccessService $tableAccessService,
@@ -29,8 +32,10 @@ class FindRecordsTool extends AbstractTool
 
     public function getDescription(): string
     {
-        return 'Lists the records of a table that are stored on a page. Use it to look at existing records'
-            . ' before creating a comparable one, for example the form of a page that already works.';
+        return 'Searches the records of a table by page, by field values and by language. Use it to look at an'
+            . ' existing record before creating a comparable one, and to find a record whose page is unknown -'
+            . ' searching by a field like {"form": 57} is the way to do that, not trying one page after the'
+            . ' other. Records on pages outside the page mounts of the user are not returned.';
     }
 
     public function getParameters(): array
@@ -38,13 +43,26 @@ class FindRecordsTool extends AbstractTool
         return [
             'table' => [
                 'type' => 'string',
-                'description' => 'Name of the table, for example "tx_powermail_domain_model_form"',
+                'description' => 'Name of the table, for example "tx_powermail_domain_model_page"',
                 'required' => true,
             ],
             'pid' => [
                 'type' => 'integer',
-                'description' => 'Uid of the page the records are stored on',
-                'required' => true,
+                'description' => 'Uid of the page the records are stored on. Leave it out to search the whole'
+                    . ' installation.',
+                'default' => self::ANY_PAGE,
+            ],
+            'filters' => [
+                'type' => 'object',
+                'description' => 'Field values that all have to match, for example {"form": 57} or'
+                    . ' {"title": "Contact"}. Only fields that exist in the table are accepted.',
+                'default' => [],
+            ],
+            'languageId' => [
+                'type' => 'integer',
+                'description' => 'Language of the records, 0 is the default language. Leave it out to get every'
+                    . ' language.',
+                'default' => self::ANY_LANGUAGE,
             ],
             'limit' => [
                 'type' => 'integer',
@@ -63,9 +81,9 @@ class FindRecordsTool extends AbstractTool
     public function execute(array $arguments): array
     {
         $table = $this->getStringArgument($arguments, 'table');
-        $pid = $this->getIntArgument($arguments, 'pid');
         $this->tableAccessService->assertReadable($table);
 
+        $pid = $this->getIntArgument($arguments, 'pid');
         if ($pid > 0 && $this->backendUserService->isInWebMount($pid) === false) {
             throw new ToolExecutionException(
                 'Page ' . $pid . ' is outside the page mounts of this backend user',
@@ -73,13 +91,42 @@ class FindRecordsTool extends AbstractTool
             );
         }
 
-        $records = $this->recordRepository->findByPid($table, $pid, $this->getIntArgument($arguments, 'limit'));
+        $languageId = $this->getIntArgument($arguments, 'languageId');
+        $records = $this->recordRepository->find(
+            $table,
+            $pid === self::ANY_PAGE ? null : $pid,
+            $this->getArrayArgument($arguments, 'filters'),
+            $languageId === self::ANY_LANGUAGE ? null : $languageId,
+            $this->getIntArgument($arguments, 'limit')
+        );
+
+        $records = $this->removeRecordsOutsideWebMounts($records);
 
         return [
             'table' => $table,
-            'pid' => $pid,
             'count' => count($records),
-            'records' => $records,
+            'records' => array_values($records),
         ];
+    }
+
+    /**
+     * A search over the whole installation must not hand out records of pages this user cannot see. Records on
+     * pid 0 live outside the page tree and are therefore in no mount either, which makes them administrator
+     * territory - the backend does not show them to an editor either.
+     *
+     * @param array<int, array<string, mixed>> $records
+     * @return array<int, array<string, mixed>>
+     * @throws UserNotFoundException
+     */
+    private function removeRecordsOutsideWebMounts(array $records): array
+    {
+        if ($this->backendUserService->hasFullTreeAccess()) {
+            return $records;
+        }
+
+        return array_filter(
+            $records,
+            fn(array $record): bool => $this->backendUserService->isInWebMount((int)($record['pid'] ?? 0))
+        );
     }
 }

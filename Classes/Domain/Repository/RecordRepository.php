@@ -6,6 +6,7 @@ namespace In2code\In2mcp\Domain\Repository;
 
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Service\InlineRelationService;
+use In2code\In2mcp\Exception\ToolExecutionException;
 use In2code\In2mcp\Domain\Service\TcaService;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -54,18 +55,54 @@ readonly class RecordRepository
     }
 
     /**
+     * Records of a table, optionally restricted to a page, to field values and to a language.
+     *
+     * A pid of null searches the whole installation, which is what a client needs to find a record whose page
+     * it does not know - looking for it by trying one page after the other is not a search.
+     *
+     * @param array<string, mixed> $filters Field name to value, all of them have to match
      * @return array<int, array<string, mixed>>
      * @throws Exception
+     * @throws ToolExecutionException
      */
-    public function findByPid(string $table, int $pid, int $limit = self::DEFAULT_LIMIT): array
-    {
+    public function find(
+        string $table,
+        ?int $pid = null,
+        array $filters = [],
+        ?int $languageId = null,
+        int $limit = self::DEFAULT_LIMIT
+    ): array {
         $queryBuilder = $this->getQueryBuilder($table);
-
         $queryBuilder
             ->select('*')
             ->from($table)
-            ->where($queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pid, Connection::PARAM_INT)))
             ->setMaxResults($this->getLimit($limit));
+
+        if ($pid !== null) {
+            $queryBuilder->andWhere(
+                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pid, Connection::PARAM_INT))
+            );
+        }
+
+        $languageField = $this->tcaService->getLanguageField($table);
+        if ($languageId !== null && $languageField !== null) {
+            $queryBuilder->andWhere(
+                $queryBuilder->expr()->eq(
+                    $languageField,
+                    $queryBuilder->createNamedParameter($languageId, Connection::PARAM_INT)
+                )
+            );
+        }
+
+        foreach ($filters as $fieldName => $value) {
+            $this->assertFilterableField($table, (string)$fieldName);
+            $queryBuilder->andWhere(
+                $queryBuilder->expr()->eq(
+                    (string)$fieldName,
+                    $queryBuilder->createNamedParameter($value)
+                )
+            );
+        }
 
         foreach ($this->getOrderingFields($table) as $orderingField) {
             $queryBuilder->addOrderBy($orderingField);
@@ -80,6 +117,27 @@ readonly class RecordRepository
             ),
             $records
         );
+    }
+
+    /**
+     * A field name goes into the query as an identifier and can not be a parameter, so only names that really
+     * exist in this table are accepted.
+     *
+     * @throws ToolExecutionException
+     */
+    private function assertFilterableField(string $table, string $fieldName): void
+    {
+        if (in_array($fieldName, ['uid', 'pid'], true)) {
+            return;
+        }
+
+        if ($this->tcaService->isFieldOfTable($table, $fieldName) === false) {
+            throw new ToolExecutionException(
+                'There is no field "' . $fieldName . '" in "' . $table . '" to filter by. Call "get_schema"'
+                . ' with the table to see its fields.',
+                1756801700
+            );
+        }
     }
 
     /**
