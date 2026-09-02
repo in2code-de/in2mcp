@@ -155,6 +155,67 @@ class DataHandlerService
     }
 
     /**
+     * Creates a record as the child of an inline field of another record, which is what an editor does with the
+     * "Create new" button inside such a field.
+     *
+     * The child and the list in the field of the parent are written in one DataHandler run. That is what keeps
+     * the child counter of the parent correct - a child created on its own leaves the parent at zero, and a
+     * parent whose counter says zero has no children as far as Extbase is concerned, however many records point
+     * at it.
+     *
+     * @return int Uid of the created child
+     * @throws DataHandlerException
+     * @throws Exception
+     * @throws TableNotAccessibleException
+     * @throws ToolExecutionException
+     * @throws UserNotFoundException
+     */
+    public function createChildRecord(
+        string $parentTable,
+        int $parentUid,
+        string $parentField,
+        int $pid,
+        array $fields
+    ): int {
+        $relation = $this->tcaService->getInlineRelation($parentTable, $parentField);
+        if ($relation === null) {
+            throw new ToolExecutionException(
+                'The field "' . $parentField . '" of "' . $parentTable . '" is no inline relation, so it holds'
+                . ' no child records. Call "get_schema" with the table to see its fields.',
+                1756801512
+            );
+        }
+
+        $this->tableAccessService->assertWritable($parentTable);
+        $this->tableAccessService->assertWritable($relation['foreignTable']);
+        $this->assertKnownFields($relation['foreignTable'], $fields);
+
+        $children = $this->inlineRelationService->findChildUids($relation, $parentUid);
+        $children[] = self::NEW_RECORD_PLACEHOLDER;
+
+        $fields['pid'] = $pid;
+        $newIds = $this->process([
+            $parentTable => [
+                $parentUid => [$parentField => implode(',', $children)],
+            ],
+            $relation['foreignTable'] => [
+                self::NEW_RECORD_PLACEHOLDER => $fields,
+            ],
+        ]);
+
+        $uid = $newIds[self::NEW_RECORD_PLACEHOLDER] ?? 0;
+        if ($uid === 0) {
+            throw new DataHandlerException(
+                'The child record in "' . $relation['foreignTable'] . '" was not created and TYPO3 reported no'
+                . ' reason',
+                1756801516
+            );
+        }
+
+        return $uid;
+    }
+
+    /**
      * Attaches a file to a file field of a record by creating a sys_file_reference.
      *
      * The reference is created and connected in one DataHandler run, because the field of the parent record
