@@ -107,6 +107,6 @@ ddev createfilesarchive                     # update .ddev/data/fileadmin.tar.gz
 
 ## Changelog
 
-| Version | Date       | State | Description             |
-|---------|------------|-------|-------------------------|
-| 0.0.1   | 2026-09-02 | alpha | Initial extension setup |
+| Version | Date       | State | Description               |
+|---------|------------|-------|---------------------------|
+| 1.0.0   | 2026-09-02 | alpha | Initial extension release |
