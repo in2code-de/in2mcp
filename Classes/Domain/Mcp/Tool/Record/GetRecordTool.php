@@ -76,15 +76,20 @@ class GetRecordTool extends AbstractTool
 
     /**
      * A record inherits the access of the page it is stored on. Records outside the page mounts of the backend
-     * user are refused, exactly like the pages they belong to.
+     * user are refused, exactly like the pages they belong to. A record on pid 0 lives outside the page tree
+     * and is in no mount either, so only administrators reach it.
      *
      * @throws ToolExecutionException
      * @throws UserNotFoundException
      */
     private function assertInWebMount(array $record): void
     {
+        if ($this->backendUserService->hasFullTreeAccess()) {
+            return;
+        }
+
         $pid = (int)($record['pid'] ?? 0);
-        if ($pid === 0 || $this->backendUserService->isInWebMount($pid)) {
+        if ($this->backendUserService->isInWebMount($pid)) {
             return;
         }
 
