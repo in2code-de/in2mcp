@@ -33,6 +33,7 @@ class DataHandlerService
         private readonly BackendUserService $backendUserService,
         private readonly TableAccessService $tableAccessService,
         private readonly TcaService $tcaService,
+        private readonly InlineRelationService $inlineRelationService,
         private readonly FileRepository $fileRepository,
     ) {
     }
@@ -76,6 +77,7 @@ class DataHandlerService
     {
         $this->tableAccessService->assertWritable($table);
         $this->assertKnownFields($table, $fields);
+        $this->assertWritableValues($table, $fields, 0);
 
         $fields['pid'] = $pid;
         $newIds = $this->process([$table => [self::NEW_RECORD_PLACEHOLDER => $fields]]);
@@ -101,6 +103,7 @@ class DataHandlerService
     {
         $this->tableAccessService->assertWritable($table);
         $this->assertKnownFields($table, $fields);
+        $this->assertWritableValues($table, $fields, $uid);
 
         if ($fields === []) {
             throw new ToolExecutionException('No fields to update were given', 1756800808);
@@ -198,6 +201,20 @@ class DataHandlerService
         }
 
         return $referenceUid;
+    }
+
+    /**
+     * An inline field carries the number of its children in the database and the list of their uids in the
+     * DataHandler. Writing the number attaches foreign records, so the value is checked before it is handed on.
+     *
+     * @throws Exception
+     * @throws ToolExecutionException
+     */
+    private function assertWritableValues(string $table, array $fields, int $uid): void
+    {
+        foreach ($fields as $fieldName => $value) {
+            $this->inlineRelationService->assertWritableValue($table, (string)$fieldName, $value, $uid);
+        }
     }
 
     /**

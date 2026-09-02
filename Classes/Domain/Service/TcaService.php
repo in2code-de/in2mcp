@@ -147,6 +147,50 @@ class TcaService
         return $fields;
     }
 
+    /**
+     * Description of an inline relation of a field, null when the field is no inline relation.
+     *
+     * The database column of such a field holds the **number** of children, while the DataHandler expects the
+     * **list of their uids** when it is written. Confusing the two attaches foreign records to the parent, so
+     * every read resolves the field to the real list and every write is checked against it.
+     *
+     * @return array{foreignTable: string, foreignField: string, foreignSortby: string}|null
+     */
+    public function getInlineRelation(string $table, string $fieldName): ?array
+    {
+        $configuration = $GLOBALS['TCA'][$table]['columns'][$fieldName]['config'] ?? [];
+        if (($configuration['type'] ?? '') !== 'inline') {
+            return null;
+        }
+
+        $foreignTable = (string)($configuration['foreign_table'] ?? '');
+        $foreignField = (string)($configuration['foreign_field'] ?? '');
+        if ($foreignTable === '' || $foreignField === '') {
+            return null;
+        }
+
+        return [
+            'foreignTable' => $foreignTable,
+            'foreignField' => $foreignField,
+            'foreignSortby' => (string)($configuration['foreign_sortby'] ?? ''),
+        ];
+    }
+
+    /**
+     * @return array<string, array{foreignTable: string, foreignField: string, foreignSortby: string}>
+     */
+    public function getInlineRelations(string $table): array
+    {
+        $relations = [];
+        foreach (array_keys($GLOBALS['TCA'][$table]['columns'] ?? []) as $fieldName) {
+            $relation = $this->getInlineRelation($table, (string)$fieldName);
+            if ($relation !== null) {
+                $relations[(string)$fieldName] = $relation;
+            }
+        }
+        return $relations;
+    }
+
     public function isSortingField(string $table, string $fieldName): bool
     {
         return $this->getSortingField($table) === $fieldName;

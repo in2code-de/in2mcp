@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Repository;
 
 use Doctrine\DBAL\Exception;
+use In2code\In2mcp\Domain\Service\InlineRelationService;
 use In2code\In2mcp\Domain\Service\TcaService;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -23,6 +24,7 @@ readonly class RecordRepository
     public function __construct(
         private ConnectionPool $connectionPool,
         private TcaService $tcaService,
+        private InlineRelationService $inlineRelationService,
     ) {
     }
 
@@ -41,7 +43,14 @@ readonly class RecordRepository
             ->executeQuery()
             ->fetchAssociative();
 
-        return $record === false ? null : $this->tcaService->cleanUpRecord($table, $record);
+        if ($record === false) {
+            return null;
+        }
+
+        return $this->inlineRelationService->resolveRecord(
+            $table,
+            $this->tcaService->cleanUpRecord($table, $record)
+        );
     }
 
     /**
@@ -65,7 +74,10 @@ readonly class RecordRepository
         $records = $queryBuilder->executeQuery()->fetchAllAssociative();
 
         return array_map(
-            fn(array $record): array => $this->tcaService->cleanUpRecord($table, $record),
+            fn(array $record): array => $this->inlineRelationService->resolveRecord(
+                $table,
+                $this->tcaService->cleanUpRecord($table, $record)
+            ),
             $records
         );
     }
