@@ -17,7 +17,12 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class DataHandlerService
 {
-    public const NEW_RECORD_PLACEHOLDER = 'NEW_in2mcp';
+    /**
+     * Placeholder of a record that is created in the current DataHandler run. It must not contain an underscore:
+     * relation fields are lists of "table_uid" pairs, so a placeholder with an underscore is torn apart when it
+     * is used inside such a list, and the new record silently never gets connected.
+     */
+    public const NEW_RECORD_PLACEHOLDER = 'NEWin2mcp';
 
     public function __construct(
         private readonly BackendUserService $backendUserService,
