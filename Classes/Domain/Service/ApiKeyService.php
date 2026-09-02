@@ -33,7 +33,7 @@ readonly class ApiKeyService
     public function createApiKey(string $backendUserIdentifier): string
     {
         $backendUser = $this->getBackendUser($backendUserIdentifier);
-        $apiKey = base64_encode(random_bytes(self::KEY_BYTES));
+        $apiKey = $this->generateApiKey();
 
         $this->backendUserRepository->updateApiKey(
             (int)$backendUser['uid'],
@@ -51,6 +51,15 @@ readonly class ApiKeyService
     {
         $backendUser = $this->getBackendUser($backendUserIdentifier);
         $this->backendUserRepository->updateApiKey((int)$backendUser['uid'], '');
+    }
+
+    /**
+     * A url safe alphabet without "+", "/" and "=" keeps the key free of characters that need quoting in a
+     * shell, in a url or in a json configuration file.
+     */
+    private function generateApiKey(): string
+    {
+        return rtrim(strtr(base64_encode(random_bytes(self::KEY_BYTES)), '+/', '-_'), '=');
     }
 
     /**

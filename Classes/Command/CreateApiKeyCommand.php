@@ -63,7 +63,7 @@ class CreateApiKeyCommand extends Command
         $io->success('Api key created for backend user "' . $backendUser['username'] . '"');
         $io->writeln('This key is shown only once and is stored as a hash only:');
         $io->writeln('');
-        $io->writeln('  <options=bold>' . $apiKey . '</>');
+        $output->writeln($apiKey);
         $io->writeln('');
         $io->writeln('Use it as a request header against ' . McpServer::MCP_SERVER_PATH . ':');
         $io->listing([

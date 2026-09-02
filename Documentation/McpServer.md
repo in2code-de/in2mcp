@@ -29,6 +29,10 @@ vendor/bin/typo3 in2mcp:apikey <uid|username> -r  # revokes the key
 The key is stored as a salted hash and can never be read back. Emptying the field or disabling the user revokes
 the access immediately.
 
+The generated key uses a url safe alphabet (`A-Z a-z 0-9 - _`), so it needs no quoting in a shell, a url or a
+json file. The CLI prints it on its own unwrapped line: a key copied from a wrapped terminal line carries the
+line break with it and is rejected by clients as an invalid header value.
+
 ### 3. Connect a client
 
 The server expects the key in one of these headers:
