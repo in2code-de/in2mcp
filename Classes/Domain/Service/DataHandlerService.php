@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Domain\Service;
 
+use Doctrine\DBAL\Exception;
+use In2code\In2mcp\Domain\Repository\FileRepository;
 use In2code\In2mcp\Exception\DataHandlerException;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
 use In2code\In2mcp\Exception\ToolExecutionException;
@@ -25,10 +27,13 @@ class DataHandlerService
      */
     public const NEW_RECORD_PLACEHOLDER = 'NEWin2mcp';
 
+    private const FILE_REFERENCE_TABLE = 'sys_file_reference';
+
     public function __construct(
         private readonly BackendUserService $backendUserService,
         private readonly TableAccessService $tableAccessService,
         private readonly TcaService $tcaService,
+        private readonly FileRepository $fileRepository,
     ) {
     }
 
@@ -144,6 +149,55 @@ class DataHandlerService
             'target' => $target,
             'update' => $update,
         ]]]]);
+    }
+
+    /**
+     * Attaches a file to a file field of a record by creating a sys_file_reference.
+     *
+     * The reference is created and connected in one DataHandler run, because the field of the parent record
+     * holds the list of its references and has to be written together with the new reference. Existing
+     * references are kept, so a second file is appended instead of replacing the first one.
+     *
+     * @return int Uid of the created file reference
+     * @throws DataHandlerException
+     * @throws Exception
+     * @throws TableNotAccessibleException
+     * @throws ToolExecutionException
+     * @throws UserNotFoundException
+     */
+    public function addFileReference(int $fileUid, string $table, int $uid, string $fieldName, int $pid): int
+    {
+        $this->tableAccessService->assertWritable($table);
+        $this->assertKnownFields($table, [$fieldName => '']);
+
+        $references = $this->fileRepository->findReferenceUids($table, $uid, $fieldName);
+        $references[] = self::NEW_RECORD_PLACEHOLDER;
+
+        // Only the file itself is described here. Which record the reference belongs to, and in which order, is
+        // derived by the DataHandler from the list in the field of the parent record. Setting tablenames,
+        // uid_foreign or fieldname here as well makes the reference count of the parent run out of sync.
+        $newIds = $this->process([
+            $table => [
+                $uid => [$fieldName => implode(',', $references)],
+            ],
+            self::FILE_REFERENCE_TABLE => [
+                self::NEW_RECORD_PLACEHOLDER => [
+                    'table_local' => 'sys_file',
+                    'uid_local' => $fileUid,
+                    'pid' => $pid,
+                ],
+            ],
+        ]);
+
+        $referenceUid = $newIds[self::NEW_RECORD_PLACEHOLDER] ?? 0;
+        if ($referenceUid === 0) {
+            throw new DataHandlerException(
+                'The file reference was not created and TYPO3 reported no reason',
+                1756801016
+            );
+        }
+
+        return $referenceUid;
     }
 
     /**
