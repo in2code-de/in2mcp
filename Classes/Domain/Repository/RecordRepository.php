@@ -96,6 +96,8 @@ readonly class RecordRepository
 
         foreach ($filters as $fieldName => $value) {
             $this->assertFilterableField($table, (string)$fieldName);
+            // The name is whitelisted against the TCA above and quoted by the QueryBuilder itself; quoting it
+            // here as well produces a column name with backticks in it.
             $queryBuilder->andWhere(
                 $queryBuilder->expr()->eq(
                     (string)$fieldName,

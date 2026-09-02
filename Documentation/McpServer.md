@@ -208,6 +208,36 @@ the same name is never overwritten, the new one is renamed. The import is writte
 
 ---
 
+## Security
+
+The endpoint is reachable without a session, so it is treated as hostile until the api key proves otherwise.
+
+**The key names its user.** An api key has the form `<uid>.<secret>`; only the secret is stored, as a salted
+hash. Without the user part the server would have to verify an incoming key against the hash of every user that
+has one, and hashing is deliberately slow - that turns an unauthenticated endpoint into a lever whose cost grows
+with every editor who gets a key. One request now costs exactly one hash verification.
+
+**Failing authentications are rate limited** per remote address (20 in 15 minutes by default, configurable via
+`$GLOBALS['TYPO3_CONF_VARS']['SYS']['rateLimiter']['in2mcp']`). A successful authentication resets the counter.
+
+**A key is only as valid as its user.** Disabling, deleting or time-limiting the backend user revokes the access
+immediately, because the regular TYPO3 authentication chain runs afterwards.
+
+**Multi factor authentication is skipped** for MCP requests - a client without a browser cannot solve it, and
+the key itself is the credential. An installation that enforces MFA should know that an api key is a way past
+it, and should hand keys out accordingly.
+
+**Content is written through the DataHandler**, so it is transformed exactly as a backend save transforms it.
+Rich text goes through the `RteHtmlParser` of the installation, and a `CType` the user is not allowed to use is
+refused by TYPO3 - which also means that raw HTML stays raw for a user who may use the `html` content element,
+and gets sanitized for everybody else. in2mcp adds no sanitizing of its own; doing so would silently break the
+content elements that are meant to carry markup.
+
+**The one outgoing request** the extension can make is `add_file_from_url`, which is off by default. See
+[Files](#files) for what it refuses.
+
+---
+
 ## Permissions
 
 There is no permission concept of its own. The api key identifies a backend user, that user is initialized like
@@ -224,6 +254,15 @@ in a regular backend request, and every read and write runs through the regular 
   page goes live.
 - Every write is written to `sys_log` by the DataHandler, so the backend history shows what happened.
 
+- **Files** follow the **file mounts** of the user, not the table permissions of `sys_file`. An editor browses
+  files in the filelist module without that table ever appearing in `tables_select`, so using it as the gate
+  would either lock every editor out or, once an integrator adds it, hand out the file inventory of the whole
+  installation. `search_files` and `add_file_reference` therefore restrict themselves to the file mounts; an
+  administrator sees everything, a user without a mount sees nothing.
+- **Clearing the cache** of a single page needs that page to be in a page mount. The DataHandler itself checks
+  nothing there - any uid clears any page - so in2mcp answers that question. Flushing the whole page cache or
+  every cache follows `options.clearCache.pages` and `options.clearCache.all` of the user TSconfig, and a
+  refusal is reported instead of silently doing nothing.
 - Tables that hold authentication data or internal bookkeeping are refused for **every** user, administrators
   included: `be_users`, `be_groups`, `be_sessions`, `fe_users`, `fe_groups`, `fe_sessions`, `sys_history`,
   `sys_log`, `sys_refindex`, `sys_registry`, `sys_file_processedfile` and `sys_lockedrecords`. This is the one

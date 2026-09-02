@@ -60,9 +60,19 @@ page permissions and page mounts when reading, the **DataHandler** when writing.
 what that backend user can do in the backend - and nothing beyond it. Emptying the api key or disabling the user
 revokes the access immediately.
 
+Concretely: page mounts and page permissions when reading pages and records, the **DataHandler** when writing,
+the **file mounts** when searching or attaching files, and the page mounts again when clearing the cache of a
+single page. Raw HTML stays raw for a user who may use the `html` content element and is sanitized for everybody
+else, because that is what TYPO3 does with a backend save.
+
 There is one deliberate exception: tables that hold authentication data or internal bookkeeping (`be_users`,
 `fe_users`, `sys_log`, `sys_refindex` and their relatives) are refused for every user, administrators included,
 so an api key that leaked cannot create a backend user. See `TableAccessService::DENIED_TABLES`.
+
+An api key has the form `<uid>.<secret>` and only the secret is stored, hashed. Failing authentications are rate
+limited per ip address. Multi factor authentication is skipped for MCP requests, so an installation that
+enforces MFA should hand out api keys accordingly. See [Documentation/McpServer.md](Documentation/McpServer.md)
+for the full picture.
 
 ## Requirements
 
