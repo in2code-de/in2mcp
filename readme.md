@@ -136,7 +136,8 @@ ddev createfilesarchive                     # update .ddev/data/fileadmin.tar.gz
 
 ## Changelog
 
-| Version | Date       | State | Description                                                                              |
-|---------|------------|-------|------------------------------------------------------------------------------------------|
-| 2.0.0   | 2026-09-02 | alpha | Allow creating of any records, adjust endpoint, allow inserting images, security reviews |
-| 1.0.0   | 2026-09-02 | alpha | Initial extension release                                                                |
+| Version | Date       | Description                                                                              |
+|---------|------------|------------------------------------------------------------------------------------------|
+| 2.1.0   | 2026-09-03 | Update extension icon, use schema API from TYPO3, update documentation                   |
+| 2.0.0   | 2026-09-02 | Allow creating of any records, adjust endpoint, allow inserting images, security reviews |
+| 1.0.0   | 2026-09-02 | Initial extension release                                                                |
