@@ -335,7 +335,7 @@ authentication resets the counter, so only failing requests count. Configurable 
 | `Mcp\Tool\ToolRegistry`        | Collects everything tagged `in2mcp.tool`                                       |
 | `Service\DataHandlerService`   | The only place that writes - always through the DataHandler                     |
 | `Service\BackendUserService`   | Single point of access to the authenticated user and its permissions            |
-| `Service\TcaService`           | Answers what page types, content types and fields exist here                    |
+| `Service\TcaService`           | Answers what page types, content types and fields exist here (Schema API)       |
 | `Service\TableAccessService`   | Decides which tables may be read and written at all                             |
 | `Repository\RecordRepository`  | Reads records of any table                                                      |
 | `Repository\FileRepository`    | Reads files and the references that point at them                               |

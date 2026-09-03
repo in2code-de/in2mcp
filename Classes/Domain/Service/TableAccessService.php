@@ -6,6 +6,7 @@ namespace In2code\In2mcp\Domain\Service;
 
 use In2code\In2mcp\Exception\TableNotAccessibleException;
 use In2code\In2mcp\Exception\UserNotFoundException;
+use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 
 /**
  * Decides which tables a MCP client may read and write.
@@ -35,8 +36,10 @@ class TableAccessService
         'sys_lockedrecords',
     ];
 
-    public function __construct(private readonly BackendUserService $backendUserService)
-    {
+    public function __construct(
+        private readonly BackendUserService $backendUserService,
+        private readonly TcaSchemaFactory $tcaSchemaFactory
+    ) {
     }
 
     /**
@@ -82,8 +85,7 @@ class TableAccessService
     public function getWritableTables(): array
     {
         $tables = [];
-        foreach (array_keys($GLOBALS['TCA'] ?? []) as $table) {
-            $table = (string)$table;
+        foreach ($this->tcaSchemaFactory->all()->getNames() as $table) {
             if (in_array($table, self::DENIED_TABLES, true)) {
                 continue;
             }
@@ -96,7 +98,7 @@ class TableAccessService
     }
 
     /**
-     * Checked after the denial, because a denied table does not necessarily have a TCA configuration - "sys_log"
+     * Checked after the denial, because a denied table does not necessarily have a schema - "sys_log"
      * has none - and "there is no such table" would be a misleading answer for a table that is refused on
      * purpose.
      *
@@ -104,7 +106,9 @@ class TableAccessService
      */
     private function assertConfigured(string $table): void
     {
-        if (isset($GLOBALS['TCA'][$table]) === false) {
+        // A name with a dot addresses a sub schema like "tt_content.textmedia" in the Schema API, which is a
+        // record type and no table - only a main schema is an answer to "is there such a table here"
+        if (str_contains($table, '.') || $this->tcaSchemaFactory->has($table) === false) {
             throw new TableNotAccessibleException(
                 'There is no table "' . $table . '" in this installation.'
                 . ' Call "get_schema" to see the tables that exist here.',

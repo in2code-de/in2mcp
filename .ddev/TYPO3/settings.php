@@ -43,12 +43,16 @@ return [
             'loginLogo' => '',
             'loginLogoAlt' => '',
         ],
-        'in2mcp' => [
-            'mcpServer' => '1',
-        ],
         'extensionmanager' => [
             'automaticInstallation' => '1',
             'offlineMode' => '0',
+        ],
+        'in2mcp' => [
+            'fileImport' => '0',
+            'fileImportAllowedHosts' => '',
+            'fileImportMaximumSize' => '10485760',
+            'mcpServer' => '1',
+            'mcpServerPath' => 'mcp',
         ],
         'scheduler' => [
             'maxLifetime' => '1440',

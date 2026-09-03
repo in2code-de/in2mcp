@@ -6,10 +6,20 @@ namespace In2code\In2mcp\Domain\Service;
 
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Localization\LanguageServiceFactory;
+use TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability;
+use TYPO3\CMS\Core\Schema\Field\FieldTypeInterface;
+use TYPO3\CMS\Core\Schema\Field\InlineFieldType;
+use TYPO3\CMS\Core\Schema\Field\StaticSelectFieldType;
+use TYPO3\CMS\Core\Schema\TcaSchema;
+use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 
 /**
- * Answers questions about the TCA of the installation, so a client can find out which page types, content types
+ * Answers questions about the schema of the installation, so a client can find out which page types, content types
  * and fields actually exist here instead of guessing.
+ *
+ * Every answer comes from the Schema API and never from $GLOBALS['TCA']: a field there is an object that knows its
+ * own type, its label and whether it is required, a table knows its capabilities, and a table that does not exist
+ * in this installation is simply absent instead of an array key that has to be guarded on every single read.
  */
 class TcaService
 {
@@ -38,8 +48,10 @@ class TcaService
 
     private ?LanguageService $languageService = null;
 
-    public function __construct(private readonly LanguageServiceFactory $languageServiceFactory)
-    {
+    public function __construct(
+        private readonly TcaSchemaFactory $tcaSchemaFactory,
+        private readonly LanguageServiceFactory $languageServiceFactory
+    ) {
     }
 
     /**
@@ -76,14 +88,14 @@ class TcaService
     public function getFields(string $table): array
     {
         $fields = [];
-        foreach ($GLOBALS['TCA'][$table]['columns'] ?? [] as $fieldName => $configuration) {
-            if (in_array($fieldName, self::IRRELEVANT_FIELDS, true)) {
+        foreach ($this->getSchema($table)?->getFields() ?? [] as $field) {
+            if (in_array($field->getName(), self::IRRELEVANT_FIELDS, true)) {
                 continue;
             }
-            $fields[$fieldName] = [
-                'type' => (string)($configuration['config']['type'] ?? 'input'),
-                'label' => $this->translate((string)($configuration['label'] ?? $fieldName)),
-                'required' => (bool)($configuration['config']['required'] ?? false),
+            $fields[$field->getName()] = [
+                'type' => $field->getType(),
+                'label' => $this->getFieldLabel($field),
+                'required' => $field->isRequired(),
             ];
         }
         return $fields;
@@ -95,14 +107,15 @@ class TcaService
      */
     public function cleanUpRecord(string $table, array $record): array
     {
-        $columns = $GLOBALS['TCA'][$table]['columns'] ?? [];
+        $alwaysKeptFields = $this->getAlwaysKeptFields($table);
         $cleanedRecord = [];
         foreach ($record as $fieldName => $value) {
+            $fieldName = (string)$fieldName;
             if (in_array($fieldName, self::IRRELEVANT_FIELDS, true)) {
                 continue;
             }
-            if (in_array($fieldName, $this->getAlwaysKeptFields($table), true) === false
-                && array_key_exists($fieldName, $columns) === false) {
+            if (in_array($fieldName, $alwaysKeptFields, true) === false
+                && $this->isFieldOfTable($table, $fieldName) === false) {
                 continue;
             }
             if ($value === null || $value === '') {
@@ -119,8 +132,11 @@ class TcaService
      */
     public function getSortingField(string $table): ?string
     {
-        $sortingField = $GLOBALS['TCA'][$table]['ctrl']['sortby'] ?? null;
-        return is_string($sortingField) && $sortingField !== '' ? $sortingField : null;
+        $schema = $this->getSchema($table);
+        if ($schema === null || $schema->hasCapability(TcaSchemaCapability::SortByField) === false) {
+            return null;
+        }
+        return $schema->getCapability(TcaSchemaCapability::SortByField)->getFieldName();
     }
 
     /**
@@ -128,12 +144,14 @@ class TcaService
      */
     public function getTableLabel(string $table): string
     {
-        return $this->translate((string)($GLOBALS['TCA'][$table]['ctrl']['title'] ?? $table));
+        $schema = $this->getSchema($table);
+        $title = $schema?->getTitle(fn(string $label): string => $this->translate($label)) ?? '';
+        return $title === '' ? $table : $title;
     }
 
     /**
-     * Fields that are no TCA column but still belong to a record a client works with. The sorting is one of
-     * them: it is not editable, but without it a client cannot tell in which order records actually are.
+     * Fields that are no field of the schema but still belong to a record a client works with. The sorting is one
+     * of them: it is not editable, but without it a client cannot tell in which order records actually are.
      *
      * @return string[]
      */
@@ -158,11 +176,19 @@ class TcaService
      */
     public function getInlineRelation(string $table, string $fieldName): ?array
     {
-        $configuration = $GLOBALS['TCA'][$table]['columns'][$fieldName]['config'] ?? [];
-        if (($configuration['type'] ?? '') !== 'inline') {
+        $schema = $this->getSchema($table);
+        if ($schema === null || $schema->hasField($fieldName) === false) {
             return null;
         }
 
+        $field = $schema->getField($fieldName);
+        if ($field instanceof InlineFieldType === false) {
+            return null;
+        }
+
+        // The Schema API has no accessor for "foreign_sortby", so all three values are taken from the
+        // configuration of the field object to keep them from two different sources apart
+        $configuration = $field->getConfiguration();
         $foreignTable = (string)($configuration['foreign_table'] ?? '');
         $foreignField = (string)($configuration['foreign_field'] ?? '');
         if ($foreignTable === '' || $foreignField === '') {
@@ -182,10 +208,10 @@ class TcaService
     public function getInlineRelations(string $table): array
     {
         $relations = [];
-        foreach (array_keys($GLOBALS['TCA'][$table]['columns'] ?? []) as $fieldName) {
-            $relation = $this->getInlineRelation($table, (string)$fieldName);
+        foreach ($this->getSchema($table)?->getFields() ?? [] as $field) {
+            $relation = $this->getInlineRelation($table, $field->getName());
             if ($relation !== null) {
-                $relations[(string)$fieldName] = $relation;
+                $relations[$field->getName()] = $relation;
             }
         }
         return $relations;
@@ -196,8 +222,11 @@ class TcaService
      */
     public function getLanguageField(string $table): ?string
     {
-        $languageField = $GLOBALS['TCA'][$table]['ctrl']['languageField'] ?? null;
-        return is_string($languageField) && $languageField !== '' ? $languageField : null;
+        $schema = $this->getSchema($table);
+        if ($schema === null || $schema->hasCapability(TcaSchemaCapability::Language) === false) {
+            return null;
+        }
+        return $schema->getCapability(TcaSchemaCapability::Language)->getLanguageField()->getName();
     }
 
     public function isSortingField(string $table, string $fieldName): bool
@@ -207,7 +236,16 @@ class TcaService
 
     public function isFieldOfTable(string $table, string $fieldName): bool
     {
-        return array_key_exists($fieldName, $GLOBALS['TCA'][$table]['columns'] ?? []);
+        return $this->getSchema($table)?->hasField($fieldName) === true;
+    }
+
+    /**
+     * Null when the table is not configured in this installation. Every method of this service answers such a
+     * table with an empty result instead of throwing, because a client is free to ask for anything.
+     */
+    private function getSchema(string $table): ?TcaSchema
+    {
+        return $this->tcaSchemaFactory->has($table) ? $this->tcaSchemaFactory->get($table) : null;
     }
 
     /**
@@ -215,18 +253,33 @@ class TcaService
      */
     private function getItemsOfSelectField(string $table, string $fieldName): array
     {
+        $schema = $this->getSchema($table);
+        if ($schema === null || $schema->hasField($fieldName) === false) {
+            return [];
+        }
+
+        $field = $schema->getField($fieldName);
+        if ($field instanceof StaticSelectFieldType === false) {
+            return [];
+        }
+
         $items = [];
-        foreach ($GLOBALS['TCA'][$table]['columns'][$fieldName]['config']['items'] ?? [] as $item) {
-            $value = $item['value'] ?? null;
-            if ($value === null || $value === '--div--') {
+        foreach ($field->getItems() as $item) {
+            if ($item->getValue() === null || $item->isDivider()) {
                 continue;
             }
             $items[] = [
-                'value' => $value,
-                'label' => $this->translate((string)($item['label'] ?? '')),
+                'value' => $item->getValue(),
+                'label' => $this->translate($item->getLabel()),
             ];
         }
         return $items;
+    }
+
+    private function getFieldLabel(FieldTypeInterface $field): string
+    {
+        $label = $field->getLabel();
+        return $label === '' ? $field->getName() : $this->translate($label);
     }
 
     /**
