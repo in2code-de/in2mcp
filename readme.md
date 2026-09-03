@@ -5,8 +5,8 @@ Claude (Desktop, Web, Code), Gemini or ChatGPT can connect to the CMS and work o
 inspecting existing content and creating or editing records within the permissions of the connected
 backend user.
 
-Example usage from Google Gemini in Browser to create a new page in your TYPO3:
-![screenshot_gemini.png](Documentation/Images/screenshot_gemini.png)
+Example usage from ChatGPT in Browser to create a new page in your TYPO3:
+![screenshot_chatgpt.png](Documentation/Images/screenshot_chatgpt.png)
 
 Content elements created from AI in TYPO3 backend:
 ![screenshot_backend_landingpage.png](Documentation/Images/screenshot_backend_landingpage.png)
