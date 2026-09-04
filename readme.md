@@ -138,6 +138,7 @@ ddev createfilesarchive                     # update .ddev/data/fileadmin.tar.gz
 
 | Version | Date       | Description                                                                              |
 |---------|------------|------------------------------------------------------------------------------------------|
+| 2.2.0   | 2026-09-04 | Security: authenticate a request by its api key only, never by a backend session         |
 | 2.1.0   | 2026-09-03 | Update extension icon, use schema API from TYPO3, update documentation                   |
 | 2.0.0   | 2026-09-02 | Allow creating of any records, adjust endpoint, allow inserting images, security reviews |
 | 1.0.0   | 2026-09-02 | Initial extension release                                                                |

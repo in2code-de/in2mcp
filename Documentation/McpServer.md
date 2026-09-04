@@ -253,9 +253,18 @@ the backend user revokes it immediately.
 **A key is only as valid as its user.** Disabling, deleting or time-limiting the backend user revokes the access
 immediately, because the regular TYPO3 authentication chain runs afterwards.
 
+**The api key is the only credential.** The middleware removes every cookie from the request before anything
+looks at it, so a backend session can never authenticate a MCP request. Without that, the core would win before
+the api key is ever asked for: it takes the user of an existing session as authenticated and only asks an
+authentication service when there is no session. A backend user without an api key would otherwise reach every
+tool from a browser that is logged into the backend. The backend user the authentication ends up with is
+verified to be the user of the key as well, so nothing but the key decides who a request runs as.
+
 **Multi factor authentication is skipped** for MCP requests - a client without a browser cannot solve it, and
-the key itself is the credential. An installation that enforces MFA should know that an api key is a way past
-it, and should hand keys out accordingly.
+the key itself is the credential. This applies to a user the api key authenticated and to nobody else: a
+session that is still waiting for its second factor is refused, so a stolen password of an MFA protected
+account does not become MCP access. An installation that enforces MFA should still know that an api key is a
+way past it, and should hand keys out accordingly.
 
 **Content is written through the DataHandler**, so it is transformed exactly as a backend save transforms it.
 Rich text goes through the `RteHtmlParser` of the installation, and a `CType` the user is not allowed to use is
@@ -326,6 +335,7 @@ authentication resets the counter, so only failing requests count. Configurable 
 |--------------------------------|-------------------------------------------------------------------------------|
 | `Middleware\McpServer`         | Answers the configured endpoint with the MCP server instead of the backend     |
 | `ApiKeyAuthenticationService`  | TYPO3 authentication service, finds the backend user of the api key            |
+| `AuthenticationContext`        | Carries the api key through the authentication and records the user it belongs to |
 | `BackendUserAuthenticator`     | Initializes that user for the request and removes the session afterwards       |
 | `BackendUserRepository`        | Looks up the hashed api key of a backend user                                  |
 | `RateLimiter\RateLimiterFactory`| Sliding window limiter for failing authentications                            |
