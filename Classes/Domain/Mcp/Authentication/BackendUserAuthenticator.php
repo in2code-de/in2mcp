@@ -33,6 +33,13 @@ class BackendUserAuthenticator
      */
     public function authenticate(ServerRequestInterface $request): BackendUserAuthentication
     {
+        // The middleware has removed every cookie of the request, so a request without an api key can not be
+        // authenticated at all and never has to reach the authentication of the core.
+        $authenticationContext = AuthenticationContext::fromRequestAttribute($request);
+        if ($authenticationContext === null || $authenticationContext->hasApiKey() === false) {
+            throw new UserNotFoundException('MCP: Request does not provide an api key', 1756800304);
+        }
+
         // Authentication services are only asked for a user if a login form was submitted or if this option is
         // set. It is enabled for the current MCP request only.
         $GLOBALS['TYPO3_CONF_VARS']['SVCONF']['auth']['setup']['BE_fetchUserIfNoSession'] = true;

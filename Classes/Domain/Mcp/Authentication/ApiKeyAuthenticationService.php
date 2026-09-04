@@ -13,24 +13,12 @@ use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use TYPO3\CMS\Core\Authentication\AbstractAuthenticationService;
 
 /**
- * Authenticates a backend user by api key, but only for requests that were marked as MCP request by the
+ * Authenticates a backend user by api key, but only for requests that carry the authentication context of the
  * McpServer middleware. Every other request is left to the regular authentication services of TYPO3.
  */
 #[Autoconfigure(public: true)]
 class ApiKeyAuthenticationService extends AbstractAuthenticationService
 {
-    public const MCP_REQUEST_ATTRIBUTE = 'in2mcp.mcp';
-
-    /**
-     * Header names that may carry the api key. "Authorization" is the standard, "X-Api-Key" and "Api-Key" are
-     * fallbacks for clients that can not set an authorization header and for webserver configurations that do
-     * not pass it to php (e.g. apache with mod_proxy_fcgi without "CGIPassAuth On").
-     */
-    protected const API_KEY_HEADERS = ['X-Api-Key', 'Api-Key'];
-
-    protected const AUTHORIZATION_HEADER = 'Authorization';
-    protected const AUTHORIZATION_SCHEME = 'Bearer';
-
     protected const AUTHENTICATION_FAILED = 0;
     protected const AUTHENTICATION_NOT_RESPONSIBLE = 100;
     protected const AUTHENTICATION_SUCCESSFUL = 200;
@@ -43,12 +31,13 @@ class ApiKeyAuthenticationService extends AbstractAuthenticationService
 
     public function getUser(): ?array
     {
-        if ($this->isMcpRequest() === false) {
+        $context = $this->getAuthenticationContext();
+        if ($context === null) {
             return null;
         }
 
         try {
-            return $this->findBackendUserByApiKey($this->getApiKey());
+            return $this->findBackendUserByApiKey($context->getApiKey());
         } catch (InvalidArgumentException $exception) {
             $this->logger->warning('MCP: Authentication failed: ' . $exception->getMessage());
             return null;
@@ -57,44 +46,26 @@ class ApiKeyAuthenticationService extends AbstractAuthenticationService
 
     public function authUser(array $user): int
     {
-        if ($this->isMcpRequest() === false) {
+        $context = $this->getAuthenticationContext();
+        if ($context === null) {
             return self::AUTHENTICATION_NOT_RESPONSIBLE;
         }
 
         try {
-            $authenticatedUser = $this->findBackendUserByApiKey($this->getApiKey());
+            $authenticatedUser = $this->findBackendUserByApiKey($context->getApiKey());
             $this->assertValidUser($authenticatedUser, $user);
         } catch (InvalidArgumentException | WrongUserException | UserNotFoundException $exception) {
             $this->logger->warning('MCP: Authentication failed: ' . $exception->getMessage());
             return self::AUTHENTICATION_FAILED;
         }
 
+        // The authenticator of the middleware verifies that the backend user it ends up with is exactly this one
+        $context->setAuthenticatedUserIdentifier((int)$authenticatedUser['uid']);
+
         $this->logger->info(
             'MCP: Backend user "' . ($authenticatedUser['username'] ?? '') . '" authenticated by api key'
         );
         return self::AUTHENTICATION_SUCCESSFUL;
-    }
-
-    protected function getApiKey(): string
-    {
-        $request = $this->authInfo['request'] ?? null;
-        if (($request instanceof ServerRequestInterface) === false) {
-            return '';
-        }
-
-        $authorization = trim($request->getHeaderLine(self::AUTHORIZATION_HEADER));
-        if (stripos($authorization, self::AUTHORIZATION_SCHEME . ' ') === 0) {
-            return trim(substr($authorization, strlen(self::AUTHORIZATION_SCHEME) + 1));
-        }
-
-        foreach (self::API_KEY_HEADERS as $header) {
-            $apiKey = trim($request->getHeaderLine($header));
-            if ($apiKey !== '') {
-                return $apiKey;
-            }
-        }
-
-        return '';
     }
 
     private function findBackendUserByApiKey(string $apiKey): ?array
@@ -106,14 +77,14 @@ class ApiKeyAuthenticationService extends AbstractAuthenticationService
         return $this->backendUsersByApiKey[$apiKey];
     }
 
-    private function isMcpRequest(): bool
+    private function getAuthenticationContext(): ?AuthenticationContext
     {
         $request = $this->authInfo['request'] ?? null;
         if (($request instanceof ServerRequestInterface) === false) {
-            return false;
+            return null;
         }
 
-        return $request->getAttribute(self::MCP_REQUEST_ATTRIBUTE, false) === true;
+        return AuthenticationContext::fromRequestAttribute($request);
     }
 
     /**

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Middleware;
 
-use In2code\In2mcp\Domain\Mcp\Authentication\ApiKeyAuthenticationService;
+use In2code\In2mcp\Domain\Mcp\Authentication\AuthenticationContext;
 use In2code\In2mcp\Domain\Mcp\Authentication\BackendUserAuthenticator;
 use In2code\In2mcp\Domain\Mcp\RateLimiter\RateLimiterFactory;
 use In2code\In2mcp\Domain\Mcp\ServerFactory;
@@ -127,7 +127,15 @@ class McpServer implements MiddlewareInterface
 
     private function initializeRequestForMcp(ServerRequestInterface $request): ServerRequestInterface
     {
-        $request = $request->withAttribute(ApiKeyAuthenticationService::MCP_REQUEST_ATTRIBUTE, true);
+        // A MCP request is authenticated by its api key alone. Dropping any backend session cookie here makes
+        // sure that neither the authentication nor anything that runs afterwards can fall back to a browser
+        // session, which the core would use before an authentication service is asked at all.
+        $request = $request->withCookieParams([])
+            ->withoutHeader('Cookie')
+            ->withAttribute(
+                AuthenticationContext::REQUEST_ATTRIBUTE,
+                AuthenticationContext::fromRequest($request)
+            );
 
         // Parts of TYPO3 read their configuration and their environment from the global request, which is not
         // set in this early state of the backend request.
