@@ -49,12 +49,15 @@ class BackendUserAuthenticator
             $backendUserAuthentication->start($request);
         } catch (MfaRequiredException) {
             // The api key itself is the credential of the client, so a multi factor authentication (which a
-            // client without a browser can not solve) is skipped for MCP requests.
+            // client without a browser can not solve) is skipped - but only for a user the api key authenticated.
+            // Without that check a session that is still waiting for its second factor would be let through.
+            if ($authenticationContext->getAuthenticatedUserIdentifier() === null) {
+                $this->logger->warning('MCP: Request without a valid api key needs a multi factor authentication');
+                throw new UserNotFoundException('MCP: Request could not be authenticated', 1756800308);
+            }
         }
 
-        if (isset($backendUserAuthentication->user['uid']) === false) {
-            throw new UserNotFoundException('MCP: Request could not be authenticated', 1756800300);
-        }
+        $this->assertUserOfApiKey($backendUserAuthentication, $authenticationContext);
 
         $GLOBALS['BE_USER'] = $backendUserAuthentication;
         $this->setBackendUserAspect($backendUserAuthentication);
@@ -63,6 +66,22 @@ class BackendUserAuthenticator
         $this->setBackendUserAspect($backendUserAuthentication);
 
         return $backendUserAuthentication;
+    }
+
+    /**
+     * Whatever the authentication of the core ended up with, it has to be the user the api key belongs to. Only
+     * ApiKeyAuthenticationService records that user, so a user from any other source is refused here.
+     *
+     * @throws UserNotFoundException
+     */
+    protected function assertUserOfApiKey(
+        BackendUserAuthentication $backendUserAuthentication,
+        AuthenticationContext $authenticationContext
+    ): void {
+        $userIdentifier = (int)($backendUserAuthentication->user['uid'] ?? 0);
+        if ($userIdentifier === 0 || $authenticationContext->isAuthenticatedUser($userIdentifier) === false) {
+            throw new UserNotFoundException('MCP: Request could not be authenticated', 1756800300);
+        }
     }
 
     public function removeSession(BackendUserAuthentication $backendUserAuthentication): void
