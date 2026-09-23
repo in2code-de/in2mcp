@@ -266,6 +266,10 @@ session that is still waiting for its second factor is refused, so a stolen pass
 account does not become MCP access. An installation that enforces MFA should still know that an api key is a
 way past it, and should hand keys out accordingly.
 
+**A MCP request is no login.** Every request authenticates on its own, so it does not dispatch the
+`AfterUserLoggedInEvent`: login notification mails (`warning_email_addr`, "Notify me by email when somebody logs
+in from my account") and other listeners of that event are not triggered by MCP clients.
+
 **Content is written through the DataHandler**, so it is transformed exactly as a backend save transforms it.
 Rich text goes through the `RteHtmlParser` of the installation, and a `CType` the user is not allowed to use is
 refused by TYPO3 - which also means that raw HTML stays raw for a user who may use the `html` content element,

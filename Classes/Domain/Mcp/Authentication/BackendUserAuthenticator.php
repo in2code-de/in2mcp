@@ -61,7 +61,7 @@ class BackendUserAuthenticator
 
         $GLOBALS['BE_USER'] = $backendUserAuthentication;
         $this->setBackendUserAspect($backendUserAuthentication);
-        $backendUserAuthentication->initializeBackendLogin($request);
+        $this->initializeBackendUserWithoutLogin($backendUserAuthentication);
         $GLOBALS['LANG'] = $this->languageServiceFactory->createFromUserPreferences($backendUserAuthentication);
         $this->setBackendUserAspect($backendUserAuthentication);
 
@@ -82,6 +82,15 @@ class BackendUserAuthenticator
         if ($userIdentifier === 0 || $authenticationContext->isAuthenticatedUser($userIdentifier) === false) {
             throw new UserNotFoundException('MCP: Request could not be authenticated', 1756800300);
         }
+    }
+
+    /**
+     * Not initializeBackendLogin(): its AfterUserLoggedInEvent would send a login notification mail per request
+     */
+    protected function initializeBackendUserWithoutLogin(BackendUserAuthentication $backendUserAuthentication): void
+    {
+        $backendUserAuthentication->fetchGroupData();
+        $backendUserAuthentication->backendSetUC();
     }
 
     public function removeSession(BackendUserAuthentication $backendUserAuthentication): void
