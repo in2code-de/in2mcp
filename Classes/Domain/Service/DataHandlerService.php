@@ -277,6 +277,7 @@ class DataHandlerService
     public function localizeRecord(string $table, int $uid, int $languageId): int
     {
         $this->tableAccessService->assertWritable($table);
+        $this->assertLanguageFieldWritable($table);
 
         $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
         $dataHandler->start(
@@ -330,6 +331,24 @@ class DataHandlerService
     {
         foreach ($fields as $fieldName => $value) {
             $this->inlineRelationService->assertWritableValue($table, (string)$fieldName, $value, $uid);
+        }
+    }
+
+    /**
+     * Without it the DataHandler creates the translation in the default language and still reports success
+     *
+     * @throws ToolExecutionException
+     * @throws UserNotFoundException
+     */
+    private function assertLanguageFieldWritable(string $table): void
+    {
+        $languageField = $this->tcaService->getLanguageField($table);
+        if ($languageField !== null && $this->tcaService->isFieldWritable($table, $languageField) === false) {
+            throw new ToolExecutionException(
+                'The backend user is not allowed to write the language field "' . $languageField . '" of "'
+                . $table . '", so the record can not be translated. Nothing was written.',
+                1756801606
+            );
         }
     }
 

@@ -297,7 +297,8 @@ in a regular backend request, and every read and write runs through the regular 
 - **Writing** goes through the **DataHandler**, so page permissions, `tables_modify`, `non_exclude_fields`, web
   mounts, hooks, reference index, slug generation, workspaces and the record history all apply unchanged. A
   refused write is reported back to the client with the reason TYPO3 gave. An update of an exclude field the
-  user may not write is refused as a whole instead of being dropped silently by the DataHandler.
+  user may not write is refused as a whole instead of being dropped silently by the DataHandler. A translation
+  is refused as well when the user may not write the language field of the table.
 - New pages are created **hidden**, because that is the TCA default of TYPO3 for pages - a human decides when a
   page goes live.
 - Every write is written to `sys_log` by the DataHandler, so the backend history shows what happened.
