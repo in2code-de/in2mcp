@@ -197,6 +197,14 @@ class BackendUserService
     /**
      * @throws UserNotFoundException
      */
+    public function isExcludeFieldAllowed(string $table, string $fieldName): bool
+    {
+        return $this->getBackendUser()->check('non_exclude_fields', $table . ':' . $fieldName);
+    }
+
+    /**
+     * @throws UserNotFoundException
+     */
     public function isTableSelectAllowed(string $table): bool
     {
         return $this->getBackendUser()->check('tables_select', $table)

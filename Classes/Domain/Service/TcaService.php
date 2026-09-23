@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Domain\Service;
 
+use In2code\In2mcp\Domain\Repository\ContentRepository;
+use In2code\In2mcp\Exception\UserNotFoundException;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Localization\LanguageServiceFactory;
 use TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability;
@@ -50,7 +52,8 @@ class TcaService
 
     public function __construct(
         private readonly TcaSchemaFactory $tcaSchemaFactory,
-        private readonly LanguageServiceFactory $languageServiceFactory
+        private readonly LanguageServiceFactory $languageServiceFactory,
+        private readonly BackendUserService $backendUserService
     ) {
     }
 
@@ -118,12 +121,50 @@ class TcaService
                 && $this->isFieldOfTable($table, $fieldName) === false) {
                 continue;
             }
+            if ($this->isFieldReadable($table, $fieldName) === false) {
+                continue;
+            }
             if ($value === null || $value === '') {
                 continue;
             }
             $cleanedRecord[$fieldName] = $value;
         }
         return $cleanedRecord;
+    }
+
+    /**
+     * @throws UserNotFoundException
+     */
+    public function isFieldReadable(string $table, string $fieldName): bool
+    {
+        return $this->isAccessControlledField($table, $fieldName) === false
+            || in_array($fieldName, $this->getStructuralFields($table), true)
+            || $this->backendUserService->isExcludeFieldAllowed($table, $fieldName);
+    }
+
+    private function isAccessControlledField(string $table, string $fieldName): bool
+    {
+        return $this->isFieldOfTable($table, $fieldName)
+            && $this->getSchema($table)?->getField($fieldName)->supportsAccessControl() === true;
+    }
+
+    /**
+     * Exclude fields the tools need to place a record
+     *
+     * @return string[]
+     */
+    private function getStructuralFields(string $table): array
+    {
+        $fields = $table === ContentRepository::TABLE_NAME ? [ContentRepository::CONTAINER_PARENT_FIELD] : [];
+
+        $schema = $this->getSchema($table);
+        if ($schema?->hasCapability(TcaSchemaCapability::Language) === true) {
+            $languageCapability = $schema->getCapability(TcaSchemaCapability::Language);
+            $fields[] = $languageCapability->getLanguageField()->getName();
+            $fields[] = $languageCapability->getTranslationOriginPointerField()->getName();
+        }
+
+        return $fields;
     }
 
     /**

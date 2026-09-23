@@ -140,6 +140,14 @@ readonly class RecordRepository
                 1756801700
             );
         }
+
+        if ($this->tcaService->isFieldReadable($table, $fieldName) === false) {
+            throw new ToolExecutionException(
+                'The backend user is not allowed to read the field "' . $fieldName . '" of "' . $table . '", so'
+                . ' it can not be used as a filter',
+                1756801702
+            );
+        }
     }
 
     /**
