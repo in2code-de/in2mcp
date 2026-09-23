@@ -289,7 +289,8 @@ in a regular backend request, and every read and write runs through the regular 
 - **Reading** applies `getPagePermsClause()` **and** the page mounts of the user. Both are needed: a page can be
   readable by permission (`perms_everybody`) and still lie outside the tree of that user, exactly as in the
   backend page tree. An empty list of page mounts never means "no restriction": for an administrator it is the
-  whole tree, for everybody else it is no page at all.
+  whole tree, for everybody else it is no page at all. This applies to pages read with `get_record` and
+  `find_records` as well, and records of other tables follow the page they are stored on.
 - **Writing** goes through the **DataHandler**, so page permissions, `tables_modify`, `non_exclude_fields`, web
   mounts, hooks, reference index, slug generation, workspaces and the record history all apply unchanged. A
   refused write is reported back to the client with the reason TYPO3 gave.

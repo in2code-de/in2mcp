@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Domain\Service;
 
+use In2code\In2mcp\Domain\Repository\PageRepository;
 use In2code\In2mcp\Exception\UserNotFoundException;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\SysLog\Type as SystemLogType;
@@ -73,6 +74,20 @@ class BackendUserService
     public function isInWebMount(int $pageUid): bool
     {
         return $this->getBackendUser()->isInWebMount($pageUid) !== null;
+    }
+
+    /**
+     * @throws UserNotFoundException
+     */
+    public function isRecordReachable(string $table, array $record): bool
+    {
+        return $this->hasFullTreeAccess() || $this->isInWebMount($this->getPageUidOfRecord($table, $record));
+    }
+
+    private function getPageUidOfRecord(string $table, array $record): int
+    {
+        $pageField = $table === PageRepository::TABLE_NAME ? 'uid' : 'pid';
+        return (int)($record[$pageField] ?? 0);
     }
 
     /**

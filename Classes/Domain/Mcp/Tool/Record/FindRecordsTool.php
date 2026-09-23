@@ -100,7 +100,7 @@ class FindRecordsTool extends AbstractTool
             $this->getIntArgument($arguments, 'limit')
         );
 
-        $records = $this->removeRecordsOutsideWebMounts($records);
+        $records = $this->removeUnreachableRecords($table, $records);
 
         return [
             'table' => $table,
@@ -110,23 +110,15 @@ class FindRecordsTool extends AbstractTool
     }
 
     /**
-     * A search over the whole installation must not hand out records of pages this user cannot see. Records on
-     * pid 0 live outside the page tree and are therefore in no mount either, which makes them administrator
-     * territory - the backend does not show them to an editor either.
-     *
      * @param array<int, array<string, mixed>> $records
      * @return array<int, array<string, mixed>>
      * @throws UserNotFoundException
      */
-    private function removeRecordsOutsideWebMounts(array $records): array
+    private function removeUnreachableRecords(string $table, array $records): array
     {
-        if ($this->backendUserService->hasFullTreeAccess()) {
-            return $records;
-        }
-
         return array_filter(
             $records,
-            fn(array $record): bool => $this->backendUserService->isInWebMount((int)($record['pid'] ?? 0))
+            fn(array $record): bool => $this->backendUserService->isRecordReachable($table, $record)
         );
     }
 }
