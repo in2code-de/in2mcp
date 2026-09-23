@@ -17,6 +17,7 @@ class FindRecordsTool extends AbstractTool
 {
     private const ANY_PAGE = -1;
     private const ANY_LANGUAGE = -1;
+    private const MAXIMUM_SCANNED_RECORDS = 5000;
 
     public function __construct(
         private readonly RecordRepository $recordRepository,
@@ -92,21 +93,42 @@ class FindRecordsTool extends AbstractTool
         }
 
         $languageId = $this->getIntArgument($arguments, 'languageId');
-        $records = $this->recordRepository->find(
+        $filters = $this->getArrayArgument($arguments, 'filters');
+        $limit = $this->recordRepository->getLimit($this->getIntArgument($arguments, 'limit'));
+
+        $findBatch = fn(int $offset): array => $this->recordRepository->find(
             $table,
             $pid === self::ANY_PAGE ? null : $pid,
-            $this->getArrayArgument($arguments, 'filters'),
+            $filters,
             $languageId === self::ANY_LANGUAGE ? null : $languageId,
-            $this->getIntArgument($arguments, 'limit')
+            $limit,
+            $offset
         );
-
-        $records = $this->removeUnreachableRecords($table, $records);
+        $records = $this->collectReachableRecords($table, $findBatch, $limit);
 
         return [
             'table' => $table,
             'count' => count($records),
             'records' => array_values($records),
         ];
+    }
+
+    /**
+     * @param callable(int): array<int, array<string, mixed>> $findBatch
+     * @return array<int, array<string, mixed>>
+     * @throws UserNotFoundException
+     */
+    private function collectReachableRecords(string $table, callable $findBatch, int $limit): array
+    {
+        $records = [];
+        $offset = 0;
+        do {
+            $batch = $findBatch($offset);
+            $offset += count($batch);
+            $records = array_merge($records, $this->removeUnreachableRecords($table, $batch));
+        } while (count($batch) === $limit && count($records) < $limit && $offset < self::MAXIMUM_SCANNED_RECORDS);
+
+        return array_slice($records, 0, $limit);
     }
 
     /**

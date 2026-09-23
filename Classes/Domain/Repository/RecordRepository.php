@@ -70,13 +70,15 @@ readonly class RecordRepository
         ?int $pid = null,
         array $filters = [],
         ?int $languageId = null,
-        int $limit = self::DEFAULT_LIMIT
+        int $limit = self::DEFAULT_LIMIT,
+        int $offset = 0
     ): array {
         $queryBuilder = $this->getQueryBuilder($table);
         $queryBuilder
             ->select('*')
             ->from($table)
-            ->setMaxResults($this->getLimit($limit));
+            ->setMaxResults($this->getLimit($limit))
+            ->setFirstResult($offset);
 
         if ($pid !== null) {
             $queryBuilder->andWhere(
@@ -186,7 +188,7 @@ readonly class RecordRepository
         return $sortingField === null ? ['uid'] : [$sortingField, 'uid'];
     }
 
-    private function getLimit(int $limit): int
+    public function getLimit(int $limit): int
     {
         if ($limit < 1) {
             return self::DEFAULT_LIMIT;
