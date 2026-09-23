@@ -103,6 +103,7 @@ class DataHandlerService
     {
         $this->tableAccessService->assertWritable($table);
         $this->assertKnownFields($table, $fields);
+        $this->assertPermittedFields($table, $fields);
         $this->assertWritableValues($table, $fields, $uid);
 
         if ($fields === []) {
@@ -329,6 +330,28 @@ class DataHandlerService
     {
         foreach ($fields as $fieldName => $value) {
             $this->inlineRelationService->assertWritableValue($table, (string)$fieldName, $value, $uid);
+        }
+    }
+
+    /**
+     * The DataHandler drops such fields silently and still reports success
+     *
+     * @throws ToolExecutionException
+     * @throws UserNotFoundException
+     */
+    private function assertPermittedFields(string $table, array $fields): void
+    {
+        $deniedFields = array_filter(
+            array_map('strval', array_keys($fields)),
+            fn(string $fieldName): bool => $this->tcaService->isFieldWritable($table, $fieldName) === false
+        );
+
+        if ($deniedFields !== []) {
+            throw new ToolExecutionException(
+                'The backend user is not allowed to write the fields ' . implode(', ', $deniedFields) . ' of "'
+                . $table . '". Nothing was written.',
+                1756800820
+            );
         }
     }
 

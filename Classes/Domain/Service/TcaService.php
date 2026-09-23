@@ -142,6 +142,15 @@ class TcaService
             || $this->backendUserService->isExcludeFieldAllowed($table, $fieldName);
     }
 
+    /**
+     * @throws UserNotFoundException
+     */
+    public function isFieldWritable(string $table, string $fieldName): bool
+    {
+        return $this->isAccessControlledField($table, $fieldName) === false
+            || $this->backendUserService->isExcludeFieldAllowed($table, $fieldName);
+    }
+
     private function isAccessControlledField(string $table, string $fieldName): bool
     {
         return $this->isFieldOfTable($table, $fieldName)
