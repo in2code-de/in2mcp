@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Domain\Service;
 
+use In2code\In2mcp\Exception\ToolExecutionException;
 use In2code\In2mcp\Exception\UserNotFoundException;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -48,6 +49,27 @@ class ContentTypeService
         $contentTypes = $this->addItems($contentTypes, $configuration['addItems.'] ?? []);
         $contentTypes = $this->keepItems($contentTypes, (string)($configuration['keepItems'] ?? ''));
         return $this->removeItems($contentTypes, (string)($configuration['removeItems'] ?? ''));
+    }
+
+    /**
+     * TYPO3 itself does not check this: the backend form hides such types, the DataHandler writes them anyway.
+     * Refusing them here keeps a client from creating elements no editor of this page could have created.
+     *
+     * @throws ToolExecutionException
+     */
+    public function assertAvailableContentType(string $contentType, int $pageUid): void
+    {
+        $contentTypeValues = $this->getValues($this->getContentTypes($pageUid));
+        if (in_array($contentType, $contentTypeValues, true)) {
+            return;
+        }
+
+        throw new ToolExecutionException(
+            'The content type "' . $contentType . '" is not available on page ' . $pageUid . '. Available types:'
+            . ' ' . implode(', ', $contentTypeValues) . '. Call "get_schema" with "pageUid" ' . $pageUid
+            . ' to see their labels and the default type of this page.',
+            1756802004
+        );
     }
 
     /**

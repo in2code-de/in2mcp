@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Service;
 
 use Doctrine\DBAL\Exception;
+use In2code\In2mcp\Domain\Repository\ContentRepository;
 use In2code\In2mcp\Domain\Repository\FileRepository;
 use In2code\In2mcp\Exception\DataHandlerException;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
@@ -28,6 +29,7 @@ class DataHandlerService
     public const NEW_RECORD_PLACEHOLDER = 'NEWin2mcp';
 
     private const FILE_REFERENCE_TABLE = 'sys_file_reference';
+    private const CONTENT_TYPE_FIELD = 'CType';
 
     public function __construct(
         private readonly BackendUserService $backendUserService,
@@ -35,6 +37,8 @@ class DataHandlerService
         private readonly TcaService $tcaService,
         private readonly InlineRelationService $inlineRelationService,
         private readonly FileRepository $fileRepository,
+        private readonly ContentTypeService $contentTypeService,
+        private readonly ContentRepository $contentRepository,
     ) {
     }
 
@@ -69,6 +73,7 @@ class DataHandlerService
      * Creates a single record and returns its uid
      *
      * @throws DataHandlerException
+     * @throws Exception
      * @throws TableNotAccessibleException
      * @throws UserNotFoundException
      * @throws ToolExecutionException
@@ -78,6 +83,12 @@ class DataHandlerService
         $this->tableAccessService->assertWritable($table);
         $this->assertKnownFields($table, $fields);
         $this->assertWritableValues($table, $fields, 0);
+        if ($table === ContentRepository::TABLE_NAME && isset($fields[self::CONTENT_TYPE_FIELD])) {
+            $this->contentTypeService->assertAvailableContentType(
+                (string)$fields[self::CONTENT_TYPE_FIELD],
+                $this->getPageUidOfNewContent($pid)
+            );
+        }
 
         $fields['pid'] = $pid;
         $newIds = $this->process([$table => [self::NEW_RECORD_PLACEHOLDER => $fields]]);
@@ -95,6 +106,7 @@ class DataHandlerService
 
     /**
      * @throws DataHandlerException
+     * @throws Exception
      * @throws TableNotAccessibleException
      * @throws UserNotFoundException
      * @throws ToolExecutionException
@@ -108,6 +120,10 @@ class DataHandlerService
 
         if ($fields === []) {
             throw new ToolExecutionException('No fields to update were given', 1756800808);
+        }
+
+        if ($table === ContentRepository::TABLE_NAME && isset($fields[self::CONTENT_TYPE_FIELD])) {
+            $this->assertContentTypeChangeAvailable($uid, (string)$fields[self::CONTENT_TYPE_FIELD]);
         }
 
         $this->process([$table => [$uid => $fields]]);
@@ -332,6 +348,35 @@ class DataHandlerService
         foreach ($fields as $fieldName => $value) {
             $this->inlineRelationService->assertWritableValue($table, (string)$fieldName, $value, $uid);
         }
+    }
+
+    /**
+     * Only a change of the type is checked. An element whose type was hidden from editors after it was created
+     * stays editable, exactly as in the backend form, where the current value of the field is always kept.
+     *
+     * @throws Exception
+     * @throws ToolExecutionException
+     */
+    private function assertContentTypeChangeAvailable(int $uid, string $contentType): void
+    {
+        $contentElement = $this->contentRepository->findByUid($uid);
+        if ($contentElement === null || (string)($contentElement[self::CONTENT_TYPE_FIELD] ?? '') === $contentType) {
+            return;
+        }
+        $this->contentTypeService->assertAvailableContentType($contentType, (int)$contentElement['pid']);
+    }
+
+    /**
+     * A negative pid means "behind the content element with this uid", so the page is the one of that element
+     *
+     * @throws Exception
+     */
+    private function getPageUidOfNewContent(int $pid): int
+    {
+        if ($pid >= 0) {
+            return $pid;
+        }
+        return (int)($this->contentRepository->findByUid(abs($pid))['pid'] ?? 0);
     }
 
     /**

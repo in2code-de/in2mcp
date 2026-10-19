@@ -167,6 +167,12 @@ TSconfig, then of the user TSconfig, then the default of the TCA - the order in 
 initializes a new record. A default that is not available on the page is replaced by the first type that is.
 It is the type of choice when a client simply wants to put text on a page.
 
+A content type that is not available on the page is refused, whichever tool writes it - `create_content_element`,
+`update_content_element`, `create_record` or `update_record`. TYPO3 itself does not check this: the backend form
+hides such types, the DataHandler writes them anyway. The error lists the types that are available instead. Only
+a change of the type is checked, so an element whose type was hidden from editors after it was created stays
+editable, as it does in the backend form.
+
 ### Records inside other records
 
 An inline field - the pages of a form, the fields of such a page - is two things at once: its database column
