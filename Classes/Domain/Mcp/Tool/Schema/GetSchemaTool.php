@@ -40,7 +40,8 @@ class GetSchemaTool extends AbstractTool
             . ' for example before using "create_record". Call this before writing records, because the'
             . ' available types, tables and fields differ from installation to installation. Pass the uid of the'
             . ' page you are going to work on as "pageUid": the content element types an editor may choose differ'
-            . ' from page to page, and only that list is valid for "create_content_element".';
+            . ' from page to page, and only that list is valid for "create_content_element". "defaultContentType"'
+            . ' is the type the backend preselects for a new element - the type of choice for plain text.';
     }
 
     public function getParameters(): array
@@ -97,6 +98,7 @@ class GetSchemaTool extends AbstractTool
         $schema = [
             'pageTypes' => $this->tcaService->getPageTypes(),
             'contentTypes' => $this->contentTypeService->getContentTypes($pageUid),
+            'defaultContentType' => $this->contentTypeService->getDefaultContentType($pageUid),
         ];
 
         if ((bool)$this->getArgument($arguments, 'withFields')) {

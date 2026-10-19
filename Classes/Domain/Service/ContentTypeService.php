@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Domain\Service;
 
+use In2code\In2mcp\Exception\UserNotFoundException;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -26,6 +27,7 @@ class ContentTypeService
 
     public function __construct(
         private readonly TcaService $tcaService,
+        private readonly BackendUserService $backendUserService,
     ) {
     }
 
@@ -49,11 +51,47 @@ class ContentTypeService
     }
 
     /**
+     * The content type a new element gets in the backend when the editor chooses nothing else - "TCAdefaults" of
+     * the page TSconfig, then of the user TSconfig, then the default of the TCA, which is the order in which the
+     * backend form initializes a new record. A default that is not available on the page is replaced by the first
+     * type that is, because the backend form would preselect exactly that one.
+     *
+     * @throws UserNotFoundException
+     */
+    public function getDefaultContentType(int $pageUid): string
+    {
+        $contentTypeValues = $this->getValues($this->getContentTypes($pageUid));
+
+        $defaultContentType = $this->getConfiguredDefault($this->getPageTsConfig($pageUid))
+            ?? $this->getConfiguredDefault($this->backendUserService->getBackendUser()->getTSConfig())
+            ?? $this->tcaService->getDefaultValue(self::CONTENT_TABLE, self::CONTENT_TYPE_FIELD);
+
+        if (in_array($defaultContentType, $contentTypeValues, true)) {
+            return $defaultContentType;
+        }
+        return $contentTypeValues[0] ?? '';
+    }
+
+    /**
+     * Value of "TCAdefaults.tt_content.CType" in a page or user TSconfig, null when it is not set
+     */
+    private function getConfiguredDefault(array $tsConfig): ?string
+    {
+        $default = $tsConfig['TCAdefaults.'][self::CONTENT_TABLE . '.'][self::CONTENT_TYPE_FIELD] ?? null;
+        return is_scalar($default) && (string)$default !== '' ? (string)$default : null;
+    }
+
+    private function getPageTsConfig(int $pageUid): array
+    {
+        return $pageUid > 0 ? BackendUtility::getPagesTSconfig($pageUid) : [];
+    }
+
+    /**
      * Configuration of "TCEFORM.tt_content.CType" for a page, with the trailing dots of TypoScript keys
      */
     private function getContentTypeConfiguration(int $pageUid): array
     {
-        $pageTsConfig = BackendUtility::getPagesTSconfig($pageUid);
+        $pageTsConfig = $this->getPageTsConfig($pageUid);
         return $pageTsConfig['TCEFORM.'][self::CONTENT_TABLE . '.'][self::CONTENT_TYPE_FIELD . '.'] ?? [];
     }
 

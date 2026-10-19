@@ -73,6 +73,18 @@ class TcaService
         return $this->getItemsOfSelectField('tt_content', 'CType');
     }
 
+    /**
+     * Default value of a field as configured in the TCA, an empty string when there is none
+     */
+    public function getDefaultValue(string $table, string $fieldName): string
+    {
+        $schema = $this->getSchema($table);
+        if ($schema === null || $schema->hasField($fieldName) === false) {
+            return '';
+        }
+        return (string)$schema->getField($fieldName)->getDefaultValue();
+    }
+
     public function getPageTypeName(int $doktype): string
     {
         foreach ($this->getPageTypes() as $item) {

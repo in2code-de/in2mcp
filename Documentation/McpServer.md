@@ -162,6 +162,11 @@ Call `get_schema` with the `pageUid` of the page you are going to work on. `cont
 an editor can choose on that page: `addItems`, `keepItems` and `removeItems` are applied in the same order as the
 backend form does. Without `pageUid` the unrestricted list of the TCA is returned.
 
+`defaultContentType` is the type the backend preselects for a new element on that page: `TCAdefaults` of the page
+TSconfig, then of the user TSconfig, then the default of the TCA - the order in which the backend form
+initializes a new record. A default that is not available on the page is replaced by the first type that is.
+It is the type of choice when a client simply wants to put text on a page.
+
 ### Records inside other records
 
 An inline field - the pages of a form, the fields of such a page - is two things at once: its database column
