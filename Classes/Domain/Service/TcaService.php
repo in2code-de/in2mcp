@@ -326,6 +326,14 @@ class TcaService
         return $items;
     }
 
+    /**
+     * Translates a label that comes from outside the schema, for example from "addItems" of the page TSconfig
+     */
+    public function translateLabel(string $label): string
+    {
+        return $this->translate($label);
+    }
+
     private function getFieldLabel(FieldTypeInterface $field): string
     {
         $label = $field->getLabel();

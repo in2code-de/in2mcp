@@ -24,10 +24,10 @@ class CreateContentElementTool extends AbstractTool
 
     public function getDescription(): string
     {
-        return 'Creates a content element on a page. Call "get_schema" for the content element types of this'
-            . ' installation and read a comparable page with "get_page" to see which types and column positions'
-            . ' are used there. To put an element inside a container element, pass the uid of the container as'
-            . ' "containerParentUid" together with the column position of that container.';
+        return 'Creates a content element on a page. Call "get_schema" with the "pageUid" of the page for the'
+            . ' content element types an editor may choose there, and read a comparable page with "get_page" to see'
+            . ' which types and column positions are used. To put an element inside a container element, pass the'
+            . ' uid of the container as "containerParentUid" together with the column position of that container.';
     }
 
     public function getParameters(): array
@@ -40,7 +40,8 @@ class CreateContentElementTool extends AbstractTool
             ],
             'contentType' => [
                 'type' => 'string',
-                'description' => 'Type of the content element, for example "textmedia", "text" or "header"',
+                'description' => 'Type of the content element, for example "textmedia". Only types that'
+                    . ' "get_schema" lists for this page are available to editors here.',
                 'required' => true,
             ],
             'colPos' => [

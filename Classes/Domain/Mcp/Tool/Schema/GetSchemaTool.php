@@ -7,6 +7,7 @@ namespace In2code\In2mcp\Domain\Mcp\Tool\Schema;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\ContentRepository;
 use In2code\In2mcp\Domain\Repository\PageRepository;
+use In2code\In2mcp\Domain\Service\ContentTypeService;
 use In2code\In2mcp\Domain\Service\TableAccessService;
 use In2code\In2mcp\Domain\Service\TcaService;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
@@ -22,6 +23,8 @@ class GetSchemaTool extends AbstractTool
     public function __construct(
         private readonly TcaService $tcaService,
         private readonly TableAccessService $tableAccessService,
+        private readonly ContentTypeService $contentTypeService,
+        private readonly PageRepository $pageRepository,
     ) {
     }
 
@@ -35,7 +38,9 @@ class GetSchemaTool extends AbstractTool
         return 'Returns the page types, content element types and fields of this TYPO3 installation, plus the'
             . ' tables the connected backend user may write. Pass a table name to get the fields of that table,'
             . ' for example before using "create_record". Call this before writing records, because the'
-            . ' available types, tables and fields differ from installation to installation.';
+            . ' available types, tables and fields differ from installation to installation. Pass the uid of the'
+            . ' page you are going to work on as "pageUid": the content element types an editor may choose differ'
+            . ' from page to page, and only that list is valid for "create_content_element".';
     }
 
     public function getParameters(): array
@@ -47,6 +52,14 @@ class GetSchemaTool extends AbstractTool
                     . ' for example "tx_powermail_domain_model_form". Fields of type "file" can be filled with'
                     . ' "add_file_reference".',
                 'default' => '',
+            ],
+            'pageUid' => [
+                'type' => 'integer',
+                'description' => 'Optional uid of the page content elements are going to be created on. The content'
+                    . ' element types are then restricted by the page TSconfig of that page, exactly as an editor'
+                    . ' sees them in the backend. Without it every type registered in the installation is listed,'
+                    . ' including types this installation hides from its editors.',
+                'default' => 0,
             ],
             'withFields' => [
                 'type' => 'boolean',
@@ -73,9 +86,17 @@ class GetSchemaTool extends AbstractTool
             return $this->getTableSchema($table);
         }
 
+        $pageUid = $this->getIntArgument($arguments, 'pageUid');
+        if ($pageUid > 0 && $this->pageRepository->findByUid($pageUid) === null) {
+            throw new ToolExecutionException(
+                'There is no page with uid ' . $pageUid . ' or the backend user may not see it',
+                1756802000
+            );
+        }
+
         $schema = [
             'pageTypes' => $this->tcaService->getPageTypes(),
-            'contentTypes' => $this->tcaService->getContentTypes(),
+            'contentTypes' => $this->contentTypeService->getContentTypes($pageUid),
         ];
 
         if ((bool)$this->getArgument($arguments, 'withFields')) {

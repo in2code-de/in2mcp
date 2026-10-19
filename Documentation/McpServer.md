@@ -122,7 +122,7 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `get_page_tree`     | The page tree as a nested structure, rooted at the page mounts of the user      |
 | `get_page`          | One page with all fields plus its content elements grouped by column position   |
 | `search_pages`      | Pages by title, navigation title, subtitle or slug                              |
-| `get_schema`        | Page types, content element types, writable tables and the fields of a table    |
+| `get_schema`        | Page types, content element types of a page, writable tables and table fields   |
 | `get_record`        | One record of any table                                                         |
 | `find_records`      | Records of a table by page, by field values and by language                     |
 | `search_files`      | Files of the file abstraction layer by name, path or title                      |
@@ -149,6 +149,18 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 asks first does not have to guess field names - and unknown field names are rejected with a message that points
 back to `get_schema` instead of being dropped silently. Call it with a `table` to get the fields of that table
 before writing a record with `create_record`.
+
+### Content element types per page
+
+The TCA lists every content element type that is registered in the installation, but an integrator narrows that
+list per page with `TCEFORM.tt_content.CType` in the page TSconfig - often drastically, for example by removing
+the core types `text` or `header` in favour of a single `textmedia`. The backend form applies this configuration,
+the DataHandler does not, so a client that only knows the TCA list would create elements an editor could never
+have created.
+
+Call `get_schema` with the `pageUid` of the page you are going to work on. `contentTypes` then contains only what
+an editor can choose on that page: `addItems`, `keepItems` and `removeItems` are applied in the same order as the
+backend form does. Without `pageUid` the unrestricted list of the TCA is returned.
 
 ### Records inside other records
 
@@ -356,6 +368,7 @@ authentication resets the counter, so only failing requests count. Configurable 
 | `Service\DataHandlerService`   | The only place that writes - always through the DataHandler                     |
 | `Service\BackendUserService`   | Single point of access to the authenticated user and its permissions            |
 | `Service\TcaService`           | Answers what page types, content types and fields exist here (Schema API)       |
+| `Service\ContentTypeService`   | Restricts the content types to what the page TSconfig of a page allows          |
 | `Service\TableAccessService`   | Decides which tables may be read and written at all                             |
 | `Repository\RecordRepository`  | Reads records of any table                                                      |
 | `Repository\FileRepository`    | Reads files and the references that point at them                               |
