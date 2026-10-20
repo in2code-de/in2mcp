@@ -96,14 +96,15 @@ class TcaService
     }
 
     /**
-     * All fields of a record type with their type and label, so a client knows what it may write
+     * All fields of a table with their type and label, so a client knows what it may write. With a record type
+     * only the fields of that type are returned, with the "columnsOverrides" of the type applied.
      *
      * @return array<string, array{type: string, label: string, required: bool}>
      */
-    public function getFields(string $table): array
+    public function getFields(string $table, string $recordType = ''): array
     {
         $fields = [];
-        foreach ($this->getSchema($table)?->getFields() ?? [] as $field) {
+        foreach ($this->getSchemaOfRecordType($table, $recordType)?->getFields() ?? [] as $field) {
             if (in_array($field->getName(), self::IRRELEVANT_FIELDS, true)) {
                 continue;
             }
@@ -291,6 +292,38 @@ class TcaService
         return $schema->getCapability(TcaSchemaCapability::Language)->getLanguageField()->getName();
     }
 
+    /**
+     * Whether the table knows a record type with this value, for example "textmedia" for "tt_content"
+     */
+    public function hasRecordType(string $table, string $recordType): bool
+    {
+        return $recordType !== '' && $this->getSchema($table)?->hasSubSchema($recordType) === true;
+    }
+
+    /**
+     * Field that holds the record type of a table, for example "CType" of "tt_content". Null if there is none or
+     * if the type is taken from a field of a related record ("field:foreign_field"), which has no local value.
+     */
+    public function getRecordTypeField(string $table): ?string
+    {
+        $typeField = (string)($this->getSchema($table)?->getRawConfiguration()['type'] ?? '');
+        return $typeField !== '' && $this->isFieldOfTable($table, $typeField) ? $typeField : null;
+    }
+
+    /**
+     * Field object of a table, taken from the record type when one is given, so the "columnsOverrides" of that
+     * type apply. Null when the field does not exist or is not part of the record type.
+     */
+    public function getFieldDefinition(string $table, string $fieldName, string $recordType = ''): ?FieldTypeInterface
+    {
+        $field = null;
+        $schema = $this->getSchemaOfRecordType($table, $recordType);
+        if ($schema !== null && $schema->hasField($fieldName)) {
+            $field = $schema->getField($fieldName);
+        }
+        return $field;
+    }
+
     public function isSortingField(string $table, string $fieldName): bool
     {
         return $this->getSortingField($table) === $fieldName;
@@ -308,6 +341,19 @@ class TcaService
     private function getSchema(string $table): ?TcaSchema
     {
         return $this->tcaSchemaFactory->has($table) ? $this->tcaSchemaFactory->get($table) : null;
+    }
+
+    /**
+     * Schema of a record type of a table - the table itself when no record type is given, null when the table or
+     * the record type does not exist
+     */
+    private function getSchemaOfRecordType(string $table, string $recordType): ?TcaSchema
+    {
+        $schema = $this->getSchema($table);
+        if ($recordType !== '') {
+            $schema = $this->hasRecordType($table, $recordType) ? $schema?->getSubSchema($recordType) : null;
+        }
+        return $schema;
     }
 
     /**

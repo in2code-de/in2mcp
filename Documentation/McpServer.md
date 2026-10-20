@@ -122,7 +122,7 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `get_page_tree`     | The page tree as a nested structure, rooted at the page mounts of the user      |
 | `get_page`          | One page with all fields plus its content elements grouped by column position   |
 | `search_pages`      | Pages by title, navigation title, subtitle or slug                              |
-| `get_schema`        | Page types, content element types of a page, writable tables and table fields   |
+| `get_schema`        | Page types, content element types of a page, writable tables, fields and values |
 | `get_record`        | One record of any table                                                         |
 | `find_records`      | Records of a table by page, by field values and by language                     |
 | `search_files`      | Files of the file abstraction layer by name, path or title                      |
@@ -160,7 +160,8 @@ have created.
 
 Call `get_schema` with the `pageUid` of the page you are going to work on. `contentTypes` then contains only what
 an editor can choose on that page: `addItems`, `keepItems` and `removeItems` are applied in the same order as the
-backend form does. Without `pageUid` the unrestricted list of the TCA is returned.
+backend form does (`keepItems`, then `addItems`, then `removeItems`). Without `pageUid` the unrestricted list of
+the TCA is returned.
 
 `defaultContentType` is the type the backend preselects for a new element on that page: `TCAdefaults` of the page
 TSconfig, then of the user TSconfig, then the default of the TCA - the order in which the backend form
@@ -172,6 +173,48 @@ A content type that is not available on the page is refused, whichever tool writ
 hides such types, the DataHandler writes them anyway. The error lists the types that are available instead. Only
 a change of the type is checked, so an element whose type was hidden from editors after it was created stays
 editable, as it does in the backend form.
+
+### Values of select fields
+
+Every select, radio and multi checkbox field lists the values an editor can choose as `items`, so a client can
+write `imageorient`, `frame_class` or a select of its own extension without guessing:
+
+```json
+"imageorient": {
+    "type": "select",
+    "label": "Position and Alignment",
+    "required": false,
+    "items": [
+        {"value": 0, "label": "Above, center"},
+        {"value": 8, "label": "Below, center"},
+        {"value": 125, "label": "Next to text, centered right"}
+    ]
+}
+```
+
+The value is what is written, never the label. The values of a multi checkbox are the bits of the stored bitmask
+(1, 2, 4, ...) and are combined by adding them up. The values of `CType` and `doktype` are not repeated here, they
+are `contentTypes` and `pageTypes`. Select fields that point to records of another table (`foreign_table`) list
+no items - they hold records, not a fixed choice.
+
+The values are built the way the backend form builds them:
+
+1. the items of the TCA, with the `columnsOverrides` of the record type
+2. the `itemsProcFunc` of the field, called through the core `ItemProcessingService` with a new record of the
+   requested type on the requested page - a function that fails without a real backend form request falls back
+   to the items of the TCA
+3. `keepItems`, `addItems`, `removeItems` and `altLabels` of `TCEFORM.<table>.<field>` in the page TSconfig of
+   `pageUid`, with `TCEFORM.<table>.<field>.types.<recordType>` merged over it
+4. the `authMode` of the field for the backend user
+
+Labels are translated into the backend language of the user. A field that is switched off with
+`TCEFORM.<table>.<field>.disabled` on that page is marked `"disabled": true` and lists no items.
+
+Because the values often differ per content type - one type may offer other image positions than another - pass
+the type as `recordType`: `get_schema` with `"pageUid": 12, "recordType": "textmedia"` returns only the fields of
+`textmedia` with exactly the values an editor sees for such an element on page 12. `recordType` belongs to
+`table`; without `table` it is the content type of the `tt_content` fields. For `pages` it is the page type, for
+example `"1"`.
 
 ### Records inside other records
 
@@ -403,6 +446,8 @@ authentication resets the counter, so only failing requests count. Configurable 
 | `Service\BackendUserService`   | Single point of access to the authenticated user and its permissions            |
 | `Service\TcaService`           | Answers what page types, content types and fields exist here (Schema API)       |
 | `Service\ContentTypeService`   | Restricts the content types to what the page TSconfig of a page allows          |
+| `Service\FieldItemService`     | Values of select, radio and multi checkbox fields, as the backend form builds them |
+| `Service\TceFormService`       | Reads `TCEFORM` of the page TSconfig, including the part for a record type       |
 | `Service\TableAccessService`   | Decides which tables may be read and written at all                             |
 | `Repository\RecordRepository`  | Reads records of any table                                                      |
 | `Repository\FileRepository`    | Reads files and the references that point at them                               |

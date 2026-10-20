@@ -6,8 +6,6 @@ namespace In2code\In2mcp\Domain\Service;
 
 use In2code\In2mcp\Exception\ToolExecutionException;
 use In2code\In2mcp\Exception\UserNotFoundException;
-use TYPO3\CMS\Backend\Utility\BackendUtility;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Answers which content element types an editor can actually choose on a page.
@@ -18,8 +16,8 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  * DataHandler does not. A client that only knows the TCA list therefore creates elements an editor could never
  * have created, and TYPO3 accepts them without a word.
  *
- * The configuration is applied in the same order as the form engine does: "addItems" first, then "keepItems",
- * then "removeItems".
+ * The configuration is applied by FieldItemService, in the same order as the form engine does it: "keepItems",
+ * then "addItems", then "removeItems".
  */
 class ContentTypeService
 {
@@ -29,6 +27,8 @@ class ContentTypeService
     public function __construct(
         private readonly TcaService $tcaService,
         private readonly BackendUserService $backendUserService,
+        private readonly FieldItemService $fieldItemService,
+        private readonly TceFormService $tceFormService,
     ) {
     }
 
@@ -41,14 +41,18 @@ class ContentTypeService
     public function getContentTypes(int $pageUid): array
     {
         $contentTypes = $this->tcaService->getContentTypes();
-        if ($pageUid <= 0) {
-            return $contentTypes;
+        if ($pageUid > 0) {
+            $contentTypes = $this->fieldItemService->applyPageTsConfig(
+                $contentTypes,
+                $this->tceFormService->getFieldConfiguration(
+                    self::CONTENT_TABLE,
+                    self::CONTENT_TYPE_FIELD,
+                    $pageUid,
+                    ''
+                )
+            );
         }
-
-        $configuration = $this->getContentTypeConfiguration($pageUid);
-        $contentTypes = $this->addItems($contentTypes, $configuration['addItems.'] ?? []);
-        $contentTypes = $this->keepItems($contentTypes, (string)($configuration['keepItems'] ?? ''));
-        return $this->removeItems($contentTypes, (string)($configuration['removeItems'] ?? ''));
+        return $contentTypes;
     }
 
     /**
@@ -84,7 +88,7 @@ class ContentTypeService
     {
         $contentTypeValues = $this->getValues($this->getContentTypes($pageUid));
 
-        $defaultContentType = $this->getConfiguredDefault($this->getPageTsConfig($pageUid))
+        $defaultContentType = $this->getConfiguredDefault($this->tceFormService->getPageTsConfig($pageUid))
             ?? $this->getConfiguredDefault($this->backendUserService->getBackendUser()->getTSConfig())
             ?? $this->tcaService->getDefaultValue(self::CONTENT_TABLE, self::CONTENT_TYPE_FIELD);
 
@@ -101,70 +105,6 @@ class ContentTypeService
     {
         $default = $tsConfig['TCAdefaults.'][self::CONTENT_TABLE . '.'][self::CONTENT_TYPE_FIELD] ?? null;
         return is_scalar($default) && (string)$default !== '' ? (string)$default : null;
-    }
-
-    private function getPageTsConfig(int $pageUid): array
-    {
-        return $pageUid > 0 ? BackendUtility::getPagesTSconfig($pageUid) : [];
-    }
-
-    /**
-     * Configuration of "TCEFORM.tt_content.CType" for a page, with the trailing dots of TypoScript keys
-     */
-    private function getContentTypeConfiguration(int $pageUid): array
-    {
-        $pageTsConfig = $this->getPageTsConfig($pageUid);
-        return $pageTsConfig['TCEFORM.'][self::CONTENT_TABLE . '.'][self::CONTENT_TYPE_FIELD . '.'] ?? [];
-    }
-
-    /**
-     * @param array<array{value: int|string, label: string}> $contentTypes
-     * @param array<string, string> $addItems Value of the new type to its label
-     * @return array<array{value: int|string, label: string}>
-     */
-    private function addItems(array $contentTypes, array $addItems): array
-    {
-        foreach ($addItems as $value => $label) {
-            if (is_string($label) === false || in_array((string)$value, $this->getValues($contentTypes), true)) {
-                continue;
-            }
-            $contentTypes[] = [
-                'value' => (string)$value,
-                'label' => $this->tcaService->translateLabel($label),
-            ];
-        }
-        return $contentTypes;
-    }
-
-    /**
-     * @param array<array{value: int|string, label: string}> $contentTypes
-     * @return array<array{value: int|string, label: string}>
-     */
-    private function keepItems(array $contentTypes, string $keepItems): array
-    {
-        if (trim($keepItems) === '') {
-            return $contentTypes;
-        }
-
-        $keptValues = GeneralUtility::trimExplode(',', $keepItems, true);
-        return array_values(array_filter(
-            $contentTypes,
-            static fn(array $contentType): bool => in_array((string)$contentType['value'], $keptValues, true)
-        ));
-    }
-
-    /**
-     * @param array<array{value: int|string, label: string}> $contentTypes
-     * @return array<array{value: int|string, label: string}>
-     */
-    private function removeItems(array $contentTypes, string $removeItems): array
-    {
-        $removedValues = GeneralUtility::trimExplode(',', $removeItems, true);
-        return array_values(array_filter(
-            $contentTypes,
-            static fn(array $contentType): bool => in_array((string)$contentType['value'], $removedValues, true)
-                === false
-        ));
     }
 
     /**

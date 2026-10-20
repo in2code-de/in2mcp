@@ -57,7 +57,9 @@ Writing: `create_page`, `update_page`, `create_content_element`, `update_content
 
 Pages and content elements have their own tools; `create_record` and `update_record` cover every other table the
 backend user may write, for example a form or a news entry. `search_files` finds files that already exist and
-`add_file_reference` connects one to a file field. `add_file_from_url` brings a new file in - it is **off by
+`add_file_reference` connects one to a file field - with title, alternative text, caption or link of the new
+reference in the same call. `get_schema` lists the allowed values of select fields, restricted by the page
+TSconfig of a page and by a record type (for example the content type). `add_file_from_url` brings a new file in - it is **off by
 default**, because it makes the server perform an outgoing request that a client decides on.
 
 ## Permissions
