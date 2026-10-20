@@ -38,7 +38,9 @@ class AddFileReferenceTool extends AbstractTool
     {
         return 'Adds an existing file to a file field of a record, for example the image of a content element'
             . ' or the social media image of a page. Find the file uid with "search_files" first. Existing'
-            . ' files of the field are kept, the new one is appended.';
+            . ' files of the field are kept, the new one is appended. Pass "fields" to describe the file in this'
+            . ' place right away, for example its title, alternative text, description (caption) or link - they'
+            . ' are written together with the reference, no "update_record" is needed afterwards.';
     }
 
     public function getParameters(): array
@@ -65,6 +67,16 @@ class AddFileReferenceTool extends AbstractTool
                     . ' "get_schema" with the table to see which fields are of type "file".',
                 'required' => true,
             ],
+            'fields' => [
+                'type' => 'object',
+                'description' => 'Optional fields of the new file reference, for example {"title": "...",'
+                    . ' "alternative": "...", "description": "...", "link": "t3://page?uid=1"}. An empty value'
+                    . ' falls back to the metadata of the file. Call "get_schema" with "sys_file_reference" to see'
+                    . ' all fields. Unknown fields are reported instead of ignored; the fields that connect the'
+                    . ' reference to the file and the record (uid_local, uid_foreign, tablenames, fieldname, pid,'
+                    . ' ...) can not be set.',
+                'default' => [],
+            ],
         ];
     }
 
@@ -81,6 +93,7 @@ class AddFileReferenceTool extends AbstractTool
         $table = $this->getStringArgument($arguments, 'table');
         $uid = $this->getIntArgument($arguments, 'uid');
         $fieldName = $this->getStringArgument($arguments, 'fieldName');
+        $fields = $this->getArrayArgument($arguments, 'fields');
 
         // The DataHandler refuses a file outside the file mounts as well, but a lookup that already respects
         // them keeps the answer from confirming that a file with this uid exists somewhere else.
@@ -109,10 +122,11 @@ class AddFileReferenceTool extends AbstractTool
             $table,
             $uid,
             $fieldName,
-            (int)($record['pid'] ?? 0)
+            (int)($record['pid'] ?? 0),
+            $fields
         );
 
-        return [
+        $result = [
             'added' => true,
             'fileReferenceUid' => $referenceUid,
             'file' => $file,
@@ -120,5 +134,10 @@ class AddFileReferenceTool extends AbstractTool
             'uid' => $uid,
             'fieldName' => $fieldName,
         ];
+        if ($fields !== []) {
+            $result['fields'] = $fields;
+        }
+
+        return $result;
     }
 }

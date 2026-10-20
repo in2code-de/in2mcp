@@ -217,6 +217,29 @@ behind the container itself, never at the top of the page.
 `add_file_reference` needs. Existing files of a field are kept, a new one is appended. Which fields accept a file
 is visible in `get_schema` as fields of type `file`.
 
+`add_file_reference` takes optional `fields` of the new `sys_file_reference`, which are written in the same
+DataHandler run as the reference itself - no `update_record` afterwards:
+
+```json
+{
+    "fileUid": 42,
+    "table": "tt_content",
+    "uid": 815,
+    "fieldName": "assets",
+    "fields": {
+        "title": "Laboratory",
+        "alternative": "Researcher at a microscope",
+        "description": "Our laboratory in Neuherberg",
+        "link": "t3://page?uid=12"
+    }
+}
+```
+
+Unknown fields are reported instead of ignored, and fields the backend user may not write are refused, as with
+`update_record`. The fields that connect the reference to the file and the record - `uid_local`, `table_local`,
+`uid_foreign`, `tablenames`, `fieldname`, `sorting_foreign`, `pid`, the language and workspace fields - are set
+by TYPO3 and cannot be given.
+
 `add_file_from_url` brings a file that is not here yet into the storage. It is **switched off by default**: the
 server, not the client, performs the download, so this has to be a decision of the installation.
 

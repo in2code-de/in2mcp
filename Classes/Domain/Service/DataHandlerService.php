@@ -29,6 +29,28 @@ class DataHandlerService
     public const NEW_RECORD_PLACEHOLDER = 'NEWin2mcp';
 
     private const FILE_REFERENCE_TABLE = 'sys_file_reference';
+
+    /**
+     * Fields of a file reference that describe the file and the record it belongs to. They are set by this
+     * service or derived by the DataHandler, a value from a client would disconnect or misplace the reference.
+     */
+    private const FILE_REFERENCE_PROTECTED_FIELDS = [
+        'uid',
+        'pid',
+        'uid_local',
+        'table_local',
+        'uid_foreign',
+        'tablenames',
+        'fieldname',
+        'sorting_foreign',
+        'sys_language_uid',
+        'l10n_parent',
+        'l10n_diffsource',
+        't3ver_oid',
+        't3ver_wsid',
+        't3ver_state',
+        't3ver_stage',
+    ];
     private const CONTENT_TYPE_FIELD = 'CType';
 
     public function __construct(
@@ -239,6 +261,10 @@ class DataHandlerService
      * holds the list of its references and has to be written together with the new reference. Existing
      * references are kept, so a second file is appended instead of replacing the first one.
      *
+     * Fields like "title", "alternative", "description" or "link" of the new reference are written in the same run,
+     * so a client does not need a second call to describe the file in its context.
+     *
+     * @param array<string, mixed> $fields Fields of the new sys_file_reference
      * @return int Uid of the created file reference
      * @throws DataHandlerException
      * @throws Exception
@@ -246,10 +272,22 @@ class DataHandlerService
      * @throws ToolExecutionException
      * @throws UserNotFoundException
      */
-    public function addFileReference(int $fileUid, string $table, int $uid, string $fieldName, int $pid): int
-    {
+    public function addFileReference(
+        int $fileUid,
+        string $table,
+        int $uid,
+        string $fieldName,
+        int $pid,
+        array $fields = []
+    ): int {
         $this->tableAccessService->assertWritable($table);
         $this->assertKnownFields($table, [$fieldName => '']);
+        if ($fields !== []) {
+            $this->assertUnprotectedFileReferenceFields($fields);
+            $this->assertKnownFields(self::FILE_REFERENCE_TABLE, $fields);
+            $this->assertPermittedFields(self::FILE_REFERENCE_TABLE, $fields);
+            $this->assertWritableValues(self::FILE_REFERENCE_TABLE, $fields, 0);
+        }
 
         $references = $this->fileRepository->findReferenceUids($table, $uid, $fieldName);
         $references[] = self::NEW_RECORD_PLACEHOLDER;
@@ -262,11 +300,11 @@ class DataHandlerService
                 $uid => [$fieldName => implode(',', $references)],
             ],
             self::FILE_REFERENCE_TABLE => [
-                self::NEW_RECORD_PLACEHOLDER => [
+                self::NEW_RECORD_PLACEHOLDER => array_replace($fields, [
                     'table_local' => 'sys_file',
                     'uid_local' => $fileUid,
                     'pid' => $pid,
-                ],
+                ]),
             ],
         ]);
 
@@ -393,6 +431,25 @@ class DataHandlerService
                 'The backend user is not allowed to write the language field "' . $languageField . '" of "'
                 . $table . '", so the record can not be translated. Nothing was written.',
                 1756801606
+            );
+        }
+    }
+
+    /**
+     * @throws ToolExecutionException
+     */
+    private function assertUnprotectedFileReferenceFields(array $fields): void
+    {
+        $protectedFields = array_intersect(
+            array_map('strval', array_keys($fields)),
+            self::FILE_REFERENCE_PROTECTED_FIELDS
+        );
+
+        if ($protectedFields !== []) {
+            throw new ToolExecutionException(
+                'The fields ' . implode(', ', $protectedFields) . ' of a file reference are set by TYPO3 from the'
+                . ' file and the record it is added to, they can not be given. Nothing was written.',
+                1756801018
             );
         }
     }
