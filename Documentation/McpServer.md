@@ -299,7 +299,8 @@ What the import refuses, in this order:
 2. hosts outside `fileImportAllowedHosts`, when that list is filled
 3. hosts that resolve to a local, private, link local or carrier grade NAT address - **every** address a host
    resolves to has to be public, and every redirect hop is validated again, so a public url cannot redirect the
-   server into the internal network
+   server into the internal network. An IPv6 address that carries an IPv4 address (IPv4-mapped `::ffff:0:0/96`,
+   IPv4-compatible, 6to4 and NAT64) is judged by that IPv4 address, Teredo and NAT64 for local use are refused
 4. more than three redirects, and relative redirect targets
 5. a `Content-Length` above the maximum, and a body that exceeds it while streaming
 6. file names with a path in them, and names the `fileDenyPattern` of the installation rejects

@@ -41,6 +41,9 @@ final class UrlValidationServiceTest extends UnitTestCase
             'uppercase scheme' => ['HTTPS://1.1.1.1/image.jpg'],
             'ipv6' => ['https://[2606:4700:4700::1111]/image.jpg'],
             'just outside carrier grade nat' => ['https://100.128.0.1/image.jpg'],
+            'ipv4-mapped public address' => ['https://[::ffff:1.1.1.1]/image.jpg'],
+            'nat64 of public address' => ['https://[64:ff9b::101:101]/image.jpg'],
+            '6to4 of public address' => ['https://[2002:101:101::1]/image.jpg'],
         ];
     }
 
@@ -104,6 +107,18 @@ final class UrlValidationServiceTest extends UnitTestCase
             'ipv6 loopback' => ['http://[::1]/'],
             'ipv6 unique local' => ['http://[fd00::1]/'],
             'ipv6 link local' => ['http://[fe80::1]/'],
+            'ipv4-mapped loopback' => ['http://[::ffff:127.0.0.1]/'],
+            'ipv4-mapped loopback in hex' => ['http://[::ffff:7f00:1]/'],
+            'ipv4-mapped private' => ['http://[::ffff:10.0.0.1]/'],
+            'ipv4-mapped cloud metadata' => ['http://[::ffff:169.254.169.254]/latest/meta-data/'],
+            'ipv4-mapped carrier grade nat' => ['http://[::ffff:100.64.0.1]/'],
+            'ipv4-compatible loopback' => ['http://[::127.0.0.1]/'],
+            '6to4 of loopback' => ['http://[2002:7f00:1::]/'],
+            '6to4 of private' => ['http://[2002:c0a8:101::1]/'],
+            'nat64 of loopback' => ['http://[64:ff9b::7f00:1]/'],
+            'nat64 of cloud metadata' => ['http://[64:ff9b::a9fe:a9fe]/'],
+            'nat64 for local use' => ['http://[64:ff9b:1::101:101]/'],
+            'teredo' => ['http://[2001:0:4136:e378:8000:63bf:3fff:fdd2]/'],
         ];
     }
 

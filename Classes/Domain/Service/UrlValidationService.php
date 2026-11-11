@@ -23,6 +23,31 @@ class UrlValidationService
      */
     private const CARRIER_GRADE_NAT = ['100.64.0.0', '100.127.255.255'];
 
+    /**
+     * IPv6 prefixes in hex that end with an IPv4 address: IPv4-mapped (::ffff:0:0/96), IPv4-compatible (::/96)
+     * and the NAT64 well known prefix (64:ff9b::/96)
+     */
+    private const IPV4_AT_END_PREFIXES = [
+        '00000000000000000000ffff',
+        '000000000000000000000000',
+        '0064ff9b0000000000000000',
+    ];
+
+    /**
+     * 6to4 (2002::/16) carries the IPv4 address right after the prefix
+     */
+    private const SIX_TO_FOUR_PREFIX = '2002';
+
+    private const IPV4_HEX_LENGTH = 8;
+
+    /**
+     * Teredo (2001::/32) hides its IPv4 address, NAT64 for local use (64:ff9b:1::/48) leads into a local network
+     */
+    private const REFUSED_IPV6_PREFIXES = [
+        '20010000',
+        '0064ff9b0001',
+    ];
+
     public function __construct(private readonly ConfigurationService $configurationService)
     {
     }
@@ -122,13 +147,51 @@ class UrlValidationService
             $address,
             FILTER_VALIDATE_IP,
             FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
-        ) !== false;
+        ) !== false
+            && $this->isCarrierGradeNat($address) === false
+            && $this->isRefusedTunnelAddress($address) === false;
 
-        if ($isPublic === false) {
-            return false;
+        $embeddedIpv4Address = $this->getEmbeddedIpv4Address($address);
+        if ($isPublic && $embeddedIpv4Address !== null) {
+            $isPublic = $this->isPublicAddress($embeddedIpv4Address);
         }
 
-        return $this->isCarrierGradeNat($address) === false;
+        return $isPublic;
+    }
+
+    /**
+     * The PHP filter flags take "::ffff:127.0.0.1", "2002:7f00:1::" or "64:ff9b::a9fe:a9fe" for public addresses,
+     * while a connection to them ends at the IPv4 address they carry.
+     */
+    private function getEmbeddedIpv4Address(string $address): ?string
+    {
+        $hexAddress = $this->getIpv6Hex($address);
+        $ipv4Hex = null;
+        foreach (self::IPV4_AT_END_PREFIXES as $prefix) {
+            if ($hexAddress !== null && str_starts_with($hexAddress, $prefix)) {
+                $ipv4Hex = substr($hexAddress, -self::IPV4_HEX_LENGTH);
+            }
+        }
+        if ($hexAddress !== null && str_starts_with($hexAddress, self::SIX_TO_FOUR_PREFIX)) {
+            $ipv4Hex = substr($hexAddress, strlen(self::SIX_TO_FOUR_PREFIX), self::IPV4_HEX_LENGTH);
+        }
+
+        return $ipv4Hex === null ? null : (string)inet_ntop((string)hex2bin($ipv4Hex));
+    }
+
+    private function isRefusedTunnelAddress(string $address): bool
+    {
+        $hexAddress = $this->getIpv6Hex($address);
+        return $hexAddress !== null && array_filter(
+            self::REFUSED_IPV6_PREFIXES,
+            static fn(string $prefix): bool => str_starts_with($hexAddress, $prefix)
+        ) !== [];
+    }
+
+    private function getIpv6Hex(string $address): ?string
+    {
+        $isIpv6 = filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false;
+        return $isIpv6 ? bin2hex((string)inet_pton($address)) : null;
     }
 
     private function isCarrierGradeNat(string $address): bool
