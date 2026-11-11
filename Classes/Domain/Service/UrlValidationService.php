@@ -141,27 +141,23 @@ class UrlValidationService
         return $addresses;
     }
 
+    /**
+     * An address that carries an IPv4 address is judged by that address alone - the PHP filter flags take
+     * "::ffff:127.0.0.1" for public up to PHP 8.3 and refuse the whole range from PHP 8.4 on.
+     */
     private function isPublicAddress(string $address): bool
     {
-        $isPublic = filter_var(
-            $address,
-            FILTER_VALIDATE_IP,
-            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
-        ) !== false
-            && $this->isCarrierGradeNat($address) === false
-            && $this->isRefusedTunnelAddress($address) === false;
-
         $embeddedIpv4Address = $this->getEmbeddedIpv4Address($address);
-        if ($isPublic && $embeddedIpv4Address !== null) {
-            $isPublic = $this->isPublicAddress($embeddedIpv4Address);
-        }
 
-        return $isPublic;
+        return $embeddedIpv4Address !== null
+            ? $this->isPublicAddress($embeddedIpv4Address)
+            : filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false
+                && $this->isCarrierGradeNat($address) === false
+                && $this->isRefusedTunnelAddress($address) === false;
     }
 
     /**
-     * The PHP filter flags take "::ffff:127.0.0.1", "2002:7f00:1::" or "64:ff9b::a9fe:a9fe" for public addresses,
-     * while a connection to them ends at the IPv4 address they carry.
+     * A connection to "::ffff:127.0.0.1", "2002:7f00:1::" or "64:ff9b::a9fe:a9fe" ends at the IPv4 address they carry
      */
     private function getEmbeddedIpv4Address(string $address): ?string
     {
