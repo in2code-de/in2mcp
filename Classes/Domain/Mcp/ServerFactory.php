@@ -7,7 +7,7 @@ namespace In2code\In2mcp\Domain\Mcp;
 use In2code\In2mcp\Domain\Mcp\Converter\McpToolSchemaConverter;
 use In2code\In2mcp\Domain\Mcp\Executer\ToolExecuter;
 use In2code\In2mcp\Domain\Mcp\Tool\ToolRegistry;
-use Mcp\Server;
+use Mcp\Server\Server;
 use Mcp\Server\Session\FileSessionStore;
 use Psr\Log\LoggerInterface;
 use TYPO3\CMS\Core\Core\Environment;

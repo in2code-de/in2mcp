@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Mcp\Executer;
 
 use In2code\In2mcp\Domain\Mcp\Tool\ToolInterface;
-use Mcp\Capability\Formatter\ToolResultFormatter;
 use Mcp\Schema\Result\CallToolResult;
+use Mcp\Server\Capability\Formatter\ToolResultFormatter;
 use Mcp\Server\ClientGateway;
 use Mcp\Server\Handler\ToolHandlerInterface;
+use stdClass;
 use Throwable;
 
 class ToolExecuter implements ToolHandlerInterface
@@ -20,7 +21,7 @@ class ToolExecuter implements ToolHandlerInterface
     public function execute(array $arguments, ClientGateway $gateway): CallToolResult
     {
         try {
-            $result = $this->tool->execute($arguments);
+            $result = $this->tool->execute($this->convertObjectsToArrays($arguments));
         } catch (Throwable $exception) {
             // The client is the addressee of a tool error, so it is returned as an error result instead of
             // letting the request fail with a protocol error.
@@ -34,6 +35,18 @@ class ToolExecuter implements ToolHandlerInterface
             (new ToolResultFormatter())->format($result),
             structuredContent: $this->getStructuredContent($result)
         );
+    }
+
+    // The sdk keeps the json types of the arguments (nested objects are \stdClass), the tools expect arrays
+    protected function convertObjectsToArrays(mixed $value): mixed
+    {
+        if ($value instanceof stdClass) {
+            $value = get_object_vars($value);
+        }
+        if (is_array($value)) {
+            $value = array_map(fn (mixed $item): mixed => $this->convertObjectsToArrays($item), $value);
+        }
+        return $value;
     }
 
     /**

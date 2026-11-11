@@ -65,6 +65,11 @@ class McpServer implements MiddlewareInterface
         try {
             $backendUserAuthentication = $this->backendUserAuthenticator->authenticate($request);
             $rateLimiter->reset();
+            // Binds the MCP session to the backend user, so its session id is worthless with the key of another user
+            $request = $request->withAttribute(
+                StreamableHttpTransport::PRINCIPAL_ATTRIBUTE,
+                'be_users:' . $backendUserAuthentication->getUserId()
+            );
             return $this->serverFactory->get()->run($this->getTransport($request));
         } catch (UserNotFoundException $exception) {
             $this->logger->warning($exception->getMessage());
