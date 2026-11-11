@@ -36,6 +36,14 @@ class TableAccessService
         'sys_lockedrecords',
     ];
 
+    /**
+     * Readable, but changed only through the file abstraction layer: the DataHandler would remove the record and
+     * leave the file in the storage and its references behind. "delete_file" is the way to delete a file.
+     */
+    private const READ_ONLY_TABLES = [
+        'sys_file',
+    ];
+
     public function __construct(
         private readonly BackendUserService $backendUserService,
         private readonly TcaSchemaFactory $tcaSchemaFactory
@@ -66,6 +74,7 @@ class TableAccessService
     public function assertWritable(string $table): void
     {
         $this->assertNotDenied($table);
+        $this->assertNotReadOnly($table);
         $this->assertConfigured($table);
 
         if ($this->backendUserService->isTableModifyAllowed($table) === false) {
@@ -86,7 +95,7 @@ class TableAccessService
     {
         $tables = [];
         foreach ($this->tcaSchemaFactory->all()->getNames() as $table) {
-            if (in_array($table, self::DENIED_TABLES, true)) {
+            if (in_array($table, [...self::DENIED_TABLES, ...self::READ_ONLY_TABLES], true)) {
                 continue;
             }
             if ($this->backendUserService->isTableModifyAllowed($table)) {
@@ -127,6 +136,20 @@ class TableAccessService
                 'The table "' . $table . '" holds authentication or bookkeeping data and is never accessible'
                 . ' through MCP, independent of the permissions of the backend user',
                 1756801012
+            );
+        }
+    }
+
+    /**
+     * @throws TableNotAccessibleException
+     */
+    private function assertNotReadOnly(string $table): void
+    {
+        if (in_array($table, self::READ_ONLY_TABLES, true)) {
+            throw new TableNotAccessibleException(
+                'Records of the table "' . $table . '" are not written through MCP, because the file in the'
+                . ' storage would stay behind. Use "delete_file" to delete a file.',
+                1756802216
             );
         }
     }

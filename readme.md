@@ -53,14 +53,15 @@ Reading: `get_backend_user`, `get_page_tree`, `get_page`, `search_pages`, `get_s
 
 Writing: `create_page`, `update_page`, `create_content_element`, `update_content_element`, `create_record`,
 `update_record`, `add_child_record`, `localize_record`, `add_file_from_url`, `add_file_reference`,
-`delete_record`, `move_record`, `clear_cache`
+`delete_file`, `delete_record`, `move_record`, `clear_cache`
 
 Pages and content elements have their own tools; `create_record` and `update_record` cover every other table the
 backend user may write, for example a form or a news entry. `search_files` finds files that already exist and
 `add_file_reference` connects one to a file field - with title, alternative text, caption or link of the new
 reference in the same call. `get_schema` lists the allowed values of select fields, restricted by the page
 TSconfig of a page and by a record type (for example the content type). `add_file_from_url` brings a new file in - it is **off by
-default**, because it makes the server perform an outgoing request that a client decides on.
+default**, because it makes the server perform an outgoing request that a client decides on. `delete_file` deletes a
+file through the file storage, but only one that no record uses anymore.
 
 ## Permissions
 

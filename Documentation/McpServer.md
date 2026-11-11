@@ -142,6 +142,7 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `update_record`          | Change fields of a record of any table                           |
 | `add_file_from_url`      | Download a file from a public url into the file storage           |
 | `add_file_reference`     | Connect an existing file to a file field of a record             |
+| `delete_file`            | Delete a file that is not used anymore, through the file storage |
 | `delete_record`          | Delete a record of any table (recoverable)                       |
 | `move_record`            | Move a record, including into another column or container        |
 
@@ -309,6 +310,25 @@ flag of the storage, the `fileDenyPattern` again and the file name sanitizing of
 the same name is never overwritten, the new one is renamed. The import is written to the file section of
 `sys_log`, next to the uploads of the backend, and a refused url is logged there as a security notice.
 
+`delete_file` deletes a file through `ResourceStorage::deleteFile()`, which checks what the backend checks: the
+file operation permissions of the user, the **file mounts** and the `fileDenyPattern`. A file outside the file
+mounts is reported as not found. If the storage has a recycler folder (`_recycler_`), the file is moved there
+instead of being deleted, and the answer says so with `movedToRecycler`.
+
+A file that is **still used** is not deleted, like in the filelist module. The usages come from the reference
+index - file fields as well as links in text fields like `t3://file?uid=42` - and the refusal lists them:
+
+```
+The file "stage.jpg" is still used and was not deleted: tt_content:815 field assets via sys_file_reference:4711
+```
+
+A client removes the usages first - a `sys_file_reference` with `delete_record`, a link by changing the text -
+and calls `delete_file` again. The deletion is written to the file section of `sys_log`.
+
+`sys_file` itself is **read only** for the record tools: `create_record`, `update_record` and `delete_record`
+refuse it, because the DataHandler would remove the record and leave the file in the storage and its references
+behind. `delete_file` is the way to delete a file.
+
 ---
 
 ## Security
@@ -395,8 +415,8 @@ in a regular backend request, and every read and write runs through the regular 
 - **Files** follow the **file mounts** of the user, not the table permissions of `sys_file`. An editor browses
   files in the filelist module without that table ever appearing in `tables_select`, so using it as the gate
   would either lock every editor out or, once an integrator adds it, hand out the file inventory of the whole
-  installation. `search_files` and `add_file_reference` therefore restrict themselves to the file mounts; an
-  administrator sees everything, a user without a mount sees nothing.
+  installation. `search_files`, `add_file_reference` and `delete_file` therefore restrict themselves to the file
+  mounts; an administrator sees everything, a user without a mount sees nothing.
 - **Clearing the cache** of a single page needs that page to be in a page mount. The DataHandler itself checks
   nothing there - any uid clears any page - so in2mcp answers that question. Flushing the whole page cache or
   every cache follows `options.clearCache.pages` and `options.clearCache.all` of the user TSconfig, and a
@@ -406,6 +426,8 @@ in a regular backend request, and every read and write runs through the regular 
   `sys_log`, `sys_refindex`, `sys_registry`, `sys_file_processedfile` and `sys_lockedrecords`. This is the one
   deliberate deviation from "the client may do what the user may do": an api key that leaked must not be able to
   create a backend user. The list is `TableAccessService::DENIED_TABLES`.
+- `sys_file` can be read, but not written with the record tools - a file is deleted with `delete_file`, which
+  goes through the file storage. The list is `TableAccessService::READ_ONLY_TABLES`.
 
 Everything else follows `tables_modify` of the backend user, so `get_schema` reports the writable tables of
 exactly this connection.

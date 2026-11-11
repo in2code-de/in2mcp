@@ -18,6 +18,8 @@ readonly class FileRepository
 {
     public const TABLE_NAME = 'sys_file';
     public const REFERENCE_TABLE_NAME = 'sys_file_reference';
+    private const METADATA_TABLE_NAME = 'sys_file_metadata';
+    private const REFERENCE_INDEX_TABLE_NAME = 'sys_refindex';
 
     private const DEFAULT_LIMIT = 25;
     private const MAXIMUM_LIMIT = 200;
@@ -187,6 +189,103 @@ readonly class FileRepository
             ->fetchFirstColumn();
 
         return array_map('intval', $references);
+    }
+
+    /**
+     * Records that still use a file, checked the same way as the filelist module does before a deletion: the
+     * reference index without the metadata of the file itself. A file reference is resolved to the record it
+     * belongs to and keeps its own uid, so a client can remove it. A reference or a record that does not exist
+     * anymore is no usage.
+     *
+     * @return array<int, array{table: string, uid: int, field: string, reference: int}>
+     * @throws Exception
+     */
+    public function findUsages(int $fileUid): array
+    {
+        $usages = [];
+        foreach ($this->findReferenceIndexEntries($fileUid) as $entry) {
+            $usage = $entry['tablename'] === self::REFERENCE_TABLE_NAME
+                ? $this->findUsageOfFileReference((int)$entry['recuid'])
+                : [
+                    'table' => (string)$entry['tablename'],
+                    'uid' => (int)$entry['recuid'],
+                    'field' => (string)$entry['field'],
+                    'reference' => 0,
+                ];
+
+            if ($usage !== null && $this->isRecordExisting($usage['table'], $usage['uid'])) {
+                $usages[] = $usage;
+            }
+        }
+        return $usages;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     * @throws Exception
+     */
+    private function findReferenceIndexEntries(int $fileUid): array
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::REFERENCE_INDEX_TABLE_NAME);
+
+        return $queryBuilder
+            ->select('tablename', 'recuid', 'field')
+            ->from(self::REFERENCE_INDEX_TABLE_NAME)
+            ->where(
+                $queryBuilder->expr()->eq('ref_table', $queryBuilder->createNamedParameter(self::TABLE_NAME)),
+                $queryBuilder->expr()->eq(
+                    'ref_uid',
+                    $queryBuilder->createNamedParameter($fileUid, Connection::PARAM_INT)
+                ),
+                $queryBuilder->expr()->neq('tablename', $queryBuilder->createNamedParameter(self::METADATA_TABLE_NAME))
+            )
+            ->executeQuery()
+            ->fetchAllAssociative();
+    }
+
+    /**
+     * @return array{table: string, uid: int, field: string, reference: int}|null
+     * @throws Exception
+     */
+    private function findUsageOfFileReference(int $referenceUid): ?array
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::REFERENCE_TABLE_NAME);
+        $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
+
+        $reference = $queryBuilder
+            ->select('tablenames', 'uid_foreign', 'fieldname')
+            ->from(self::REFERENCE_TABLE_NAME)
+            ->where(
+                $queryBuilder->expr()->eq(
+                    'uid',
+                    $queryBuilder->createNamedParameter($referenceUid, Connection::PARAM_INT)
+                )
+            )
+            ->executeQuery()
+            ->fetchAssociative();
+
+        return $reference === false ? null : [
+            'table' => (string)$reference['tablenames'],
+            'uid' => (int)$reference['uid_foreign'],
+            'field' => (string)$reference['fieldname'],
+            'reference' => $referenceUid,
+        ];
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function isRecordExisting(string $table, int $uid): bool
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
+        $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
+
+        return $queryBuilder
+            ->count('uid')
+            ->from($table)
+            ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, Connection::PARAM_INT)))
+            ->executeQuery()
+            ->fetchOne() > 0;
     }
 
     private function getLimit(int $limit): int
