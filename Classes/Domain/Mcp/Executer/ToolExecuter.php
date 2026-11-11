@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Mcp\Executer;
 
 use In2code\In2mcp\Domain\Mcp\Tool\ToolInterface;
+use Mcp\Schema\Enum\StructuredContent;
 use Mcp\Schema\Result\CallToolResult;
 use Mcp\Server\Capability\Formatter\ToolResultFormatter;
 use Mcp\Server\ClientGateway;
@@ -53,10 +54,10 @@ class ToolExecuter implements ToolHandlerInterface
      * The structured content of a tool result must be an object, while many tools return a list of records. Such
      * a list is wrapped into an object, everything that is not an array has no structure at all.
      */
-    protected function getStructuredContent(mixed $result): ?array
+    protected function getStructuredContent(mixed $result): array|StructuredContent
     {
         if (is_array($result) === false) {
-            return null;
+            return StructuredContent::Absent;
         }
 
         if (array_is_list($result)) {
