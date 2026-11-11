@@ -43,7 +43,8 @@
 		"typo3/cms-seo": "^13.4 || ^14.3",
 		"typo3/cms-setup": "^13.4 || ^14.3",
 		"typo3/cms-t3editor": "^13.4 || ^14.3",
-		"typo3/cms-tstemplate": "^13.4 || ^14.3"
+		"typo3/cms-tstemplate": "^13.4 || ^14.3",
+		"typo3/testing-framework": "^9.0"
 	},
 	"replace": {
 		"typo3-ter/in2mcp": "self.version"
@@ -51,6 +52,11 @@
 	"autoload": {
 		"psr-4": {
 			"In2code\\In2mcp\\": "Classes/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"In2code\\In2mcp\\Tests\\": "Tests/"
 		}
 	},
 	"funding": [
@@ -63,6 +69,9 @@
 			"url": "https://github.com/orgs/in2code-de/sponsoring"
 		}
 	],
+	"scripts": {
+		"test:unit": "phpunit -c phpunit.xml.dist"
+	},
 	"extra": {
 		"typo3/cms": {
 			"cms-package-dir": "{$vendor-dir}/typo3/cms",
