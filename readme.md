@@ -140,6 +140,7 @@ ddev createfilesarchive                     # update .ddev/data/fileadmin.tar.gz
 
 | Version | Date       | Description                                                                                                                        |
 |---------|------------|------------------------------------------------------------------------------------------------------------------------------------|
+| 2.4.1   | 2026-11-11 | Security: update mcp/sdk to 0.10 (PKSA-s52d-n7sx-trsg), bind MCP sessions to the backend user                                      |
 | 2.4.0   | 2026-10-20 | Allowed values of select fields in get_schema (per page and record type), set fields of a new file reference in add_file_reference |
 | 2.3.0   | 2026-10-20 | Report allowed content elements per page in get_schema, some bugfixes to show usefull messages for permission problems             |
 | 2.2.0   | 2026-09-04 | Security: authenticate a request by its api key only, never by a backend session                                                   |
