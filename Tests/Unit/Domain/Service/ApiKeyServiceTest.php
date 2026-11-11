@@ -8,56 +8,43 @@ use In2code\In2mcp\Domain\Repository\BackendUserRepository;
 use In2code\In2mcp\Domain\Service\ApiKeyService;
 use In2code\In2mcp\Exception\UserNotFoundException;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
 use TYPO3\CMS\Core\Crypto\PasswordHashing\PasswordHashFactory;
 use TYPO3\CMS\Core\Crypto\PasswordHashing\PasswordHashInterface;
 use TYPO3\TestingFramework\Core\Unit\UnitTestCase;
 
 final class ApiKeyServiceTest extends UnitTestCase
 {
-    private BackendUserRepository&MockObject $backendUserRepository;
-    private ApiKeyService $subject;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->backendUserRepository = $this->createMock(BackendUserRepository::class);
-
-        $hashInstance = $this->createMock(PasswordHashInterface::class);
-        $hashInstance->method('getHashedPassword')->willReturnCallback(
-            static fn(string $secret): string => 'hash:' . $secret
-        );
-        $passwordHashFactory = $this->createMock(PasswordHashFactory::class);
-        $passwordHashFactory->method('getDefaultHashInstance')->with('BE')->willReturn($hashInstance);
-
-        $this->subject = new ApiKeyService($this->backendUserRepository, $passwordHashFactory);
-    }
+    private const BACKEND_HASH_MODE = 'BE';
 
     #[Test]
-    public function createApiKeyStoresOnlyHashOfSecretAndReturnsKeyWithUserUid(): void
+    public function createApiKeyStoresOnlyBackendHashOfSecretAndReturnsKeyWithUserUid(): void
     {
-        $this->backendUserRepository->method('findByUidOrUsername')->with('editor')->willReturn(['uid' => 7]);
+        $backendUserRepository = $this->createMock(BackendUserRepository::class);
+        $backendUserRepository->expects(self::once())
+            ->method('findByUidOrUsername')
+            ->with('editor')
+            ->willReturn(['uid' => 7]);
         $storedHash = null;
-        $this->backendUserRepository->expects(self::once())
+        $backendUserRepository->expects(self::once())
             ->method('updateApiKey')
             ->willReturnCallback(static function (int $uid, string $hash) use (&$storedHash): void {
                 self::assertSame(7, $uid);
                 $storedHash = $hash;
             });
 
-        $apiKey = $this->subject->createApiKey('editor');
+        $apiKey = $this->createSubject($backendUserRepository)->createApiKey('editor');
 
         [$uid, $secret] = explode(BackendUserRepository::API_KEY_SEPARATOR, $apiKey, 2);
         self::assertSame('7', $uid);
-        self::assertSame('hash:' . $secret, $storedHash);
+        self::assertSame(self::BACKEND_HASH_MODE . ':' . $secret, $storedHash);
     }
 
     #[Test]
     public function createApiKeyReturnsUrlSafeSecretOfSufficientLength(): void
     {
-        $this->backendUserRepository->method('findByUidOrUsername')->willReturn(['uid' => 1]);
+        $subject = $this->createSubject($this->createRepositoryFindingUser(1));
 
-        $secret = explode(BackendUserRepository::API_KEY_SEPARATOR, $this->subject->createApiKey('1'), 2)[1];
+        $secret = explode(BackendUserRepository::API_KEY_SEPARATOR, $subject->createApiKey('1'), 2)[1];
 
         self::assertMatchesRegularExpression('~^[A-Za-z0-9_-]{128}$~', $secret);
     }
@@ -65,28 +52,58 @@ final class ApiKeyServiceTest extends UnitTestCase
     #[Test]
     public function createApiKeyReturnsDifferentKeyOnEveryCall(): void
     {
-        $this->backendUserRepository->method('findByUidOrUsername')->willReturn(['uid' => 1]);
+        $subject = $this->createSubject($this->createRepositoryFindingUser(1));
 
-        self::assertNotSame($this->subject->createApiKey('1'), $this->subject->createApiKey('1'));
+        self::assertNotSame($subject->createApiKey('1'), $subject->createApiKey('1'));
     }
 
     #[Test]
     public function createApiKeyThrowsForUnknownUser(): void
     {
-        $this->backendUserRepository->method('findByUidOrUsername')->willReturn(null);
-        $this->backendUserRepository->expects(self::never())->method('updateApiKey');
+        $backendUserRepository = $this->createMock(BackendUserRepository::class);
+        $backendUserRepository->expects(self::once())->method('findByUidOrUsername')->willReturn(null);
+        $backendUserRepository->expects(self::never())->method('updateApiKey');
 
         $this->expectException(UserNotFoundException::class);
         $this->expectExceptionCode(1756800600);
-        $this->subject->createApiKey('nobody');
+        $this->createSubject($backendUserRepository)->createApiKey('nobody');
     }
 
     #[Test]
     public function revokeApiKeyEmptiesStoredHash(): void
     {
-        $this->backendUserRepository->method('findByUidOrUsername')->willReturn(['uid' => 3]);
-        $this->backendUserRepository->expects(self::once())->method('updateApiKey')->with(3, '');
+        $backendUserRepository = $this->createMock(BackendUserRepository::class);
+        $backendUserRepository->expects(self::once())->method('findByUidOrUsername')->willReturn(['uid' => 3]);
+        $backendUserRepository->expects(self::once())->method('updateApiKey')->with(3, '');
 
-        $this->subject->revokeApiKey('3');
+        $this->createSubject($backendUserRepository)->revokeApiKey('3');
+    }
+
+    private function createRepositoryFindingUser(int $uid): BackendUserRepository
+    {
+        $backendUserRepository = $this->createStub(BackendUserRepository::class);
+        $backendUserRepository->method('findByUidOrUsername')->willReturn(['uid' => $uid]);
+        return $backendUserRepository;
+    }
+
+    /**
+     * The hash is "<mode>:<secret>", so a test sees both which hash mode was used and what was hashed
+     */
+    private function createSubject(BackendUserRepository $backendUserRepository): ApiKeyService
+    {
+        $passwordHashFactory = $this->createStub(PasswordHashFactory::class);
+        $passwordHashFactory->method('getDefaultHashInstance')->willReturnCallback(
+            fn(string $mode): PasswordHashInterface => $this->createHashInstance($mode)
+        );
+        return new ApiKeyService($backendUserRepository, $passwordHashFactory);
+    }
+
+    private function createHashInstance(string $mode): PasswordHashInterface
+    {
+        $hashInstance = $this->createStub(PasswordHashInterface::class);
+        $hashInstance->method('getHashedPassword')->willReturnCallback(
+            static fn(string $secret): string => $mode . ':' . $secret
+        );
+        return $hashInstance;
     }
 }

@@ -23,13 +23,13 @@ final class ToolExecuterTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->gateway = new ClientGateway($this->createMock(SessionInterface::class));
+        $this->gateway = new ClientGateway($this->createStub(SessionInterface::class));
     }
 
     #[Test]
     public function executeReturnsExceptionMessageAsErrorResult(): void
     {
-        $tool = $this->createMock(ToolInterface::class);
+        $tool = $this->createStub(ToolInterface::class);
         $tool->method('execute')->willThrowException(new ToolExecutionException('Call "get_page" first', 1));
 
         $result = (new ToolExecuter($tool))->execute([], $this->gateway);
