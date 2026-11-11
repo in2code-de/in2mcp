@@ -1,0 +1,49 @@
+name: testing
+on: [push, pull_request]
+
+jobs:
+  php-lint:
+    name: "PHP linter"
+    runs-on: ubuntu-26.04
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v6
+      - name: "Install PHP"
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "${{ matrix.php-version }}"
+          coverage: none
+          tools: composer:v2
+      - name: "Run PHP lint"
+        run: "composer test:php:lint"
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version:
+          - 8.2
+          - 8.3
+          - 8.4
+  unit-tests:
+    name: "PHP Unit Tests"
+    runs-on: ubuntu-26.04
+    needs: php-lint
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v6
+      - name: "Install PHP"
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "${{ matrix.php-version }}"
+          coverage: none
+          tools: composer:v2
+      - name: "Composer Update"
+        run: "composer update --no-progress"
+      - name: "Run Unit Tests"
+        run: "composer test:unit"
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version:
+          - 8.2
+          - 8.3
+          - 8.4

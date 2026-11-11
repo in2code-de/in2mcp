@@ -135,7 +135,8 @@ ddev exec .Build/bin/typo3 cache:flush      # flush all caches
 ddev mysql                                  # database shell
 ddev createdumpfile                         # update .ddev/data/db.sql.gz from current database
 ddev createfilesarchive                     # update .ddev/data/fileadmin.tar.gz from current files
-ddev composer test:unit                     # run the unit tests
+ddev composer test:php:lint                 # lint all php files
+ddev composer test:unit                     # run the unit tests (both also run in GitHub Actions)
 ```
 
 ## Changelog
