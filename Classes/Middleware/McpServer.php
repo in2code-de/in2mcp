@@ -7,6 +7,7 @@ namespace In2code\In2mcp\Middleware;
 use In2code\In2mcp\Domain\Mcp\Authentication\AuthenticationContext;
 use In2code\In2mcp\Domain\Mcp\Authentication\BackendUserAuthenticator;
 use In2code\In2mcp\Domain\Mcp\RateLimiter\RateLimiterFactory;
+use In2code\In2mcp\Domain\Mcp\SdkCompatibility;
 use In2code\In2mcp\Domain\Mcp\ServerFactory;
 use In2code\In2mcp\Domain\Service\ConfigurationService;
 use In2code\In2mcp\Exception\UserNotFoundException;
@@ -66,8 +67,8 @@ class McpServer implements MiddlewareInterface
             $backendUserAuthentication = $this->backendUserAuthenticator->authenticate($request);
             $rateLimiter->reset();
             // Binds the MCP session to the backend user, so its session id is worthless with the key of another user
-            $request = $request->withAttribute(
-                StreamableHttpTransport::PRINCIPAL_ATTRIBUTE,
+            $request = SdkCompatibility::withPrincipal(
+                $request,
                 'be_users:' . $backendUserAuthentication->getUserId()
             );
             return $this->serverFactory->get()->run($this->getTransport($request));

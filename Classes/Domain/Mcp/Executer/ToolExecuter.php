@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Domain\Mcp\Executer;
 
+use In2code\In2mcp\Domain\Mcp\SdkCompatibility;
 use In2code\In2mcp\Domain\Mcp\Tool\ToolInterface;
 use Mcp\Schema\Enum\StructuredContent;
 use Mcp\Schema\Result\CallToolResult;
-use Mcp\Server\Capability\Formatter\ToolResultFormatter;
 use Mcp\Server\ClientGateway;
 use Mcp\Server\Handler\ToolHandlerInterface;
 use stdClass;
@@ -27,13 +27,13 @@ class ToolExecuter implements ToolHandlerInterface
             // The client is the addressee of a tool error, so it is returned as an error result instead of
             // letting the request fail with a protocol error.
             return new CallToolResult(
-                (new ToolResultFormatter())->format($exception->getMessage()),
+                SdkCompatibility::getToolResultFormatter()->format($exception->getMessage()),
                 true
             );
         }
 
         return new CallToolResult(
-            (new ToolResultFormatter())->format($result),
+            SdkCompatibility::getToolResultFormatter()->format($result),
             structuredContent: $this->getStructuredContent($result)
         );
     }
@@ -54,10 +54,10 @@ class ToolExecuter implements ToolHandlerInterface
      * The structured content of a tool result must be an object, while many tools return a list of records. Such
      * a list is wrapped into an object, everything that is not an array has no structure at all.
      */
-    protected function getStructuredContent(mixed $result): array|StructuredContent
+    protected function getStructuredContent(mixed $result): array|StructuredContent|null
     {
         if (is_array($result) === false) {
-            return StructuredContent::Absent;
+            return SdkCompatibility::getAbsentStructuredContent();
         }
 
         if (array_is_list($result)) {

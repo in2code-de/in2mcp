@@ -35,7 +35,7 @@ final class ToolExecuterTest extends UnitTestCase
         $result = (new ToolExecuter($tool))->execute([], $this->gateway);
 
         self::assertTrue($result->isError);
-        self::assertFalse($result->hasStructuredContent());
+        self::assertArrayNotHasKey('structuredContent', $result->jsonSerialize());
         self::assertInstanceOf(TextContent::class, $result->content[0]);
         self::assertSame('Call "get_page" first', $result->content[0]->text);
     }
@@ -84,7 +84,7 @@ final class ToolExecuterTest extends UnitTestCase
         $result = (new ToolExecuter(new ArgumentTool([], $toolResult)))->execute([], $this->gateway);
 
         self::assertFalse($result->isError);
-        self::assertFalse($result->hasStructuredContent());
+        self::assertArrayNotHasKey('structuredContent', $result->jsonSerialize());
     }
 
     #[Test]

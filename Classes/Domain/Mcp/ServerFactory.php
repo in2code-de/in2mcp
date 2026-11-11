@@ -7,6 +7,7 @@ namespace In2code\In2mcp\Domain\Mcp;
 use In2code\In2mcp\Domain\Mcp\Converter\McpToolSchemaConverter;
 use In2code\In2mcp\Domain\Mcp\Executer\ToolExecuter;
 use In2code\In2mcp\Domain\Mcp\Tool\ToolRegistry;
+use Mcp\Server as LegacyServer;
 use Mcp\Server\Server;
 use Mcp\Server\Session\FileSessionStore;
 use Psr\Log\LoggerInterface;
@@ -33,9 +34,9 @@ class ServerFactory
     ) {
     }
 
-    public function get(): Server
+    public function get(): Server|LegacyServer
     {
-        $builder = Server::builder()
+        $builder = SdkCompatibility::getServerBuilder()
             ->setServerInfo(
                 self::SERVER_NAME,
                 ExtensionManagementUtility::getExtensionVersion(self::EXTENSION_KEY)
