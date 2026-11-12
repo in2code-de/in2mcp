@@ -38,6 +38,7 @@ class RecentChangeService
         private readonly PageRepository $pageRepository,
         private readonly BackendUserService $backendUserService,
         private readonly TcaService $tcaService,
+        private readonly LastEditorService $lastEditorService,
     ) {
     }
 
@@ -57,11 +58,14 @@ class RecentChangeService
             $limit
         );
         $pages = $this->recentChangeRepository->findPagesByUids(array_keys($ranking));
+        $editors = $this->lastEditorService->findEditorsOfPages(
+            array_map(static fn(array $changes): int => $changes['lastChanged'], $ranking)
+        );
 
         $result = [];
         foreach ($ranking as $pageUid => $changes) {
             if (isset($pages[$pageUid])) {
-                $result[] = $this->buildPage($pages[$pageUid], $changes);
+                $result[] = $this->addEditor($this->buildPage($pages[$pageUid], $changes), $editors, $pageUid);
             }
         }
         return $result;
@@ -75,12 +79,25 @@ class RecentChangeService
     public function getRecentlyChangedContent(int $rootPageUid, ?int $languageId, int $limit): array
     {
         $contentTypeNames = array_column($this->tcaService->getContentTypes(), 'label', 'value');
-        return array_map(
-            fn(array $contentElement): array => $this->removeUnreadableFields(ContentRepository::TABLE_NAME, [
+        $contentElements = $this->recentChangeRepository->findRecentContent(
+            $this->getPageUidsInScope($rootPageUid),
+            $languageId,
+            $limit
+        );
+        $changeByContent = [];
+        foreach ($contentElements as $contentElement) {
+            $changeByContent[(int)$contentElement['uid']] = (int)$contentElement['tstamp'];
+        }
+        $editors = $this->lastEditorService->findEditorsOfContent($changeByContent);
+
+        $result = [];
+        foreach ($contentElements as $contentElement) {
+            $contentType = (string)$contentElement['CType'];
+            $record = $this->removeUnreadableFields(ContentRepository::TABLE_NAME, [
                 'uid' => (int)$contentElement['uid'],
                 'pid' => (int)$contentElement['pid'],
-                'CType' => (string)$contentElement['CType'],
-                'contentTypeName' => (string)($contentTypeNames[$contentElement['CType']] ?? $contentElement['CType']),
+                'CType' => $contentType,
+                'contentTypeName' => (string)($contentTypeNames[$contentType] ?? $contentType),
                 'header' => (string)$contentElement['header'],
                 'colPos' => (int)$contentElement['colPos'],
                 'sys_language_uid' => (int)$contentElement['sys_language_uid'],
@@ -88,13 +105,26 @@ class RecentChangeService
                 'changed' => $this->formatTimestamp((int)$contentElement['tstamp']),
                 'pageTitle' => (string)$contentElement['page_title'],
                 'pageSlug' => (string)$contentElement['page_slug'],
-            ]),
-            $this->recentChangeRepository->findRecentContent(
-                $this->getPageUidsInScope($rootPageUid),
-                $languageId,
-                $limit
-            )
-        );
+            ]);
+            $result[] = $this->addEditor($record, $editors, (int)$contentElement['uid']);
+        }
+        return $result;
+    }
+
+    /**
+     * "changedBy" is only part of the answer for administrators, for everybody else the key is missing
+     *
+     * @param array<string, mixed> $record
+     * @param array<int, string> $editors
+     * @return array<string, mixed>
+     * @throws UserNotFoundException
+     */
+    private function addEditor(array $record, array $editors, int $key): array
+    {
+        if ($this->lastEditorService->isAvailable()) {
+            $record['changedBy'] = $editors[$key] ?? null;
+        }
+        return $record;
     }
 
     /**

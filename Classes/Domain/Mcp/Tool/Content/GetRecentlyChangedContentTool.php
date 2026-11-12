@@ -29,6 +29,7 @@ class GetRecentlyChangedContentTool extends AbstractTool
     {
         return 'Returns the content elements that were changed most recently, newest first, together with the'
             . ' title and slug of their page. Hidden elements are included and marked. Times are ISO 8601.'
+            . ' For administrators "changedBy" names the backend user of the change.'
             . ' Pass "pageUid" to look only at one site or section.';
     }
 

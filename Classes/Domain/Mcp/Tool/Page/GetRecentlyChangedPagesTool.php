@@ -29,6 +29,7 @@ class GetRecentlyChangedPagesTool extends AbstractTool
         return 'Returns the pages that were changed most recently, newest first. A page counts as changed when its'
             . ' properties, one of its translations or one of its content elements changed - "lastChanged" is the'
             . ' newest of these, "pagePropertiesChanged" and "contentChanged" tell them apart. Times are ISO 8601.'
+            . ' For administrators "changedBy" names the backend user of that change.'
             . ' Pass "pageUid" to look only at one site or section.';
     }
 

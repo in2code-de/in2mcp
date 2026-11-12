@@ -438,7 +438,9 @@ in a regular backend request, and every read and write runs through the regular 
   change never leave the server. Note that every MCP request logs its backend user in, so the last login of a user
   connected through MCP is the time of its last request.
 - `get_recently_changed_pages` and `get_recently_changed_content` apply the page permissions, the page mounts,
-  the allowed languages and the exclude fields of the user, just like the other reading tools.
+  the allowed languages and the exclude fields of the user, just like the other reading tools. Only for
+  administrators they add `changedBy`, the username of the last change taken from the record history; for every
+  other user that key is missing.
 - `sys_file` can be read, but not written with the record tools - a file is deleted with `delete_file`, which
   goes through the file storage. The list is `TableAccessService::READ_ONLY_TABLES`.
 

@@ -134,6 +134,41 @@ readonly class RecentChangeRepository
     }
 
     /**
+     * Deleted records are included, because deleting one is a change of its page as well
+     *
+     * @param list<int> $pageUids
+     * @return array<int, int> uid of a content element or a page translation => uid of the page it belongs to
+     * @throws Exception
+     */
+    public function findRecordsOfPages(string $table, array $pageUids): array
+    {
+        if ($pageUids === []) {
+            return [];
+        }
+
+        $pageField = $table === PageRepository::TABLE_NAME ? 'l10n_parent' : 'pid';
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
+        $queryBuilder->getRestrictions()->removeAll();
+        $rows = $queryBuilder
+            ->select('uid', $pageField)
+            ->from($table)
+            ->where(
+                $queryBuilder->expr()->in(
+                    $pageField,
+                    $queryBuilder->createNamedParameter($pageUids, Connection::PARAM_INT_ARRAY)
+                )
+            )
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        $pageUidsByRecord = [];
+        foreach ($rows as $row) {
+            $pageUidsByRecord[(int)$row['uid']] = (int)$row[$pageField];
+        }
+        return $pageUidsByRecord;
+    }
+
+    /**
      * @param list<int>|null $pageUids null means every page
      * @return list<array<string, mixed>>
      * @throws Exception

@@ -142,6 +142,57 @@ readonly class BackendUserActivityRepository
         return $queryBuilder->executeQuery()->fetchAllAssociative();
     }
 
+    /**
+     * @param array<string, list<int>> $recordUidsByTable
+     * @return list<array{tablename: string, recuid: int, userid: int}> newest first
+     * @throws Exception
+     */
+    public function findHistoryOfRecords(array $recordUidsByTable, int $since): array
+    {
+        $queryBuilder = $this->getQueryBuilder(self::HISTORY_TABLE);
+        $recordConstraints = [];
+        foreach ($recordUidsByTable as $table => $recordUids) {
+            if ($recordUids === []) {
+                continue;
+            }
+            $recordConstraints[] = $queryBuilder->expr()->and(
+                $queryBuilder->expr()->eq('tablename', $queryBuilder->createNamedParameter($table)),
+                $queryBuilder->expr()->in(
+                    'recuid',
+                    $queryBuilder->createNamedParameter($recordUids, Connection::PARAM_INT_ARRAY)
+                )
+            );
+        }
+        if ($recordConstraints === []) {
+            return [];
+        }
+
+        $rows = $queryBuilder
+            ->select('tablename', 'recuid', 'userid')
+            ->from(self::HISTORY_TABLE)
+            ->where(
+                $this->getBackendUserConstraint($queryBuilder),
+                $queryBuilder->expr()->gte(
+                    'tstamp',
+                    $queryBuilder->createNamedParameter($since, Connection::PARAM_INT)
+                ),
+                $queryBuilder->expr()->or(...$recordConstraints)
+            )
+            ->orderBy('tstamp', 'DESC')
+            ->addOrderBy('uid', 'DESC')
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        return array_map(
+            static fn(array $row): array => [
+                'tablename' => (string)$row['tablename'],
+                'recuid' => (int)$row['recuid'],
+                'userid' => (int)$row['userid'],
+            ],
+            $rows
+        );
+    }
+
     private function getBackendUserConstraint(QueryBuilder $queryBuilder): string
     {
         return (string)$queryBuilder->expr()->and(

@@ -7,6 +7,7 @@ namespace In2code\In2mcp\Tests\Unit\Domain\Service;
 use In2code\In2mcp\Domain\Repository\PageRepository;
 use In2code\In2mcp\Domain\Repository\RecentChangeRepository;
 use In2code\In2mcp\Domain\Service\BackendUserService;
+use In2code\In2mcp\Domain\Service\LastEditorService;
 use In2code\In2mcp\Domain\Service\RecentChangeService;
 use In2code\In2mcp\Domain\Service\TcaService;
 use PHPUnit\Framework\Attributes\Test;
@@ -23,7 +24,8 @@ final class RecentChangeServiceTest extends UnitTestCase
             $this->createStub(RecentChangeRepository::class),
             $this->createStub(PageRepository::class),
             $this->createStub(BackendUserService::class),
-            $this->createStub(TcaService::class)
+            $this->createStub(TcaService::class),
+            $this->createStub(LastEditorService::class)
         );
     }
 
