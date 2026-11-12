@@ -176,6 +176,37 @@ readonly class PageRepository
     }
 
     /**
+     * @return list<int> the page itself and all pages below it in the default language, hidden ones included
+     * @throws Exception
+     */
+    public function findSubtreeUids(int $rootUid): array
+    {
+        $subtreeUids = [$rootUid];
+        $parentUids = [$rootUid];
+        while ($parentUids !== []) {
+            $queryBuilder = $this->getQueryBuilder();
+            $childUids = $queryBuilder
+                ->select('uid')
+                ->from(self::TABLE_NAME)
+                ->where(
+                    $queryBuilder->expr()->in(
+                        'pid',
+                        $queryBuilder->createNamedParameter($parentUids, Connection::PARAM_INT_ARRAY)
+                    ),
+                    $queryBuilder->expr()->eq(
+                        'sys_language_uid',
+                        $queryBuilder->createNamedParameter(0, Connection::PARAM_INT)
+                    )
+                )
+                ->executeQuery()
+                ->fetchFirstColumn();
+            $parentUids = array_values(array_diff(array_map('intval', $childUids), $subtreeUids));
+            $subtreeUids = array_merge($subtreeUids, $parentUids);
+        }
+        return $subtreeUids;
+    }
+
+    /**
      * Uid of the last child of a page in sorting order, 0 if the page has no children. Needed to append a new
      * page at the end, because DataHandler puts a record with a positive pid at the very beginning.
      *

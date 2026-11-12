@@ -126,6 +126,8 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `get_record`        | One record of any table                                                         |
 | `find_records`      | Records of a table by page, by field values and by language                     |
 | `search_files`      | Files of the file abstraction layer by name, path or title                      |
+| `get_recently_changed_pages`   | Pages changed most recently (properties, translations or content), optionally below one page |
+| `get_recently_changed_content` | Content elements changed most recently with their page, optionally below one page            |
 
 ### Writing
 
@@ -427,6 +429,8 @@ in a regular backend request, and every read and write runs through the regular 
   `sys_log`, `sys_refindex`, `sys_registry`, `sys_file_processedfile` and `sys_lockedrecords`. This is the one
   deliberate deviation from "the client may do what the user may do": an api key that leaked must not be able to
   create a backend user. The list is `TableAccessService::DENIED_TABLES`.
+- `get_recently_changed_pages` and `get_recently_changed_content` apply the page permissions, the page mounts,
+  the allowed languages and the exclude fields of the user, just like the other reading tools.
 - `sys_file` can be read, but not written with the record tools - a file is deleted with `delete_file`, which
   goes through the file storage. The list is `TableAccessService::READ_ONLY_TABLES`.
 

@@ -187,6 +187,20 @@ class BackendUserService
     }
 
     /**
+     * @return list<int>|null null when every language is allowed, like the backend reads an empty list
+     * @throws UserNotFoundException
+     */
+    public function getAllowedLanguageIds(): ?array
+    {
+        $backendUser = $this->getBackendUser();
+        $allowedLanguages = trim((string)($backendUser->groupData['allowed_languages'] ?? ''));
+        if ($backendUser->isAdmin() || $allowedLanguages === '') {
+            return null;
+        }
+        return array_map('intval', explode(',', $allowedLanguages));
+    }
+
+    /**
      * @throws UserNotFoundException
      */
     public function isTableModifyAllowed(string $table): bool
