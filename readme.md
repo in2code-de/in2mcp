@@ -145,6 +145,7 @@ ddev composer test:unit                     # run the unit tests (both also run 
 
 | Version | Date       | Description                                                                                                                        |
 |---------|------------|------------------------------------------------------------------------------------------------------------------------------------|
+| 4.0.0   | 2026-11-12 | New tools get_recently_changed_pages and get_recently_changed_content, new administrator tools get_backend_users and get_recent_changes |
 | 3.0.1   | 2026-11-11 | Allow mcp/sdk 0.9 again, so the extension can be installed on TYPO3 13 (remove SdkCompatibility with TYPO3 13 support)             |
 | 3.0.0   | 2026-11-11 | New tool delete_file, added unit tests, small security improvent for importing images: refuse IPv6 addresses carrying an internal IPv4 in add_file_from_url                   |
 | 2.4.1   | 2026-11-11 | Security: update mcp/sdk to 0.10 (PKSA-s52d-n7sx-trsg), bind MCP sessions to the backend user                                      |
