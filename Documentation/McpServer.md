@@ -128,6 +128,8 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `search_files`      | Files of the file abstraction layer by name, path or title                      |
 | `get_recently_changed_pages`   | Pages changed most recently (properties, translations or content), optionally below one page |
 | `get_recently_changed_content` | Content elements changed most recently with their page, optionally below one page            |
+| `get_backend_users`  | Administrators only: backend users with last login, active MFA providers and last change   |
+| `get_recent_changes` | Administrators only: newest entries of the record history - who changed which record when |
 
 ### Writing
 
@@ -429,6 +431,12 @@ in a regular backend request, and every read and write runs through the regular 
   `sys_log`, `sys_refindex`, `sys_registry`, `sys_file_processedfile` and `sys_lockedrecords`. This is the one
   deliberate deviation from "the client may do what the user may do": an api key that leaked must not be able to
   create a backend user. The list is `TableAccessService::DENIED_TABLES`.
+- `get_backend_users` and `get_recent_changes` are the only tools that read `be_users` and `sys_history`, and
+  they answer **administrators only**. They return a fixed set of fields - username, real name, admin and
+  disabled flag, last login, the names of the active MFA providers, and for a change its table, record, action and
+  the names of the changed fields. Passwords, api key hashes, email addresses, MFA secrets and the values of a
+  change never leave the server. Note that every MCP request logs its backend user in, so the last login of a user
+  connected through MCP is the time of its last request.
 - `get_recently_changed_pages` and `get_recently_changed_content` apply the page permissions, the page mounts,
   the allowed languages and the exclude fields of the user, just like the other reading tools.
 - `sys_file` can be read, but not written with the record tools - a file is deleted with `delete_file`, which

@@ -334,6 +334,12 @@ class TcaService
         return $this->getSchema($table)?->hasField($fieldName) === true;
     }
 
+    public function isTable(string $table): bool
+    {
+        // A name with a dot is a record type like "tt_content.textmedia", which the factory knows as well
+        return str_contains($table, '.') === false && $this->tcaSchemaFactory->has($table);
+    }
+
     /**
      * Null when the table is not configured in this installation. Every method of this service answers such a
      * table with an empty result instead of throwing, because a client is free to ask for anything.

@@ -51,6 +51,8 @@ client, the OAuth situation of Gemini Enterprise and the full reference.
 Reading: `get_backend_user`, `get_page_tree`, `get_page`, `search_pages`, `get_schema`, `get_record`,
 `find_records`, `search_files`, `get_recently_changed_pages`, `get_recently_changed_content`
 
+Administrators only: `get_backend_users`, `get_recent_changes`
+
 Writing: `create_page`, `update_page`, `create_content_element`, `update_content_element`, `create_record`,
 `update_record`, `add_child_record`, `localize_record`, `add_file_from_url`, `add_file_reference`,
 `delete_file`, `delete_record`, `move_record`, `clear_cache`
