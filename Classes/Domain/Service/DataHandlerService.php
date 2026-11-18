@@ -225,11 +225,19 @@ class DataHandlerService
             );
         }
 
+        if ($relation['foreignTable'] === self::FILE_REFERENCE_TABLE) {
+            throw new ToolExecutionException(
+                'The field "' . $parentField . '" of "' . $parentTable . '" holds file references. Use'
+                . ' "add_file_reference" to put a file on it.',
+                1756801514
+            );
+        }
+
         $this->tableAccessService->assertWritable($parentTable);
         $this->tableAccessService->assertWritable($relation['foreignTable']);
         $this->assertKnownFields($relation['foreignTable'], $fields);
 
-        $children = $this->inlineRelationService->findChildUids($relation, $parentUid);
+        $children = $this->inlineRelationService->findChildUids($relation, $parentTable, $parentUid);
         $children[] = self::NEW_RECORD_PLACEHOLDER;
 
         $fields['pid'] = $pid;

@@ -10,6 +10,7 @@ use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Localization\LanguageServiceFactory;
 use TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability;
 use TYPO3\CMS\Core\Schema\Field\FieldTypeInterface;
+use TYPO3\CMS\Core\Schema\Field\FileFieldType;
 use TYPO3\CMS\Core\Schema\Field\InlineFieldType;
 use TYPO3\CMS\Core\Schema\Field\StaticSelectFieldType;
 use TYPO3\CMS\Core\Schema\TcaSchema;
@@ -229,13 +230,19 @@ class TcaService
     }
 
     /**
-     * Description of an inline relation of a field, null when the field is no inline relation.
+     * Description of an inline relation of a field, null when the field is no inline relation. A file field is one
+     * as well: its references in sys_file_reference are children like any other.
      *
      * The database column of such a field holds the **number** of children, while the DataHandler expects the
      * **list of their uids** when it is written. Confusing the two attaches foreign records to the parent, so
      * every read resolves the field to the real list and every write is checked against it.
      *
-     * @return array{foreignTable: string, foreignField: string, foreignSortby: string}|null
+     * A child table can be shared by several parent tables and fields. Then the uid of the parent alone does not
+     * say whose child a record is - "foreign_table_field" holds the parent table and "foreign_match_fields" tell
+     * the fields apart. TCA preparation sets both for every file field.
+     *
+     * @return array{foreignTable: string, foreignField: string, foreignSortby: string, foreignTableField: string,
+     *     foreignMatchFields: array<string, string>}|null
      */
     public function getInlineRelation(string $table, string $fieldName): ?array
     {
@@ -245,12 +252,12 @@ class TcaService
         }
 
         $field = $schema->getField($fieldName);
-        if ($field instanceof InlineFieldType === false) {
+        if ($field instanceof InlineFieldType === false && $field instanceof FileFieldType === false) {
             return null;
         }
 
-        // The Schema API has no accessor for "foreign_sortby", so all three values are taken from the
-        // configuration of the field object to keep them from two different sources apart
+        // The Schema API has no accessor for these values, so all of them are taken from the configuration of the
+        // field object to keep them from two different sources apart
         $configuration = $field->getConfiguration();
         $foreignTable = (string)($configuration['foreign_table'] ?? '');
         $foreignField = (string)($configuration['foreign_field'] ?? '');
@@ -262,11 +269,14 @@ class TcaService
             'foreignTable' => $foreignTable,
             'foreignField' => $foreignField,
             'foreignSortby' => (string)($configuration['foreign_sortby'] ?? ''),
+            'foreignTableField' => (string)($configuration['foreign_table_field'] ?? ''),
+            'foreignMatchFields' => array_map('strval', (array)($configuration['foreign_match_fields'] ?? [])),
         ];
     }
 
     /**
-     * @return array<string, array{foreignTable: string, foreignField: string, foreignSortby: string}>
+     * @return array<string, array{foreignTable: string, foreignField: string, foreignSortby: string,
+     *     foreignTableField: string, foreignMatchFields: array<string, string>}>
      */
     public function getInlineRelations(string $table): array
     {

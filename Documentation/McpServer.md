@@ -235,6 +235,15 @@ the backend does, writing the child and the list of the parent in one DataHandle
 counter correct. A child created with `create_record` alone leaves the parent at zero, and a parent whose
 counter says zero has no children as far as Extbase is concerned, however many records point at it.
 
+A file field is the same kind of field: its children are the records in `sys_file_reference`, so it reads as the
+list of its reference uids as well, and a write that would move a reference away from another record is refused.
+File references are created with `add_file_reference`, never with `add_child_record`.
+
+Whose child a record is, is decided by the uid of the parent **and** - where the TCA defines them - by the
+parent table in `foreign_table_field` and the values of `foreign_match_fields`. A child table shared by several
+tables or fields (like `sys_file_reference`, which tells its parents apart by `tablenames` and `fieldname`)
+therefore never mixes up the children of `tt_content:5` and `pages:5`.
+
 ### Sorting
 
 `sorting` is readable on every record and on the content elements of `get_page`, so a client can tell in which
