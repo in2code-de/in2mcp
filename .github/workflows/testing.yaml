@@ -23,6 +23,21 @@ jobs:
           - 8.2
           - 8.3
           - 8.4
+  php-cs-fixer:
+    name: "PHP CS Fixer"
+    runs-on: ubuntu-26.04
+    needs: php-lint
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v6
+      - name: "Install PHP"
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+      - name: "Composer Update"
+        run: "composer update --no-progress"
+      - name: "Run PHP CS Fixer"
+        run: "composer test:php:cs"
   unit-tests:
     name: "PHP Unit Tests"
     runs-on: ubuntu-26.04
