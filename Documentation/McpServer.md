@@ -308,6 +308,8 @@ What the import refuses, in this order:
 4. more than three redirects, and relative redirect targets
 5. a `Content-Length` above the maximum, and a body that exceeds it while streaming
 6. file names with a path in them, and names the `fileDenyPattern` of the installation rejects
+7. the fallback storage `0:`, which is the web root and evaluates no permissions - the core refuses it for every
+   user, administrators included, and so does every file tool of this extension
 
 Afterwards the file goes into the storage through `ResourceStorage::addFile()`, which applies what the backend
 applies to an upload: the file operation permissions of the user (`addFile`), the **file mounts**, the writable

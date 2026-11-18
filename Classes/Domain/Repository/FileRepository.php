@@ -21,6 +21,7 @@ readonly class FileRepository
     private const METADATA_TABLE_NAME = 'sys_file_metadata';
     private const REFERENCE_INDEX_TABLE_NAME = 'sys_refindex';
 
+    private const FALLBACK_STORAGE_UID = 0;
     private const DEFAULT_LIMIT = 25;
     private const MAXIMUM_LIMIT = 200;
 
@@ -127,6 +128,14 @@ readonly class FileRepository
      */
     private function restrictToFileMounts(QueryBuilder $queryBuilder, ?array $fileMounts, string $alias = 'f.'): void
     {
+        // Storage 0 is the web root outside of every storage, the core refuses it for administrators as well
+        $queryBuilder->andWhere(
+            $queryBuilder->expr()->gt(
+                $alias . 'storage',
+                $queryBuilder->createNamedParameter(self::FALLBACK_STORAGE_UID, Connection::PARAM_INT)
+            )
+        );
+
         if ($fileMounts === null) {
             return;
         }

@@ -77,6 +77,7 @@ class AddFileFromUrlTool extends AbstractTool
         $this->fileImportService->assertImportable($url);
 
         $folder = $this->getTargetFolder($this->getStringArgument($arguments, 'targetFolder'));
+        $this->assertRegularStorage($folder);
         $this->assertFolderIsWritable($folder);
 
         $file = $this->fileImportService->importFromUrl(
@@ -136,6 +137,22 @@ class AddFileFromUrlTool extends AbstractTool
                 'The folder "' . $combinedIdentifier . '" could not be found: ' . $exception->getMessage(),
                 1756801306,
                 $exception
+            );
+        }
+    }
+
+    /**
+     * @throws ToolExecutionException
+     */
+    private function assertRegularStorage(Folder $folder): void
+    {
+        // Storage 0 is the web root and evaluates no permissions - the core refuses it for every user as well
+        if ($folder->getStorage()->isFallbackStorage()) {
+            throw new ToolExecutionException(
+                'Storage 0 holds files outside of every file storage and is no target for an import. Use a folder'
+                . ' of a file storage like "1:/user_upload/", or leave "targetFolder" empty for the default upload'
+                . ' folder of the backend user.',
+                1756801310
             );
         }
     }
