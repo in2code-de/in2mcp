@@ -1,0 +1,10 @@
+"tx_news_domain_model_news"
+,"uid","pid","title","related_links","content_elements","sys_language_uid"
+,1,2,"News in the mount",0,0,0
+,2,4,"News outside of the mount",1,1,0
+"tx_news_domain_model_link"
+,"uid","pid","parent","title","uri","sys_language_uid"
+,1,4,2,"Link of the foreign news","https://example.org",0
+"tt_content"
+,"uid","pid","sorting","CType","header","colPos","tx_news_related_news","sys_language_uid"
+,20,4,256,"text","Content of the foreign news",0,2,0

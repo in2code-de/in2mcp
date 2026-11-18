@@ -113,6 +113,24 @@ final class McpServerTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
+    public function editorIsRefusedWhileTheBackendIsLockedToAdministrators(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['BE']['adminOnly'] = 1;
+
+        $response = $this->process($this->createRequest($this->createApiKey('editor'), 'initialize'));
+
+        self::assertSame(401, $response->getStatusCode());
+    }
+
+    #[Test]
+    public function administratorIsAcceptedWhileTheBackendIsLockedToAdministrators(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['BE']['adminOnly'] = 1;
+
+        self::assertNotSame('', $this->initialize($this->createApiKey('admin')));
+    }
+
+    #[Test]
     public function clientAddressOutsideOfTheAllowedAddressesIsRefused(): void
     {
         $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['mcpServerAllowedIps'] = '198.51.100.0/24';

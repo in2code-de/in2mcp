@@ -10,6 +10,13 @@ use PHPUnit\Framework\Attributes\Test;
 
 final class RecordToolsTest extends AbstractFunctionalTestCase
 {
+    private const PASSWORD_FIELD = 'tx_in2mcpfixture_secret';
+
+    protected array $testExtensionsToLoad = [
+        'in2code/in2mcp',
+        __DIR__ . '/../../../../Fixtures/Extensions/in2mcp_fixture',
+    ];
+
     #[Test]
     public function getRecordReturnsARecordOfTheMount(): void
     {
@@ -51,11 +58,26 @@ final class RecordToolsTest extends AbstractFunctionalTestCase
     public function getRecordNeverReturnsAPasswordField(): void
     {
         $this->loginAs(self::ADMIN);
+        $this->writeSecret(1, 'very secret');
 
-        $result = $this->callTool('get_record', ['table' => 'pages', 'uid' => 2]);
+        $result = $this->callTool('get_record', ['table' => 'tt_content', 'uid' => 1]);
 
-        self::assertArrayNotHasKey('perms_userid', array_filter($result['record'], 'is_null'));
-        self::assertSame('About', $result['record']['title']);
+        self::assertSame('First element', $result['record']['header']);
+        self::assertArrayNotHasKey(self::PASSWORD_FIELD, $result['record']);
+    }
+
+    #[Test]
+    public function findRecordsNeverReturnsAPasswordField(): void
+    {
+        $this->loginAs(self::ADMIN);
+        $this->writeSecret(1, 'very secret');
+
+        $records = $this->callTool('find_records', ['table' => 'tt_content'])['records'];
+
+        self::assertNotSame([], $records);
+        foreach ($records as $record) {
+            self::assertArrayNotHasKey(self::PASSWORD_FIELD, $record);
+        }
     }
 
     #[Test]
@@ -251,5 +273,11 @@ final class RecordToolsTest extends AbstractFunctionalTestCase
 
         $this->expectException(ClientFacingException::class);
         $this->callTool('localize_record', ['table' => 'tt_content', 'uid' => 1, 'languageId' => 0]);
+    }
+
+    private function writeSecret(int $contentUid, string $secret): void
+    {
+        $this->getConnectionPool()->getConnectionForTable('tt_content')
+            ->update('tt_content', [self::PASSWORD_FIELD => $secret], ['uid' => $contentUid]);
     }
 }

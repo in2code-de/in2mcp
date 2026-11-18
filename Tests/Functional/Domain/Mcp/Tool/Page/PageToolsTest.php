@@ -54,6 +54,57 @@ final class PageToolsTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
+    public function pageTreeLeavesOutTheNavigationTitleForAnEditorWithoutTheFieldPermission(): void
+    {
+        $this->loginAs(self::EDITOR);
+
+        $tree = $this->callTool('get_page_tree', ['pageUid' => 1])['tree'];
+
+        self::assertArrayNotHasKey('nav_title', array_column($tree, null, 'uid')[3]);
+    }
+
+    #[Test]
+    public function pageTreeContainsTheNavigationTitleForAnAdministrator(): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        $tree = $this->callTool('get_page_tree', ['pageUid' => 1])['tree'];
+
+        self::assertSame('Navigation only', array_column($tree, null, 'uid')[3]['nav_title']);
+    }
+
+    #[Test]
+    public function searchIgnoresExcludeFieldsAnEditorMayNotRead(): void
+    {
+        $this->loginAs(self::EDITOR);
+
+        self::assertSame([], $this->callTool('search_pages', ['searchTerm' => 'Navigation only']));
+        self::assertSame([], $this->callTool('search_pages', ['searchTerm' => 'Subline only']));
+    }
+
+    #[Test]
+    public function searchFindsExcludeFieldsForAnAdministrator(): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        $result = $this->callTool('search_pages', ['searchTerm' => 'Subline only']);
+
+        self::assertSame([3], array_map('intval', array_column($result, 'uid')));
+    }
+
+    #[Test]
+    public function getPageLeavesOutExcludeFieldsAnEditorMayNotRead(): void
+    {
+        $this->loginAs(self::EDITOR);
+
+        $page = $this->callTool('get_page', ['pageUid' => 3, 'withContent' => false])['page'];
+
+        self::assertSame('Contact', $page['title']);
+        self::assertArrayNotHasKey('nav_title', $page);
+        self::assertArrayNotHasKey('subtitle', $page);
+    }
+
+    #[Test]
     public function createPageAppendsAHiddenPageBehindTheLastSubpage(): void
     {
         $this->loginAs(self::EDITOR);

@@ -1,6 +1,6 @@
 "be_groups"
 ,"uid","pid","title","db_mountpoints","file_mountpoints","file_permissions","tables_select","tables_modify","pagetypes_select","non_exclude_fields","explicit_allowdeny","custom_options","allowed_languages","workspace_perms"
-,1,0,"Editors with MCP","1","1","readFolder,writeFolder,addFolder,readFile,writeFile,addFile,renameFile,replaceFile,moveFile,copyFile,deleteFile","pages,tt_content,sys_file_reference","pages,tt_content,sys_file_reference","1,254","pages:hidden,pages:nav_title,tt_content:hidden","tt_content:CType:text,tt_content:CType:header,tt_content:CType:textmedia","in2mcp:access","0",1
+,1,0,"Editors with MCP","1","1","readFolder,writeFolder,addFolder,readFile,writeFile,addFile,renameFile,replaceFile,moveFile,copyFile,deleteFile","pages,tt_content,sys_file_reference,tx_news_domain_model_news,tx_news_domain_model_link","pages,tt_content,sys_file_reference,tx_news_domain_model_news,tx_news_domain_model_link","1,254","pages:hidden,pages:media,tt_content:hidden,tx_news_domain_model_news:related_links,tx_news_domain_model_news:content_elements","tt_content:CType:text,tt_content:CType:header,tt_content:CType:textmedia","in2mcp:access","0",1
 ,2,0,"Editors without MCP","1","","","pages,tt_content","pages,tt_content","1,254","","tt_content:CType:text","","0",1
 "be_users"
 ,"uid","pid","username","password","admin","usergroup","options","workspace_perms","deleted","disable"

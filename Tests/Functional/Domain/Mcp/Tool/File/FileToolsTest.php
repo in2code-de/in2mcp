@@ -13,6 +13,7 @@ final class FileToolsTest extends AbstractFunctionalTestCase
     private const FILE_IN_MOUNT = 1;
     private const FILE_OUTSIDE_OF_MOUNT = 2;
     private const UNUSED_FILE_IN_MOUNT = 3;
+    private const FILE_IN_FALLBACK_STORAGE = 4;
 
     protected array $pathsToProvideInTestInstance = [
         'typo3conf/ext/in2mcp/Tests/Functional/Fixtures/Files/fileadmin/' => 'fileadmin/',
@@ -43,6 +44,42 @@ final class FileToolsTest extends AbstractFunctionalTestCase
         $result = $this->callTool('search_files');
 
         self::assertSame(['image.png', 'secret.txt', 'unused.txt'], $this->getSortedNames($result['files']));
+    }
+
+    #[Test]
+    public function searchFilesNeverReturnsAFileOfTheFallbackStorage(): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        $result = $this->callTool('search_files', ['searchTerm' => 'fallback']);
+
+        self::assertSame([], $result['files']);
+    }
+
+    #[Test]
+    public function deleteFileRefusesAFileOfTheFallbackStorage(): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        $this->expectException(ClientFacingException::class);
+        $this->callTool('delete_file', ['fileUid' => self::FILE_IN_FALLBACK_STORAGE]);
+    }
+
+    #[Test]
+    public function addFileReferenceRefusesAFileOfTheFallbackStorage(): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        $this->expectException(ClientFacingException::class);
+        $this->callTool(
+            'add_file_reference',
+            [
+                'fileUid' => self::FILE_IN_FALLBACK_STORAGE,
+                'table' => 'tt_content',
+                'uid' => 1,
+                'fieldName' => 'assets',
+            ]
+        );
     }
 
     #[Test]
