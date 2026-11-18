@@ -7,6 +7,7 @@ namespace In2code\In2mcp\Tests\Functional\Middleware;
 use In2code\In2mcp\Domain\Service\ApiKeyService;
 use In2code\In2mcp\Middleware\McpServer;
 use In2code\In2mcp\Tests\Functional\AbstractFunctionalTestCase;
+use Mcp\Schema\RequestMeta;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -22,6 +23,7 @@ final class McpServerTest extends AbstractFunctionalTestCase
     private const ENDPOINT_URL = 'https://typo3-testing.local/typo3/mcp';
     private const CLIENT_ADDRESS = '192.0.2.10';
     private const PROTOCOL_VERSION = '2025-06-18';
+    private const STATELESS_PROTOCOL_VERSION = '2026-07-28';
     private const SESSION_HEADER = 'Mcp-Session-Id';
     private const NOT_HANDLED_STATUS = 418;
     private const REGISTERED_TOOLS = 30;
@@ -72,6 +74,36 @@ final class McpServerTest extends AbstractFunctionalTestCase
 
         self::assertTrue($result['result']['isError']);
         self::assertStringContainsString('not allowed to see it', $result['result']['content'][0]['text']);
+    }
+
+    #[Test]
+    public function clientWithoutHandshakeListsTheTools(): void
+    {
+        $response = $this->process($this->createStatelessRequest($this->createApiKey('admin'), 'tools/list'));
+
+        self::assertSame(200, $response->getStatusCode(), (string)$response->getBody());
+        self::assertCount(self::REGISTERED_TOOLS, $this->decode($response)['result']['tools']);
+    }
+
+    #[Test]
+    public function clientWithoutHandshakeRunsAToolAsTheUserOfTheApiKey(): void
+    {
+        $response = $this->process($this->createStatelessRequest(
+            $this->createApiKey('editor'),
+            'tools/call',
+            ['name' => 'get_backend_user', 'arguments' => (object)[]]
+        ));
+
+        self::assertSame(200, $response->getStatusCode(), (string)$response->getBody());
+        self::assertSame('editor', $this->decode($response)['result']['structuredContent']['username']);
+    }
+
+    #[Test]
+    public function clientWithoutHandshakeIsRefusedWithoutApiKey(): void
+    {
+        $response = $this->process($this->createStatelessRequest('', 'tools/list'));
+
+        self::assertSame(401, $response->getStatusCode());
     }
 
     #[Test]
@@ -238,6 +270,33 @@ final class McpServerTest extends AbstractFunctionalTestCase
         return $request
             ->withAttribute('applicationType', SystemEnvironmentBuilder::REQUESTTYPE_BE)
             ->withAttribute('normalizedParams', NormalizedParams::createFromRequest($request));
+    }
+
+    /**
+     * A client of the revision without handshake names the revision in every request instead of a session
+     *
+     * @param array<string, mixed> $parameters
+     */
+    private function createStatelessRequest(
+        string $apiKey,
+        string $method,
+        array $parameters = []
+    ): ServerRequestInterface {
+        $parameters['_meta'] = [
+            RequestMeta::PROTOCOL_VERSION => self::STATELESS_PROTOCOL_VERSION,
+            RequestMeta::CLIENT_CAPABILITIES => (object)[],
+            RequestMeta::CLIENT_INFO => ['name' => 'functional-test', 'version' => '1.0'],
+        ];
+        $message = ['jsonrpc' => '2.0', 'id' => 1, 'method' => $method, 'params' => $parameters];
+
+        $request = $this->createRequest($apiKey, $method)
+            ->withBody((new StreamFactory())->createStream(json_encode($message, JSON_THROW_ON_ERROR)))
+            ->withHeader('MCP-Protocol-Version', self::STATELESS_PROTOCOL_VERSION)
+            ->withHeader('Mcp-Method', $method);
+        if (is_string($parameters['name'] ?? null)) {
+            $request = $request->withHeader('Mcp-Name', $parameters['name']);
+        }
+        return $request;
     }
 
     private function process(ServerRequestInterface $request): ResponseInterface

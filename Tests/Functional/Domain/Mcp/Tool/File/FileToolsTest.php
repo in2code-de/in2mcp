@@ -113,8 +113,28 @@ final class FileToolsTest extends AbstractFunctionalTestCase
         );
         self::assertSame($contentUid, (int)$reference['record']['uid_foreign']);
         self::assertSame('assets', $reference['record']['fieldname']);
+    }
+
+    #[Test]
+    public function fileFieldListsTheUidsOfItsReferencesInTheirOrder(): void
+    {
+        $this->loginAs(self::EDITOR);
+        $contentUid = $this->callTool(
+            'create_content_element',
+            ['pageUid' => 2, 'contentType' => 'textmedia']
+        )['contentUid'];
+        $arguments = [
+            'fileUid' => self::FILE_IN_MOUNT,
+            'table' => 'tt_content',
+            'uid' => $contentUid,
+            'fieldName' => 'assets',
+        ];
+        $firstUid = $this->callTool('add_file_reference', $arguments)['fileReferenceUid'];
+        $secondUid = $this->callTool('add_file_reference', $arguments)['fileReferenceUid'];
+
         $content = $this->callTool('get_record', ['table' => 'tt_content', 'uid' => $contentUid]);
-        self::assertSame(1, $this->countReferences($content['record']['assets']));
+
+        self::assertSame($firstUid . ',' . $secondUid, $content['record']['assets']);
     }
 
     #[Test]
@@ -317,10 +337,5 @@ final class FileToolsTest extends AbstractFunctionalTestCase
         $names = array_column($files, 'name');
         sort($names);
         return $names;
-    }
-
-    private function countReferences(mixed $fieldValue): int
-    {
-        return is_array($fieldValue) ? count($fieldValue) : (int)$fieldValue;
     }
 }
