@@ -166,41 +166,6 @@ readonly class FileRepository
     }
 
     /**
-     * Uids of the file references of one field of one record, in the order an editor sees them
-     *
-     * @return int[]
-     * @throws Exception
-     */
-    public function findReferenceUids(string $table, int $uid, string $fieldName): array
-    {
-        $queryBuilder = $this->recordQueryBuilderFactory->create(self::REFERENCE_TABLE_NAME);
-
-        $references = $queryBuilder
-            ->select('uid')
-            ->from(self::REFERENCE_TABLE_NAME)
-            ->where(
-                $queryBuilder->expr()->eq(
-                    'tablenames',
-                    $queryBuilder->createNamedParameter($table)
-                ),
-                $queryBuilder->expr()->eq(
-                    'uid_foreign',
-                    $queryBuilder->createNamedParameter($uid, Connection::PARAM_INT)
-                ),
-                $queryBuilder->expr()->eq(
-                    'fieldname',
-                    $queryBuilder->createNamedParameter($fieldName)
-                )
-            )
-            ->orderBy('sorting_foreign')
-            ->addOrderBy('uid')
-            ->executeQuery()
-            ->fetchFirstColumn();
-
-        return array_map('intval', $references);
-    }
-
-    /**
      * Records that still use a file, checked the same way as the filelist module does before a deletion: the
      * reference index without the metadata of the file itself. A file reference is resolved to the record it
      * belongs to and keeps its own uid, so a client can remove it. A reference or a record that does not exist

@@ -6,7 +6,6 @@ namespace In2code\In2mcp\Domain\Service;
 
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Repository\ContentRepository;
-use In2code\In2mcp\Domain\Repository\FileRepository;
 use In2code\In2mcp\Exception\DataHandlerException;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
 use In2code\In2mcp\Exception\ToolExecutionException;
@@ -58,7 +57,6 @@ class DataHandlerService
         private readonly TableAccessService $tableAccessService,
         private readonly TcaService $tcaService,
         private readonly InlineRelationService $inlineRelationService,
-        private readonly FileRepository $fileRepository,
         private readonly ContentTypeService $contentTypeService,
         private readonly ContentRepository $contentRepository,
     ) {
@@ -291,6 +289,9 @@ class DataHandlerService
     ): int {
         $this->tableAccessService->assertWritable($table);
         $this->assertKnownFields($table, [$fieldName => '']);
+        $relation = $this->getFileRelation($table, $fieldName);
+        // The DataHandler drops a field the user may not write, and the reference would be created without parent
+        $this->assertPermittedFields($table, [$fieldName => '']);
         if ($fields !== []) {
             $this->assertUnprotectedFileReferenceFields($fields);
             $this->assertKnownFields(self::FILE_REFERENCE_TABLE, $fields);
@@ -298,7 +299,7 @@ class DataHandlerService
             $this->assertWritableValues(self::FILE_REFERENCE_TABLE, $fields, 0);
         }
 
-        $references = $this->fileRepository->findReferenceUids($table, $uid, $fieldName);
+        $references = $this->inlineRelationService->findChildUids($relation, $table, $uid);
         $references[] = self::NEW_RECORD_PLACEHOLDER;
 
         // Only the file itself is described here. Which record the reference belongs to, and in which order, is
@@ -442,6 +443,24 @@ class DataHandlerService
                 1756801606
             );
         }
+    }
+
+    /**
+     * @return array{foreignTable: string, foreignField: string, foreignSortby: string, foreignTableField: string,
+     *     foreignMatchFields: array<string, string>}
+     * @throws ToolExecutionException
+     */
+    private function getFileRelation(string $table, string $fieldName): array
+    {
+        $relation = $this->tcaService->getInlineRelation($table, $fieldName);
+        if ($relation === null || $relation['foreignTable'] !== self::FILE_REFERENCE_TABLE) {
+            throw new ToolExecutionException(
+                'The field "' . $fieldName . '" of "' . $table . '" is no file field. Call "get_schema" with the'
+                . ' table to see its fields.',
+                1756801014
+            );
+        }
+        return $relation;
     }
 
     /**
