@@ -8,6 +8,7 @@ use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Service\InlineRelationService;
 use In2code\In2mcp\Exception\ToolExecutionException;
 use In2code\In2mcp\Domain\Service\TcaService;
+use In2code\In2mcp\Domain\Service\WorkspaceService;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
@@ -24,6 +25,7 @@ readonly class RecordRepository
         private RecordQueryBuilderFactory $recordQueryBuilderFactory,
         private TcaService $tcaService,
         private InlineRelationService $inlineRelationService,
+        private WorkspaceService $workspaceService,
     ) {
     }
 
@@ -42,7 +44,8 @@ readonly class RecordRepository
             ->executeQuery()
             ->fetchAssociative();
 
-        if ($record === false) {
+        $record = $record === false ? null : $this->workspaceService->overlayRecord($table, $record);
+        if ($record === null) {
             return null;
         }
 
@@ -117,7 +120,7 @@ readonly class RecordRepository
                 $table,
                 $this->tcaService->cleanUpRecord($table, $record)
             ),
-            $records
+            $this->workspaceService->overlayRecords($table, $records)
         );
     }
 

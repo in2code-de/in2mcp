@@ -22,6 +22,7 @@ class InlineRelationService
     public function __construct(
         private readonly RecordQueryBuilderFactory $recordQueryBuilderFactory,
         private readonly TcaService $tcaService,
+        private readonly WorkspaceService $workspaceService,
     ) {
     }
 
@@ -82,7 +83,11 @@ class InlineRelationService
         }
         $queryBuilder->addOrderBy('uid');
 
-        return array_map('intval', $queryBuilder->executeQuery()->fetchFirstColumn());
+        $children = $this->workspaceService->overlayRecords(
+            $relation['foreignTable'],
+            $queryBuilder->executeQuery()->fetchAllAssociative()
+        );
+        return array_map(static fn(array $child): int => (int)$child['uid'], $children);
     }
 
     /**

@@ -424,7 +424,10 @@ in a regular backend request, and every read and write runs through the regular 
   they describe where a record belongs.
 - **Workspaces**: a request works in the workspace the user has selected in the backend, without
   EXT:workspaces that is always live. Every read returns live records and the records of that workspace, never
-  the drafts of another workspace.
+  the drafts of another workspace. Inside a workspace a record is returned as it looks there, under the uid of
+  its live record like in the backend, and a record deleted in the workspace is left out. Two limits remain:
+  filters and searches compare the live values, and a record moved inside the workspace is still listed on its
+  live page.
 - **Writing** goes through the **DataHandler**, so page permissions, `tables_modify`, `non_exclude_fields`, web
   mounts, hooks, reference index, slug generation, workspaces and the record history all apply unchanged. A
   refused write is reported back to the client with the reason TYPO3 gave. An update of an exclude field the
@@ -506,6 +509,7 @@ authentication resets the counter, so only failing requests count. Configurable 
 | `Repository\RecordRepository`  | Reads records of any table                                                      |
 | `Repository\FileRepository`    | Reads files and the references that point at them                               |
 | `Repository\RecordQueryBuilderFactory` | Query builder for records: no deleted ones, no drafts of other workspaces |
+| `Service\WorkspaceService`     | The workspace of a request, and the overlay of a record with its workspace version |
 | `Service\FileImportService`    | Downloads a file into the storage, streamed and size limited                    |
 | `Service\UrlValidationService` | The only guard on the one outgoing request this extension makes                 |
 | `Service\InlineRelationService`| Translates between the child counter and the list of child uids                 |

@@ -6,6 +6,7 @@ namespace In2code\In2mcp\Domain\Repository;
 
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Service\TcaService;
+use In2code\In2mcp\Domain\Service\WorkspaceService;
 use TYPO3\CMS\Core\Database\Connection;
 
 /**
@@ -24,6 +25,7 @@ readonly class ContentRepository
     public function __construct(
         private RecordQueryBuilderFactory $recordQueryBuilderFactory,
         private TcaService $tcaService,
+        private WorkspaceService $workspaceService,
     ) {
     }
 
@@ -54,7 +56,7 @@ readonly class ContentRepository
 
         return array_map(
             fn(array $contentElement): array => $this->tcaService->cleanUpRecord(self::TABLE_NAME, $contentElement),
-            $contentElements
+            $this->workspaceService->overlayRecords(self::TABLE_NAME, $contentElements)
         );
     }
 
@@ -197,8 +199,10 @@ readonly class ContentRepository
             ->executeQuery()
             ->fetchAssociative();
 
-        return $contentElement === false
+        $contentElement = $contentElement === false
             ? null
-            : $this->tcaService->cleanUpRecord(self::TABLE_NAME, $contentElement);
+            : $this->workspaceService->overlayRecord(self::TABLE_NAME, $contentElement);
+
+        return $contentElement === null ? null : $this->tcaService->cleanUpRecord(self::TABLE_NAME, $contentElement);
     }
 }

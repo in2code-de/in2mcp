@@ -7,6 +7,7 @@ namespace In2code\In2mcp\Domain\Repository;
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Service\BackendUserService;
 use In2code\In2mcp\Domain\Service\TcaService;
+use In2code\In2mcp\Domain\Service\WorkspaceService;
 use In2code\In2mcp\Exception\UserNotFoundException;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
@@ -24,6 +25,7 @@ readonly class PageRepository
         private RecordQueryBuilderFactory $recordQueryBuilderFactory,
         private BackendUserService $backendUserService,
         private TcaService $tcaService,
+        private WorkspaceService $workspaceService,
     ) {
     }
 
@@ -45,7 +47,8 @@ readonly class PageRepository
             ->executeQuery()
             ->fetchAssociative();
 
-        if ($page === false || $this->backendUserService->isInWebMount($uid) === false) {
+        $page = $page === false ? null : $this->workspaceService->overlayRecord(self::TABLE_NAME, $page);
+        if ($page === null || $this->backendUserService->isInWebMount($uid) === false) {
             return null;
         }
 
@@ -94,7 +97,7 @@ readonly class PageRepository
             ->fetchAllAssociative();
 
         $tree = [];
-        foreach ($pages as $page) {
+        foreach ($this->workspaceService->overlayRecords(self::TABLE_NAME, $pages) as $page) {
             $page['doktypeName'] = $this->tcaService->getPageTypeName((int)$page['doktype']);
             $page['children'] = $this->findTree((int)$page['uid'], $depth - 1, $languageId);
             $tree[] = $page;
@@ -132,7 +135,7 @@ readonly class PageRepository
             ->fetchAllAssociative();
 
         return array_values(array_filter(
-            $pages,
+            $this->workspaceService->overlayRecords(self::TABLE_NAME, $pages),
             fn(array $page): bool => $this->backendUserService->isInWebMount((int)$page['uid'])
         ));
     }
@@ -162,7 +165,8 @@ readonly class PageRepository
                 ->executeQuery()
                 ->fetchAssociative();
 
-            if ($page === false) {
+            $page = $page === false ? null : $this->workspaceService->overlayRecord(self::TABLE_NAME, $page);
+            if ($page === null) {
                 continue;
             }
 
