@@ -58,6 +58,7 @@ class BackendUserAuthenticator
         }
 
         $this->assertUserOfApiKey($backendUserAuthentication, $authenticationContext);
+        $this->assertLoginAllowed($backendUserAuthentication);
 
         $GLOBALS['BE_USER'] = $backendUserAuthentication;
         $this->setBackendUserAspect($backendUserAuthentication);
@@ -81,6 +82,21 @@ class BackendUserAuthenticator
         $userIdentifier = (int)($backendUserAuthentication->user['uid'] ?? 0);
         if ($userIdentifier === 0 || $authenticationContext->isAuthenticatedUser($userIdentifier) === false) {
             throw new UserNotFoundException('MCP: Request could not be authenticated', 1756800300);
+        }
+    }
+
+    /**
+     * @throws UserNotFoundException
+     */
+    protected function assertLoginAllowed(BackendUserAuthentication $backendUserAuthentication): void
+    {
+        // The core checks [BE][adminOnly] in its authentication middleware, which a MCP request never reaches
+        if ($backendUserAuthentication->isUserAllowedToLogin() === false) {
+            $this->removeSession($backendUserAuthentication);
+            throw new UserNotFoundException(
+                'MCP: The backend is locked to administrators by [BE][adminOnly], request was refused',
+                1756800312
+            );
         }
     }
 

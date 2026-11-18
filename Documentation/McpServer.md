@@ -391,6 +391,9 @@ session that is still waiting for its second factor is refused, so a stolen pass
 account does not become MCP access. An installation that enforces MFA should still know that an api key is a
 way past it, and should hand keys out accordingly.
 
+**A locked backend is locked for MCP as well.** While `[BE][adminOnly]` restricts the backend to administrators,
+every other api key is answered with `401 Unauthorized`, exactly as the backend login refuses that user.
+
 **A MCP request is no login.** Every request authenticates on its own, so it does not dispatch the
 `AfterUserLoggedInEvent`: login notification mails (`warning_email_addr`, "Notify me by email when somebody logs
 in from my account") and other listeners of that event are not triggered by MCP clients.
