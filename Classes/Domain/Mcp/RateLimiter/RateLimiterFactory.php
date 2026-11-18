@@ -8,6 +8,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Symfony\Component\RateLimiter\LimiterInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory as SymfonyRateLimiterFactory;
 use TYPO3\CMS\Core\Http\NormalizedParams;
+use TYPO3\CMS\Core\Locking\LockFactory;
 use TYPO3\CMS\Core\RateLimiter\Storage\CachingFrameworkStorage;
 
 /**
@@ -32,14 +33,22 @@ class RateLimiterFactory
     private const IPV6_NETWORK_SUFFIX = '/64';
     private const IPV4_MAPPED_PREFIX = "\0\0\0\0\0\0\0\0\0\0\xff\xff";
 
-    public function __construct(protected readonly CachingFrameworkStorage $storage)
-    {
+    private const LOCK_PREFIX = 'in2mcp-rate-limiter-';
+
+    public function __construct(
+        protected readonly CachingFrameworkStorage $storage,
+        protected readonly LockFactory $lockFactory,
+    ) {
     }
 
     public function create(ServerRequestInterface $request): LimiterInterface
     {
+        $limitedAddress = $this->getLimitedAddress($this->getRemoteAddress($request));
         $factory = new SymfonyRateLimiterFactory($this->getConfiguration(), $this->storage);
-        return $factory->create($this->getLimitedAddress($this->getRemoteAddress($request)));
+        return new LockedLimiter(
+            $factory->create($limitedAddress),
+            $this->lockFactory->createLocker(self::LOCK_PREFIX . sha1($limitedAddress))
+        );
     }
 
     /**

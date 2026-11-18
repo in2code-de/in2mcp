@@ -369,7 +369,8 @@ everything that comes with *having* to answer wrong keys:
   `$GLOBALS['TYPO3_CONF_VARS']['SYS']['rateLimiter']['in2mcp']`). A successful authentication resets the
   counter. An IPv6 address is counted per **/64 network** - even a home connection gets at least one of them, so
   counting single addresses would hand out a fresh limit for every request. An IPv4 address a dual stack server
-  sees as `::ffff:a.b.c.d` is counted as that IPv4 address. `X-Forwarded-For` is only trusted when `reverseProxyIP` is configured, so the address cannot be
+  sees as `::ffff:a.b.c.d` is counted as that IPv4 address. The counter of a client is read and written under an
+  exclusive lock, so requests sent at the same moment cannot all pass the limit before one of them has raised it. `X-Forwarded-For` is only trusted when `reverseProxyIP` is configured, so the address cannot be
   spoofed - but an installation behind a proxy **without** that setting sees every client as one address and
   shares one limit between them.
 - **A wrong key always costs exactly one hash verification**, whether the named user has a key, has none or does

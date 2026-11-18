@@ -7,6 +7,7 @@ namespace In2code\In2mcp\Tests\Unit\Domain\Mcp\RateLimiter;
 use In2code\In2mcp\Domain\Mcp\RateLimiter\RateLimiterFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use TYPO3\CMS\Core\Locking\LockFactory;
 use TYPO3\CMS\Core\RateLimiter\Storage\CachingFrameworkStorage;
 use TYPO3\TestingFramework\Core\Unit\UnitTestCase;
 
@@ -41,7 +42,10 @@ final class RateLimiterFactoryTest extends UnitTestCase
 
     private function getLimitedAddress(string $remoteAddress): string
     {
-        $subject = new class ($this->createStub(CachingFrameworkStorage::class)) extends RateLimiterFactory {
+        $subject = new class (
+            $this->createStub(CachingFrameworkStorage::class),
+            $this->createStub(LockFactory::class)
+        ) extends RateLimiterFactory {
             public function getLimitedAddressForTest(string $remoteAddress): string
             {
                 return $this->getLimitedAddress($remoteAddress);
