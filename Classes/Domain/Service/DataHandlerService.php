@@ -236,6 +236,7 @@ class DataHandlerService
         $this->tableAccessService->assertWritable($parentTable);
         $this->tableAccessService->assertWritable($relation['foreignTable']);
         $this->assertKnownFields($relation['foreignTable'], $fields);
+        $this->assertWritableValues($relation['foreignTable'], $fields, 0);
 
         $children = $this->inlineRelationService->findChildUids($relation, $parentTable, $parentUid);
         $children[] = self::NEW_RECORD_PLACEHOLDER;
