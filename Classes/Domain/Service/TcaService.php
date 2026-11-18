@@ -14,6 +14,7 @@ use TYPO3\CMS\Core\Schema\Field\FieldTranslationBehaviour;
 use TYPO3\CMS\Core\Schema\Field\FieldTypeInterface;
 use TYPO3\CMS\Core\Schema\Field\FileFieldType;
 use TYPO3\CMS\Core\Schema\Field\InlineFieldType;
+use TYPO3\CMS\Core\Schema\Field\PasswordFieldType;
 use TYPO3\CMS\Core\Schema\Field\StaticSelectFieldType;
 use TYPO3\CMS\Core\Schema\TcaSchema;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
@@ -137,7 +138,7 @@ class TcaService
                 && $this->isFieldOfTable($table, $fieldName) === false) {
                 continue;
             }
-            if ($this->isFieldReadable($table, $fieldName) === false) {
+            if ($this->isFieldReadable($table, $fieldName) === false || $this->isPasswordField($table, $fieldName)) {
                 continue;
             }
             if ($value === null || $value === '') {
@@ -165,6 +166,15 @@ class TcaService
     {
         return $this->isAccessControlledField($table, $fieldName) === false
             || $this->backendUserService->isExcludeFieldAllowed($table, $fieldName);
+    }
+
+    /**
+     * Never returned, not even a mask: a client that sends a record back would store the mask as new password
+     */
+    private function isPasswordField(string $table, string $fieldName): bool
+    {
+        return $this->isFieldOfTable($table, $fieldName)
+            && $this->getSchema($table)?->getField($fieldName) instanceof PasswordFieldType;
     }
 
     private function isAccessControlledField(string $table, string $fieldName): bool

@@ -457,6 +457,9 @@ in a regular backend request, and every read and write runs through the regular 
   them to everybody. `get_page` and `get_page_tree` refuse a language the user may not access, and `get_page`
   returns content elements only to a user who may read `tt_content`. Administrators and users without such a
   list are not checked at all.
+- **Password fields** (TCA type `password`) are never returned, not even masked, for administrators neither: a
+  client that sends a record back with a mask would store the mask as new password. Writing them stays possible
+  for whoever may write the field, the DataHandler hashes the value as usual.
 - **Exclude fields** are only returned when `non_exclude_fields` allows them, and only those can be used as a
   filter of `find_records`. The language fields and the container of a content element stay readable, because
   they describe where a record belongs.
