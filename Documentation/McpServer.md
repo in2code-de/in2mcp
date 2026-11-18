@@ -489,11 +489,15 @@ in a regular backend request, and every read and write runs through the regular 
   nothing there - any uid clears any page - so in2mcp answers that question. Flushing the whole page cache or
   every cache follows `options.clearCache.pages` and `options.clearCache.all` of the user TSconfig, and a
   refusal is reported instead of silently doing nothing.
-- Tables that hold authentication data or internal bookkeeping are refused for **every** user, administrators
-  included: `be_users`, `be_groups`, `be_sessions`, `fe_users`, `fe_groups`, `fe_sessions`, `sys_history`,
-  `sys_log`, `sys_refindex`, `sys_registry`, `sys_file_processedfile` and `sys_lockedrecords`. This is the one
-  deliberate deviation from "the client may do what the user may do": an api key that leaked must not be able to
-  create a backend user. The list is `TableAccessService::DENIED_TABLES`.
+- Tables that hold authentication data, internal bookkeeping or scheduled commands are refused for **every**
+  user, administrators included: `be_users`, `be_groups`, `be_sessions`, `fe_users`, `fe_groups`, `fe_sessions`,
+  `sys_history`, `sys_log`, `sys_refindex`, `sys_registry`, `sys_file_processedfile`, `sys_lockedrecords`,
+  `tx_scheduler_task` and `tx_scheduler_task_group`. Tables that decide what users may do or where files go are
+  **read only** for every user: `sys_file_storage`, `sys_filemounts`, `sys_workspace`, `sys_workspace_stage` and
+  `sys_template`, next to `sys_file`. This is the one deliberate deviation from "the client may do what the user
+  may do": an api key lives in plain text in the configuration of a client, and one that leaked must not be able to
+  create a backend user, widen the permissions of others, change where files are written or schedule a command.
+  The lists are `TableAccessService::DENIED_TABLES` and `READ_ONLY_TABLES`.
 - `get_backend_users` and `get_recent_changes` are the only tools that read `be_users` and `sys_history`, and
   they answer **administrators only**. They return a fixed set of fields - username, real name, admin and
   disabled flag, last login, the names of the active MFA providers, and for a change its table, record, action and

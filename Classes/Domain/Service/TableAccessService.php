@@ -34,14 +34,22 @@ class TableAccessService
         'sys_registry',
         'sys_file_processedfile',
         'sys_lockedrecords',
+        // A task "Execute console commands" runs any command of the installation with full rights
+        'tx_scheduler_task',
+        'tx_scheduler_task_group',
     ];
 
     /**
-     * Readable, but changed only through the file abstraction layer: the DataHandler would remove the record and
-     * leave the file in the storage and its references behind. "delete_file" is the way to delete a file.
+     * Readable for a client that wants to understand the installation, but never written through MCP, for
+     * administrators neither: a leaked api key must not be able to widen what a user may do or where files go.
      */
     private const READ_ONLY_TABLES = [
-        'sys_file',
+        'sys_file' => 'the file in the storage would stay behind. Use "delete_file" to delete a file.',
+        'sys_file_storage' => 'a storage decides where files are written on the server.',
+        'sys_filemounts' => 'a file mount widens the files of every user who has it.',
+        'sys_workspace' => 'a workspace decides who may edit and publish its changes.',
+        'sys_workspace_stage' => 'a stage decides who may move changes on to publication.',
+        'sys_template' => 'TypoScript changes the output of the whole site. Change it in the backend.',
     ];
 
     public function __construct(
@@ -95,7 +103,7 @@ class TableAccessService
     {
         $tables = [];
         foreach ($this->tcaSchemaFactory->all()->getNames() as $table) {
-            if (in_array($table, [...self::DENIED_TABLES, ...self::READ_ONLY_TABLES], true)) {
+            if (in_array($table, [...self::DENIED_TABLES, ...array_keys(self::READ_ONLY_TABLES)], true)) {
                 continue;
             }
             if ($this->backendUserService->isTableModifyAllowed($table)) {
@@ -133,8 +141,8 @@ class TableAccessService
     {
         if (in_array($table, self::DENIED_TABLES, true)) {
             throw new TableNotAccessibleException(
-                'The table "' . $table . '" holds authentication or bookkeeping data and is never accessible'
-                . ' through MCP, independent of the permissions of the backend user',
+                'The table "' . $table . '" holds users, sessions, internal bookkeeping or scheduled commands and'
+                . ' is never accessible through MCP, independent of the permissions of the backend user',
                 1756801012
             );
         }
@@ -145,10 +153,10 @@ class TableAccessService
      */
     private function assertNotReadOnly(string $table): void
     {
-        if (in_array($table, self::READ_ONLY_TABLES, true)) {
+        if (array_key_exists($table, self::READ_ONLY_TABLES)) {
             throw new TableNotAccessibleException(
-                'Records of the table "' . $table . '" are not written through MCP, because the file in the'
-                . ' storage would stay behind. Use "delete_file" to delete a file.',
+                'Records of the table "' . $table . '" are only read through MCP, not written: '
+                . self::READ_ONLY_TABLES[$table],
                 1756802216
             );
         }

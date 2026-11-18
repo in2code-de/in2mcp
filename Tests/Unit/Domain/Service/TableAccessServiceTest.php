@@ -17,7 +17,19 @@ use TYPO3\TestingFramework\Core\Unit\UnitTestCase;
 
 final class TableAccessServiceTest extends UnitTestCase
 {
-    private const CONFIGURED_TABLES = ['pages', 'tt_content', 'sys_file', 'be_users', 'fe_users', 'tx_news'];
+    private const CONFIGURED_TABLES = [
+        'pages',
+        'tt_content',
+        'sys_file',
+        'sys_file_storage',
+        'sys_filemounts',
+        'sys_workspace',
+        'sys_workspace_stage',
+        'sys_template',
+        'be_users',
+        'fe_users',
+        'tx_news',
+    ];
 
     public static function deniedTableDataProvider(): array
     {
@@ -29,6 +41,8 @@ final class TableAccessServiceTest extends UnitTestCase
             'log without schema' => ['sys_log'],
             'reference index' => ['sys_refindex'],
             'registry' => ['sys_registry'],
+            'scheduler tasks' => ['tx_scheduler_task'],
+            'scheduler task groups' => ['tx_scheduler_task_group'],
         ];
     }
 
@@ -90,19 +104,33 @@ final class TableAccessServiceTest extends UnitTestCase
         $this->createSubjectWithPermission(false)->assertWritable('tx_news');
     }
 
-    #[Test]
-    #[DoesNotPerformAssertions]
-    public function assertReadableAcceptsReadOnlyTable(): void
+    public static function readOnlyTableDataProvider(): array
     {
-        $this->createSubjectWithPermission(true)->assertReadable('sys_file');
+        return [
+            'files' => ['sys_file'],
+            'storages' => ['sys_file_storage'],
+            'file mounts' => ['sys_filemounts'],
+            'workspaces' => ['sys_workspace'],
+            'workspace stages' => ['sys_workspace_stage'],
+            'typoscript' => ['sys_template'],
+        ];
     }
 
     #[Test]
-    public function assertWritableRefusesReadOnlyTable(): void
+    #[DataProvider('readOnlyTableDataProvider')]
+    #[DoesNotPerformAssertions]
+    public function assertReadableAcceptsReadOnlyTable(string $table): void
+    {
+        $this->createSubjectWithPermission(true)->assertReadable($table);
+    }
+
+    #[Test]
+    #[DataProvider('readOnlyTableDataProvider')]
+    public function assertWritableRefusesReadOnlyTable(string $table): void
     {
         $this->expectException(TableNotAccessibleException::class);
         $this->expectExceptionCode(1756802216);
-        $this->createSubjectWithPermission(true)->assertWritable('sys_file');
+        $this->createSubjectWithPermission(true)->assertWritable($table);
     }
 
     public static function unknownTableDataProvider(): array

@@ -78,9 +78,11 @@ the **file mounts** when searching or attaching files, and the page mounts again
 single page. Raw HTML stays raw for a user who may use the `html` content element and is sanitized for everybody
 else, because that is what TYPO3 does with a backend save.
 
-There is one deliberate exception: tables that hold authentication data or internal bookkeeping (`be_users`,
-`fe_users`, `sys_log`, `sys_refindex` and their relatives) are refused for every user, administrators included,
-so an api key that leaked cannot create a backend user. See `TableAccessService::DENIED_TABLES`.
+There is one deliberate exception: tables that hold authentication data, internal bookkeeping or scheduled
+commands (`be_users`, `fe_users`, `sys_log`, `tx_scheduler_task` and their relatives) are refused for every user,
+administrators included, and storages, file mounts, workspaces and TypoScript are read only, so an api key that
+leaked cannot create a backend user, widen permissions or schedule a command. See
+`TableAccessService::DENIED_TABLES` and `READ_ONLY_TABLES`.
 
 An api key has the form `<uid>.<secret>` and only the secret is stored, hashed. Failing authentications are rate
 limited per ip address. Multi factor authentication is skipped for MCP requests, so an installation that
