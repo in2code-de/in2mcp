@@ -186,6 +186,18 @@ final class PageToolsTest extends AbstractFunctionalTestCase
 
         $result = $this->callTool('get_recently_changed_pages', ['pageUid' => 1]);
 
-        self::assertSame('Contact us', $result[0]['title'] ?? $result['pages'][0]['title'] ?? null);
+        self::assertSame('Contact us', $result[0]['title']);
+        self::assertArrayNotHasKey('nav_title', $result[0]);
+    }
+
+    #[Test]
+    public function recentlyChangedPagesContainTheNavigationTitleForAnAdministrator(): void
+    {
+        $this->loginAs(self::ADMIN);
+        $this->callTool('update_page', ['pageUid' => 3, 'fields' => ['title' => 'Contact us']]);
+
+        $result = $this->callTool('get_recently_changed_pages', ['pageUid' => 1]);
+
+        self::assertSame('Navigation only', $result[0]['nav_title']);
     }
 }

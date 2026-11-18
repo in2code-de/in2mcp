@@ -188,7 +188,7 @@ class RecentChangeService
             'uid' => (int)$page['uid'],
             'pid' => (int)$page['pid'],
             'title' => (string)$page['title'],
-            'nav_title' => (string)$page['nav_title'],
+            'nav_title' => (string)($page['nav_title'] ?? ''),
             'slug' => (string)$page['slug'],
             'doktype' => (int)$page['doktype'],
             'doktypeName' => $this->tcaService->getPageTypeName((int)$page['doktype']),
