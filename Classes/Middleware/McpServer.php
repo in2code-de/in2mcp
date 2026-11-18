@@ -12,7 +12,6 @@ use In2code\In2mcp\Domain\Mcp\ServerFactory;
 use In2code\In2mcp\Domain\Service\ConfigurationService;
 use In2code\In2mcp\Exception\UserNotFoundException;
 use Mcp\Server\Transport\Http\Middleware\CorsMiddleware;
-use Mcp\Server\Transport\Http\Middleware\ProtocolVersionMiddleware;
 use Mcp\Server\Transport\StreamableHttpTransport;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -86,6 +85,12 @@ class McpServer implements MiddlewareInterface
         }
     }
 
+    /**
+     * Not the default middleware of the sdk: its DnsRebindingProtectionMiddleware accepts localhost only, while
+     * TYPO3 already checks the host with trustedHostsPattern. The check of the protocol version is applied by the
+     * transport itself, and only to clients of the handshake era - in this list it would refuse every client of
+     * the 2026-07-28 revision.
+     */
     private function getTransport(ServerRequestInterface $request): StreamableHttpTransport
     {
         return new StreamableHttpTransport(
@@ -93,7 +98,7 @@ class McpServer implements MiddlewareInterface
             $this->responseFactory,
             $this->streamFactory,
             $this->logger,
-            [new CorsMiddleware(), new ProtocolVersionMiddleware()]
+            [new CorsMiddleware()]
         );
     }
 
