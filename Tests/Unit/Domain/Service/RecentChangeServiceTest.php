@@ -21,11 +21,11 @@ final class RecentChangeServiceTest extends UnitTestCase
     {
         parent::setUp();
         $this->subject = new RecentChangeService(
-            $this->createStub(RecentChangeRepository::class),
-            $this->createStub(PageRepository::class),
-            $this->createStub(BackendUserService::class),
-            $this->createStub(TcaService::class),
-            $this->createStub(LastEditorService::class)
+            self::createStub(RecentChangeRepository::class),
+            self::createStub(PageRepository::class),
+            self::createStub(BackendUserService::class),
+            self::createStub(TcaService::class),
+            self::createStub(LastEditorService::class)
         );
     }
 

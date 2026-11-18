@@ -101,7 +101,7 @@ class FindRecordsTool extends AbstractTool
         $filters = $this->getArrayArgument($arguments, 'filters');
         $limit = $this->recordRepository->getLimit($this->getIntArgument($arguments, 'limit'));
 
-        $findBatch = fn(int $offset): array => $this->recordRepository->find(
+        $findBatch = fn (int $offset): array => $this->recordRepository->find(
             $table,
             $pid === self::ANY_PAGE ? null : $pid,
             $filters,
@@ -145,7 +145,7 @@ class FindRecordsTool extends AbstractTool
     {
         return array_filter(
             $records,
-            fn(array $record): bool => $this->recordAccessService->isRecordReadable($table, $record)
+            fn (array $record): bool => $this->recordAccessService->isRecordReadable($table, $record)
         );
     }
 }

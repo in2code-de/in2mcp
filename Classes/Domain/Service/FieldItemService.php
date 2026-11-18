@@ -109,7 +109,7 @@ class FieldItemService
             $keptValues = GeneralUtility::trimExplode(',', $keepItems, true);
             $items = array_filter(
                 $items,
-                static fn(array $item): bool => in_array((string)$item['value'], $keptValues, true)
+                static fn (array $item): bool => in_array((string)$item['value'], $keptValues, true)
             );
         }
 
@@ -118,7 +118,7 @@ class FieldItemService
         $removedValues = GeneralUtility::trimExplode(',', (string)($configuration[self::REMOVE_ITEMS_KEY] ?? ''), true);
         $items = array_filter(
             $items,
-            static fn(array $item): bool => in_array((string)$item['value'], $removedValues, true) === false
+            static fn (array $item): bool => in_array((string)$item['value'], $removedValues, true) === false
         );
 
         $altLabels = $configuration[self::ALT_LABELS_KEY] ?? [];
@@ -260,10 +260,10 @@ class FieldItemService
      */
     private function addItems(array $items, mixed $addItems): array
     {
-        $values = array_map(static fn(array $item): string => (string)$item['value'], $items);
+        $values = array_map(static fn (array $item): string => (string)$item['value'], $items);
         // A value from the TSconfig is always a string. It gets the type of the values of the TCA, so a field does
         // not mix 7 and "0" - integers only when the field has nothing but integers so far.
-        $integerValues = array_filter($items, static fn(array $item): bool => is_int($item['value'])) === $items;
+        $integerValues = array_filter($items, static fn (array $item): bool => is_int($item['value'])) === $items;
         foreach (is_array($addItems) ? $addItems : [] as $value => $label) {
             $value = (string)$value;
             if (is_string($label)
@@ -302,7 +302,7 @@ class FieldItemService
             $backendUser = $this->backendUserService->getBackendUser();
             $items = array_values(array_filter(
                 $items,
-                static fn(array $item): bool => $backendUser->checkAuthMode($table, $field->getName(), $item['value'])
+                static fn (array $item): bool => $backendUser->checkAuthMode($table, $field->getName(), $item['value'])
             ));
         }
         return $items;

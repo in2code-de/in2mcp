@@ -497,7 +497,7 @@ class DataHandlerService
     {
         $deniedFields = array_filter(
             array_map('strval', array_keys($fields)),
-            fn(string $fieldName): bool => $this->tcaService->isFieldWritable($table, $fieldName) === false
+            fn (string $fieldName): bool => $this->tcaService->isFieldWritable($table, $fieldName) === false
         );
 
         if ($deniedFields !== []) {

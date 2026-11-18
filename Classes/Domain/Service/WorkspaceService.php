@@ -72,8 +72,8 @@ readonly class WorkspaceService
     public function overlayRecords(string $table, array $records): array
     {
         return array_values(array_filter(
-            array_map(fn(array $record): ?array => $this->overlayRecord($table, $record), $records),
-            static fn(?array $record): bool => $record !== null
+            array_map(fn (array $record): ?array => $this->overlayRecord($table, $record), $records),
+            static fn (?array $record): bool => $record !== null
         ));
     }
 

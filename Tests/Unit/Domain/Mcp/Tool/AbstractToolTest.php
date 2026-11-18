@@ -101,7 +101,7 @@ final class AbstractToolTest extends UnitTestCase
     #[Test]
     public function getParametersIsEmptyByDefault(): void
     {
-        $tool = new class () extends AbstractTool {
+        $tool = new class() extends AbstractTool {
             public function getName(): string
             {
                 return 'empty';
@@ -124,7 +124,7 @@ final class AbstractToolTest extends UnitTestCase
     #[Test]
     public function readOnlyToolIsNeverDestructive(): void
     {
-        $tool = new class () extends ArgumentTool {
+        $tool = new class() extends ArgumentTool {
             protected const READ_ONLY = true;
         };
 

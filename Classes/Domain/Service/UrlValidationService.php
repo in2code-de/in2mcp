@@ -195,7 +195,7 @@ class UrlValidationService
         $hexAddress = $this->getIpv6Hex($address);
         return $hexAddress !== null && array_filter(
             self::REFUSED_IPV6_PREFIXES,
-            static fn(string $prefix): bool => str_starts_with($hexAddress, $prefix)
+            static fn (string $prefix): bool => str_starts_with($hexAddress, $prefix)
         ) !== [];
     }
 

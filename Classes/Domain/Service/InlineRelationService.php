@@ -87,7 +87,7 @@ class InlineRelationService
             $relation['foreignTable'],
             $queryBuilder->executeQuery()->fetchAllAssociative()
         );
-        return array_map(static fn(array $child): int => (int)$child['uid'], $children);
+        return array_map(static fn (array $child): int => (int)$child['uid'], $children);
     }
 
     /**

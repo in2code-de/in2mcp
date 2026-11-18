@@ -62,13 +62,13 @@ final class BackendUserActivityServiceTest extends UnitTestCase
 
     private function createSubject(bool $isAdmin): BackendUserActivityService
     {
-        $backendUserService = $this->createStub(BackendUserService::class);
+        $backendUserService = self::createStub(BackendUserService::class);
         $backendUserService->method('isAdmin')->willReturn($isAdmin);
 
         return new BackendUserActivityService(
-            $this->createStub(BackendUserActivityRepository::class),
+            self::createStub(BackendUserActivityRepository::class),
             $backendUserService,
-            $this->createStub(TcaService::class)
+            self::createStub(TcaService::class)
         );
     }
 }

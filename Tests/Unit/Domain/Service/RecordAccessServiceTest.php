@@ -53,7 +53,7 @@ final class RecordAccessServiceTest extends UnitTestCase
      */
     private function createRestrictedSubject(array $allowedLanguageIds): RecordAccessService
     {
-        $tcaService = $this->createStub(TcaService::class);
+        $tcaService = self::createStub(TcaService::class);
         $tcaService->method('getLanguageField')->willReturn('sys_language_uid');
         return new RecordAccessService($this->createBackendUserService($allowedLanguageIds), $tcaService);
     }
@@ -63,11 +63,11 @@ final class RecordAccessServiceTest extends UnitTestCase
      */
     private function createBackendUserService(?array $allowedLanguageIds): BackendUserService
     {
-        $backendUserService = $this->createStub(BackendUserService::class);
+        $backendUserService = self::createStub(BackendUserService::class);
         $backendUserService->method('isRecordReachable')->willReturn(true);
         $backendUserService->method('getAllowedLanguageIds')->willReturn($allowedLanguageIds);
         $backendUserService->method('isLanguageAllowed')->willReturnCallback(
-            static fn(int $languageId): bool => $allowedLanguageIds === null
+            static fn (int $languageId): bool => $allowedLanguageIds === null
                 || in_array($languageId, $allowedLanguageIds, true)
         );
         return $backendUserService;

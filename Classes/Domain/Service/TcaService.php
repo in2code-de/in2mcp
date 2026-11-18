@@ -172,7 +172,7 @@ class TcaService
             ? $fieldNames
             : array_values(array_filter(
                 $fieldNames,
-                fn(string $fieldName): bool => $this->isFieldReadable($table, $fieldName)
+                fn (string $fieldName): bool => $this->isFieldReadable($table, $fieldName)
             ));
     }
 
@@ -238,7 +238,7 @@ class TcaService
     public function getTableLabel(string $table): string
     {
         $schema = $this->getSchema($table);
-        $title = $schema?->getTitle(fn(string $label): string => $this->translate($label)) ?? '';
+        $title = $schema?->getTitle(fn (string $label): string => $this->translate($label)) ?? '';
         return $title === '' ? $table : $title;
     }
 
@@ -483,7 +483,7 @@ class TcaService
      */
     private function toLowerCase(array $values): array
     {
-        return array_values(array_map(static fn(mixed $value): string => strtolower((string)$value), $values));
+        return array_values(array_map(static fn (mixed $value): string => strtolower((string)$value), $values));
     }
 
     /**

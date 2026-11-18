@@ -53,12 +53,12 @@ final class LastEditorServiceTest extends UnitTestCase
 
     private function createSubject(bool $isAdmin): LastEditorService
     {
-        $backendUserService = $this->createStub(BackendUserService::class);
+        $backendUserService = self::createStub(BackendUserService::class);
         $backendUserService->method('isAdmin')->willReturn($isAdmin);
 
         return new LastEditorService(
-            $this->createStub(BackendUserActivityRepository::class),
-            $this->createStub(RecentChangeRepository::class),
+            self::createStub(BackendUserActivityRepository::class),
+            self::createStub(RecentChangeRepository::class),
             $backendUserService
         );
     }

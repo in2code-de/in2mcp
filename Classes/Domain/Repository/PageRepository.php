@@ -157,7 +157,7 @@ readonly class PageRepository
             ->from(self::TABLE_NAME)
             ->andWhere(
                 $queryBuilder->expr()->or(...array_map(
-                    static fn(string $fieldName): string => (string)$queryBuilder->expr()->like(
+                    static fn (string $fieldName): string => (string)$queryBuilder->expr()->like(
                         $fieldName,
                         $searchParameter
                     ),
@@ -175,7 +175,7 @@ readonly class PageRepository
 
         return array_values(array_filter(
             $this->workspaceService->overlayRecords(self::TABLE_NAME, $pages),
-            fn(array $page): bool => $this->backendUserService->isInWebMount((int)$page['uid'])
+            fn (array $page): bool => $this->backendUserService->isInWebMount((int)$page['uid'])
         ));
     }
 

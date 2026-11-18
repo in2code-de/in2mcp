@@ -73,7 +73,7 @@ final class EmptyFieldServiceTest extends UnitTestCase
     #[Test]
     public function unknownFieldIsRefused(): void
     {
-        $tcaService = $this->createStub(TcaService::class);
+        $tcaService = self::createStub(TcaService::class);
         $tcaService->method('getFieldDefinition')->willReturn(null);
 
         $this->expectExceptionCode(1795478401);
@@ -85,12 +85,12 @@ final class EmptyFieldServiceTest extends UnitTestCase
      */
     private function createSubject(string $type, array $configuration, bool $isCountingChildren): EmptyFieldService
     {
-        $field = $this->createStub(FieldTypeInterface::class);
+        $field = self::createStub(FieldTypeInterface::class);
         $field->method('getType')->willReturn($type);
         $field->method('getName')->willReturn('field');
         $field->method('getConfiguration')->willReturn($configuration);
 
-        $tcaService = $this->createStub(TcaService::class);
+        $tcaService = self::createStub(TcaService::class);
         $tcaService->method('getFieldDefinition')->willReturn($field);
         $tcaService->method('getInlineRelation')->willReturn(
             $isCountingChildren ? ['foreignTable' => 'child', 'foreignField' => 'parent'] : null

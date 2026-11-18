@@ -42,9 +42,8 @@ final class ClientAddressServiceTest extends UnitTestCase
         array $allowedIps,
         string $address,
         bool $expected
-    ): void
-    {
-        $configurationService = $this->createStub(ConfigurationService::class);
+    ): void {
+        $configurationService = self::createStub(ConfigurationService::class);
         $configurationService->method('getMcpServerAllowedIps')->willReturn($allowedIps);
         $request = (new ServerRequest('https://example.org/typo3/mcp', 'POST'))->withAttribute(
             'normalizedParams',
@@ -56,7 +55,7 @@ final class ClientAddressServiceTest extends UnitTestCase
 
     private function createNormalizedParams(string $address): NormalizedParams
     {
-        $normalizedParams = $this->createStub(NormalizedParams::class);
+        $normalizedParams = self::createStub(NormalizedParams::class);
         $normalizedParams->method('getRemoteAddress')->willReturn($address);
         return $normalizedParams;
     }

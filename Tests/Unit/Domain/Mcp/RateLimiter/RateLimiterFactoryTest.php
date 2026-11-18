@@ -43,11 +43,10 @@ final class RateLimiterFactoryTest extends UnitTestCase
 
     private function getLimitedAddress(string $remoteAddress): string
     {
-        $subject = new class (
-            $this->createStub(CachingFrameworkStorage::class),
-            $this->createStub(LockFactory::class),
-            $this->createStub(ClientAddressService::class)
-        ) extends RateLimiterFactory {
+        $storage = self::createStub(CachingFrameworkStorage::class);
+        $lockFactory = self::createStub(LockFactory::class);
+        $clientAddressService = self::createStub(ClientAddressService::class);
+        $subject = new class($storage, $lockFactory, $clientAddressService) extends RateLimiterFactory {
             public function getLimitedAddressForTest(string $remoteAddress): string
             {
                 return $this->getLimitedAddress($remoteAddress);

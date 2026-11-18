@@ -26,16 +26,16 @@ final class FieldItemServiceTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $tcaService = $this->createStub(TcaService::class);
+        $tcaService = self::createStub(TcaService::class);
         $tcaService->method('translateLabel')->willReturnCallback(
-            static fn(string $label): string => 'translated:' . $label
+            static fn (string $label): string => 'translated:' . $label
         );
 
         $this->subject = new FieldItemService(
             $tcaService,
-            $this->createStub(TceFormService::class),
-            $this->createStub(BackendUserService::class),
-            $this->createStub(ItemProcessingService::class)
+            self::createStub(TceFormService::class),
+            self::createStub(BackendUserService::class),
+            self::createStub(ItemProcessingService::class)
         );
     }
 

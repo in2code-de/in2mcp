@@ -66,14 +66,14 @@ final class WorkspaceServiceTest extends UnitTestCase
         if ($workspaceId !== null) {
             $context->setAspect('workspace', new WorkspaceAspect($workspaceId));
         }
-        $packageManager = $this->createStub(PackageManager::class);
+        $packageManager = self::createStub(PackageManager::class);
         $packageManager->method('isPackageActive')->willReturn(false);
 
         return new WorkspaceService(
             $context,
             $packageManager,
-            $this->createStub(WorkspaceRepository::class),
-            $this->createStub(BackendUserService::class)
+            self::createStub(WorkspaceRepository::class),
+            self::createStub(BackendUserService::class)
         );
     }
 }

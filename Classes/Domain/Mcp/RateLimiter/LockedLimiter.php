@@ -26,17 +26,17 @@ readonly class LockedLimiter implements LimiterInterface
 
     public function reserve(int $tokens = 1, ?float $maxTime = null): Reservation
     {
-        return $this->locked(fn(): Reservation => $this->limiter->reserve($tokens, $maxTime));
+        return $this->locked(fn (): Reservation => $this->limiter->reserve($tokens, $maxTime));
     }
 
     public function consume(int $tokens = 1): RateLimit
     {
-        return $this->locked(fn(): RateLimit => $this->limiter->consume($tokens));
+        return $this->locked(fn (): RateLimit => $this->limiter->consume($tokens));
     }
 
     public function reset(): void
     {
-        $this->locked(fn(): null => $this->limiter->reset());
+        $this->locked(fn (): null => $this->limiter->reset());
     }
 
     /**

@@ -48,7 +48,7 @@ abstract class AbstractMiddlewareTestCase extends AbstractFunctionalTestCase
     // The backend behind the middleware answers with a status no middleware uses, so passing on is visible
     protected function processWith(MiddlewareInterface $middleware, ServerRequestInterface $request): ResponseInterface
     {
-        $backend = new class (self::NOT_HANDLED_STATUS) implements RequestHandlerInterface {
+        $backend = new class(self::NOT_HANDLED_STATUS) implements RequestHandlerInterface {
             public function __construct(private readonly int $status)
             {
             }

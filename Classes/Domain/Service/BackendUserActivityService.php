@@ -45,7 +45,7 @@ class BackendUserActivityService
         $lastChanges = $this->backendUserActivityRepository->findLastChangeTimesByUser();
 
         return array_map(
-            fn(array $user): array => [
+            fn (array $user): array => [
                 'uid' => (int)$user['uid'],
                 'username' => (string)$user['username'],
                 'realName' => (string)$user['realName'],
@@ -74,7 +74,7 @@ class BackendUserActivityService
         );
 
         return array_map(
-            fn(array $change): array => [
+            fn (array $change): array => [
                 'changed' => $this->formatTimestamp((int)$change['tstamp']),
                 'action' => self::ACTION_NAMES[(int)$change['actiontype']] ?? 'unknown',
                 'userUid' => (int)$change['userid'],

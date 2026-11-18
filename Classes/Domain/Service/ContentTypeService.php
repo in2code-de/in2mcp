@@ -116,6 +116,6 @@ class ContentTypeService
      */
     private function getValues(array $contentTypes): array
     {
-        return array_map(static fn(array $contentType): string => (string)$contentType['value'], $contentTypes);
+        return array_map(static fn (array $contentType): string => (string)$contentType['value'], $contentTypes);
     }
 }

@@ -59,7 +59,7 @@ class RecentChangeService
         );
         $pages = $this->recentChangeRepository->findPagesByUids(array_keys($ranking));
         $editors = $this->lastEditorService->findEditorsOfPages(
-            array_map(static fn(array $changes): int => $changes['lastChanged'], $ranking)
+            array_map(static fn (array $changes): int => $changes['lastChanged'], $ranking)
         );
 
         $result = [];
@@ -149,7 +149,7 @@ class RecentChangeService
         }
         uksort(
             $ranking,
-            static fn(int $left, int $right): int => [$ranking[$right]['lastChanged'], $right]
+            static fn (int $left, int $right): int => [$ranking[$right]['lastChanged'], $right]
                 <=> [$ranking[$left]['lastChanged'], $left]
         );
         return array_slice($ranking, 0, max($limit, 0), true);

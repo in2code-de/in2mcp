@@ -143,7 +143,7 @@ readonly class ConfigurationService
     public function getMcpServerAllowedIps(): array
     {
         return array_values(array_filter(array_map(
-            static fn(string $address): string => trim($address),
+            static fn (string $address): string => trim($address),
             explode(',', (string)$this->get('mcpServerAllowedIps'))
         )));
     }
@@ -151,7 +151,7 @@ readonly class ConfigurationService
     public function getFileImportAllowedHosts(): array
     {
         $hosts = array_filter(array_map(
-            static fn(string $host): string => strtolower(trim($host)),
+            static fn (string $host): string => strtolower(trim($host)),
             explode(',', (string)$this->get('fileImportAllowedHosts'))
         ));
 

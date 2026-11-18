@@ -106,7 +106,7 @@ class LastEditorService
     private function findEditors(array $keysByRecord, int $oldestChange): array
     {
         $historyEntries = $this->backendUserActivityRepository->findHistoryOfRecords(
-            array_map(static fn(array $keys): array => array_keys($keys), $keysByRecord),
+            array_map(static fn (array $keys): array => array_keys($keys), $keysByRecord),
             $oldestChange - self::HISTORY_TOLERANCE_SECONDS
         );
         $editorUids = $this->pickNewestEditors($historyEntries, $keysByRecord);

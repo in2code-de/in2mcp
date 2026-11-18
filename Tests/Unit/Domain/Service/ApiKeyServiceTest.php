@@ -81,7 +81,7 @@ final class ApiKeyServiceTest extends UnitTestCase
 
     private function createRepositoryFindingUser(int $uid): BackendUserRepository
     {
-        $backendUserRepository = $this->createStub(BackendUserRepository::class);
+        $backendUserRepository = self::createStub(BackendUserRepository::class);
         $backendUserRepository->method('findByUidOrUsername')->willReturn(['uid' => $uid]);
         return $backendUserRepository;
     }
@@ -91,18 +91,18 @@ final class ApiKeyServiceTest extends UnitTestCase
      */
     private function createSubject(BackendUserRepository $backendUserRepository): ApiKeyService
     {
-        $passwordHashFactory = $this->createStub(PasswordHashFactory::class);
+        $passwordHashFactory = self::createStub(PasswordHashFactory::class);
         $passwordHashFactory->method('getDefaultHashInstance')->willReturnCallback(
-            fn(string $mode): PasswordHashInterface => $this->createHashInstance($mode)
+            fn (string $mode): PasswordHashInterface => $this->createHashInstance($mode)
         );
         return new ApiKeyService($backendUserRepository, $passwordHashFactory);
     }
 
     private function createHashInstance(string $mode): PasswordHashInterface
     {
-        $hashInstance = $this->createStub(PasswordHashInterface::class);
+        $hashInstance = self::createStub(PasswordHashInterface::class);
         $hashInstance->method('getHashedPassword')->willReturnCallback(
-            static fn(string $secret): string => $mode . ':' . $secret
+            static fn (string $secret): string => $mode . ':' . $secret
         );
         return $hashInstance;
     }

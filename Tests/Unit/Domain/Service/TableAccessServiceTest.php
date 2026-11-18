@@ -163,9 +163,9 @@ final class TableAccessServiceTest extends UnitTestCase
     #[Test]
     public function getWritableTablesReturnsSortedAllowedTablesWithoutDeniedAndReadOnlyTables(): void
     {
-        $backendUserService = $this->createStub(BackendUserService::class);
+        $backendUserService = self::createStub(BackendUserService::class);
         $backendUserService->method('isTableModifyAllowed')->willReturnCallback(
-            static fn(string $table): bool => $table !== 'tx_news'
+            static fn (string $table): bool => $table !== 'tx_news'
         );
 
         self::assertSame(['pages', 'tt_content'], $this->createSubject($backendUserService)->getWritableTables());
@@ -173,7 +173,7 @@ final class TableAccessServiceTest extends UnitTestCase
 
     private function createSubjectWithPermission(bool $isAllowed): TableAccessService
     {
-        $backendUserService = $this->createStub(BackendUserService::class);
+        $backendUserService = self::createStub(BackendUserService::class);
         $backendUserService->method('isTableSelectAllowed')->willReturn($isAllowed);
         $backendUserService->method('isTableModifyAllowed')->willReturn($isAllowed);
 
@@ -182,9 +182,9 @@ final class TableAccessServiceTest extends UnitTestCase
 
     private function createSubject(BackendUserService $backendUserService): TableAccessService
     {
-        $tcaSchemaFactory = $this->createStub(TcaSchemaFactory::class);
+        $tcaSchemaFactory = self::createStub(TcaSchemaFactory::class);
         $tcaSchemaFactory->method('has')->willReturnCallback(
-            static fn(string $name): bool => in_array(explode('.', $name)[0], self::CONFIGURED_TABLES, true)
+            static fn (string $name): bool => in_array(explode('.', $name)[0], self::CONFIGURED_TABLES, true)
         );
         $tcaSchemaFactory->method('all')->willReturn($this->createSchemaCollection(self::CONFIGURED_TABLES));
 
@@ -198,7 +198,7 @@ final class TableAccessServiceTest extends UnitTestCase
     {
         $schemas = [];
         foreach ($tables as $table) {
-            $schema = $this->createStub(SchemaInterface::class);
+            $schema = self::createStub(SchemaInterface::class);
             $schema->method('getName')->willReturn($table);
             $schemas[$table] = $schema;
         }

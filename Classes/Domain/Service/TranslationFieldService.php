@@ -54,11 +54,11 @@ readonly class TranslationFieldService
         $fieldNames = array_map('strval', array_keys($this->withoutStateField($fields)));
         $excludedFields = array_values(array_filter(
             $fieldNames,
-            fn(string $fieldName): bool => $this->tcaService->isExcludedFromTranslation($table, $fieldName)
+            fn (string $fieldName): bool => $this->tcaService->isExcludedFromTranslation($table, $fieldName)
         ));
         $synchronizedFields = array_values(array_filter(
             $fieldNames,
-            fn(string $fieldName): bool => $this->tcaService->isSynchronizedInTranslation($table, $fieldName)
+            fn (string $fieldName): bool => $this->tcaService->isSynchronizedInTranslation($table, $fieldName)
         ));
 
         $translationParentField = $this->tcaService->getTranslationParentField($table);
@@ -126,7 +126,7 @@ readonly class TranslationFieldService
     {
         $lockedFields = array_values(array_filter(
             $synchronizedFields,
-            static fn(string $fieldName): bool => ($states[$fieldName] ?? self::STATE_PARENT) !== self::STATE_CUSTOM
+            static fn (string $fieldName): bool => ($states[$fieldName] ?? self::STATE_PARENT) !== self::STATE_CUSTOM
         ));
 
         if ($lockedFields !== []) {

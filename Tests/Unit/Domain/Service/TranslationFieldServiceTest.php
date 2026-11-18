@@ -73,7 +73,7 @@ final class TranslationFieldServiceTest extends UnitTestCase
      */
     private function createSubject(int $translationParent, array $localizationState): TranslationFieldService
     {
-        $recordRepository = $this->createStub(RecordRepository::class);
+        $recordRepository = self::createStub(RecordRepository::class);
         $recordRepository->method('findTranslationState')->willReturn([
             'translationParent' => $translationParent,
             'localizationState' => $localizationState,
@@ -83,13 +83,13 @@ final class TranslationFieldServiceTest extends UnitTestCase
 
     private function createTcaService(): TcaService
     {
-        $tcaService = $this->createStub(TcaService::class);
+        $tcaService = self::createStub(TcaService::class);
         $tcaService->method('getTranslationParentField')->willReturn('l10n_parent');
         $tcaService->method('isExcludedFromTranslation')->willReturnCallback(
-            static fn(string $table, string $fieldName): bool => $fieldName === 'layout'
+            static fn (string $table, string $fieldName): bool => $fieldName === 'layout'
         );
         $tcaService->method('isSynchronizedInTranslation')->willReturnCallback(
-            static fn(string $table, string $fieldName): bool => in_array($fieldName, ['author', 'media'], true)
+            static fn (string $table, string $fieldName): bool => in_array($fieldName, ['author', 'media'], true)
         );
         return $tcaService;
     }

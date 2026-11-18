@@ -7,9 +7,9 @@ namespace In2code\In2mcp\Domain\Repository;
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Service\EmptyFieldService;
 use In2code\In2mcp\Domain\Service\InlineRelationService;
-use In2code\In2mcp\Exception\ToolExecutionException;
 use In2code\In2mcp\Domain\Service\TcaService;
 use In2code\In2mcp\Domain\Service\WorkspaceService;
+use In2code\In2mcp\Exception\ToolExecutionException;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\Query\Expression\CompositeExpression;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
@@ -140,7 +140,7 @@ readonly class RecordRepository
         $records = $queryBuilder->executeQuery()->fetchAllAssociative();
 
         return array_map(
-            fn(array $record): array => $this->inlineRelationService->resolveRecord(
+            fn (array $record): array => $this->inlineRelationService->resolveRecord(
                 $table,
                 $this->tcaService->cleanUpRecord($table, $record)
             ),

@@ -188,7 +188,7 @@ readonly class RecentChangeRepository
     {
         $queryBuilder = $this->getContentQueryBuilder($pageUids);
         $queryBuilder
-            ->select(...array_map(static fn(string $field): string => 'c.' . $field, self::CONTENT_FIELDS))
+            ->select(...array_map(static fn (string $field): string => 'c.' . $field, self::CONTENT_FIELDS))
             ->addSelect('pages.title AS page_title', 'pages.slug AS page_slug')
             ->orderBy('c.tstamp', 'DESC')
             ->addOrderBy('c.uid', 'DESC')

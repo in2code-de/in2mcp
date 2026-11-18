@@ -55,7 +55,7 @@ readonly class ContentRepository
             ->fetchAllAssociative();
 
         return array_map(
-            fn(array $contentElement): array => $this->tcaService->cleanUpRecord(self::TABLE_NAME, $contentElement),
+            fn (array $contentElement): array => $this->tcaService->cleanUpRecord(self::TABLE_NAME, $contentElement),
             $this->workspaceService->overlayRecords(self::TABLE_NAME, $contentElements)
         );
     }

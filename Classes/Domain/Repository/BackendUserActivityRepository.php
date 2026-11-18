@@ -184,7 +184,7 @@ readonly class BackendUserActivityRepository
             ->fetchAllAssociative();
 
         return array_map(
-            static fn(array $row): array => [
+            static fn (array $row): array => [
                 'tablename' => (string)$row['tablename'],
                 'recuid' => (int)$row['recuid'],
                 'userid' => (int)$row['userid'],

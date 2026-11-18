@@ -302,7 +302,7 @@ final class InlineRelationToolsTest extends AbstractFunctionalTestCase
     private function getUids(mixed $value): array
     {
         $uids = is_array($value) ? $value : explode(',', (string)$value);
-        return array_values(array_map('intval', array_filter($uids, static fn(mixed $uid): bool => (int)$uid > 0)));
+        return array_values(array_map('intval', array_filter($uids, static fn (mixed $uid): bool => (int)$uid > 0)));
     }
 
     /**

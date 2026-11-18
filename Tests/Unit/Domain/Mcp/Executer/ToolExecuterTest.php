@@ -26,13 +26,13 @@ final class ToolExecuterTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->gateway = new ClientGateway($this->createStub(SessionInterface::class));
+        $this->gateway = new ClientGateway(self::createStub(SessionInterface::class));
     }
 
     #[Test]
     public function executeReturnsExceptionMessageAsErrorResult(): void
     {
-        $tool = $this->createStub(ToolInterface::class);
+        $tool = self::createStub(ToolInterface::class);
         $tool->method('execute')->willThrowException(new ToolExecutionException('Call "get_page" first', 1));
 
         $result = (new ToolExecuter($tool, new NullLogger()))->execute([], $this->gateway);
@@ -114,7 +114,7 @@ final class ToolExecuterTest extends UnitTestCase
     #[Test]
     public function executeHidesTheMessageOfAnUnexpectedException(): void
     {
-        $tool = $this->createStub(ToolInterface::class);
+        $tool = self::createStub(ToolInterface::class);
         $tool->method('getName')->willReturn('get_record');
         $tool->method('execute')->willThrowException(
             new RuntimeException('SQLSTATE[42S22]: Column not found in /var/www/html/vendor', 1)
@@ -131,7 +131,7 @@ final class ToolExecuterTest extends UnitTestCase
     #[Test]
     public function executeLogsAnUnexpectedExceptionUnderTheReferenceTheClientGets(): void
     {
-        $tool = $this->createStub(ToolInterface::class);
+        $tool = self::createStub(ToolInterface::class);
         $tool->method('getName')->willReturn('get_record');
         $tool->method('execute')->willThrowException(new RuntimeException('SQLSTATE[42S22]', 1));
         $loggedMessage = '';
