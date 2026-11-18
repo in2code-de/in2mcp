@@ -182,6 +182,8 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `clear_cache`            | Clear the cache so changes show up in the frontend                |
 | `update_record`          | Change fields of a record of any table                           |
 | `add_file_from_url`      | Download a file from a public url into the file storage           |
+| `add_file_from_content`  | Store a small file whose content the client sends base64 encoded  |
+| `create_file_upload`     | One-time upload url for a local file of the client (needs a shell) |
 | `add_file_reference`     | Connect an existing file to a file field of a record             |
 | `delete_file`            | Delete a file that is not used anymore, through the file storage |
 | `delete_record`          | Delete a record of any table (recoverable)                       |
@@ -420,6 +422,46 @@ and calls `delete_file` again. The deletion is written to the file section of `s
 refuse it, because the DataHandler would remove the record and leave the file in the storage and its references
 behind. `delete_file` is the way to delete a file.
 
+#### Files of the client
+
+A file that is not reachable by a public url - a screenshot, a photo on the disk - comes in from the client
+itself. Both ways are **switched off by default** with one setting; no outgoing request is involved, and the file
+mounts and file permissions of the backend user apply exactly like for an upload in the backend.
+
+| Setting                 | Purpose                                                                  | Default    |
+|-------------------------|--------------------------------------------------------------------------|------------|
+| `fileUpload`            | Allow `add_file_from_content`, `create_file_upload` and the upload endpoint | `0`     |
+| `fileImportMaximumSize` | Maximum file size in bytes, for every way a file comes in                 | `10485760` |
+
+`add_file_from_content` takes the content base64 encoded in the call, optionally as data uri
+(`data:image/png;base64,...`), together with a `fileName` including its extension. It works in every client, but
+the model has to produce every character of the content, so it is only practical for small files like icons, SVG
+or generated graphics. The size is checked on the encoded content before anything is decoded.
+
+`create_file_upload` is for a client that can send http requests itself, like Claude Code with a shell. It checks
+the target folder right away and answers with an upload url, a token and a ready command:
+
+```bash
+curl -sS -X POST -H 'X-In2mcp-Upload-Token: <token>' -F 'file=@/path/to/file' \
+    'https://example.org/typo3/mcp/upload'
+```
+
+The answer of the upload has the same form as the one of the tools and contains the file uid for
+`add_file_reference`. The endpoint is the MCP endpoint plus `/upload`.
+
+- the token is valid **once** and for 15 minutes; it is removed as soon as it is presented, whether the upload
+  succeeds or not, and only its hash is stored (cache `in2mcp_upload`)
+- it stands for the backend user who requested it, who is authenticated exactly like for a MCP request: a disabled
+  user, a revoked api key, a group without MCP access or `[BE][adminOnly]` end every open token
+- the api key never leaves the configuration of the client, the model only sees the token
+- the allowed client addresses and the rate limiter apply; an unknown token counts as a failed authentication
+- the target folder is resolved and checked again when the file arrives, and the name - given to the tool or taken
+  from the uploaded file - has to pass the same checks as an import
+
+**An image attached in the chat** of Claude Desktop or claude.ai reaches the model as an image, not as the bytes of
+the file - neither way can store the original from there, and MCP has no upload from the client to the server.
+Save the image and upload it from Claude Code, or put it somewhere public and use `add_file_from_url`.
+
 ---
 
 ## Security
@@ -499,7 +541,8 @@ and gets sanitized for everybody else. in2mcp adds no sanitizing of its own; doi
 content elements that are meant to carry markup.
 
 **The one outgoing request** the extension can make is `add_file_from_url`, which is off by default. See
-[Files](#files) for what it refuses.
+[Files](#files) for what it refuses. The upload of a file of the client (`fileUpload`, off by default as well)
+makes no request; its endpoint accepts only one-time tokens that a MCP request handed out.
 
 ---
 
@@ -594,6 +637,10 @@ authentication resets the counter, so only failing requests count. Configurable 
 | `429`  | Too many failed authentications from this ip address            |
 | `405`  | Request method not supported (only `POST`, `DELETE`, `OPTIONS`) |
 
+The upload endpoint answers with json (`{"imported": false, "error": "..."}`) and these statuses: `400` for a
+refused file with the reason, `401` for an unknown, used or expired token, `403` for a refused client address,
+`405` for anything but `POST`, `429` for too many failed authentications.
+
 A tool that fails answers with a tool result marked as error, not with an http status. Its text tells the client
 what went wrong and what to call instead - but only for the errors in2mcp raises itself. Any other error, like a
 database error or a message of a third party library, can carry internals such as paths, table structures or
@@ -608,6 +655,7 @@ not name the internal address a host resolved to.
 | Class                          | Task                                                                          |
 |--------------------------------|-------------------------------------------------------------------------------|
 | `Middleware\McpServer`         | Answers the configured endpoint with the MCP server instead of the backend     |
+| `Middleware\McpFileUpload`     | Receives a file for a one-time token below the endpoint (`/upload`)            |
 | `ApiKeyAuthenticationService`  | TYPO3 authentication service, finds the backend user of the api key            |
 | `AuthenticationContext`        | Carries the api key through the authentication and records the user it belongs to |
 | `BackendUserAuthenticator`     | Initializes that user for the request and removes the session afterwards       |
@@ -629,6 +677,10 @@ not name the internal address a host resolved to.
 | `Repository\RecordQueryBuilderFactory` | Query builder for records: no deleted ones, no drafts of other workspaces |
 | `Service\WorkspaceService`     | The workspace of a request, and the overlay of a record with its workspace version |
 | `Service\FileImportService`    | Downloads a file into the storage, streamed and size limited                    |
+| `Service\FileStorageService`   | Common last step of every new file: name, size, `addFile()`, `sys_log`          |
+| `Service\TargetFolderService`  | Resolves the target folder of a new file and refuses it when it is not writable |
+| `Service\FileUploadService`    | Stores the file of the upload endpoint                                          |
+| `Service\UploadTokenService`   | One-time tokens of the upload endpoint, stored as hash                          |
 | `Service\UrlValidationService` | The only guard on the one outgoing request this extension makes                 |
 | `Service\InlineRelationService`| Translates between the child counter and the list of child uids                 |
 

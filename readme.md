@@ -56,15 +56,17 @@ Reading: `get_backend_user`, `get_page_tree`, `get_page`, `search_pages`, `get_s
 Administrators only: `get_backend_users`, `get_recent_changes`
 
 Writing: `create_page`, `update_page`, `create_content_element`, `update_content_element`, `create_record`,
-`update_record`, `add_child_record`, `localize_record`, `add_file_from_url`, `add_file_reference`,
-`delete_file`, `delete_record`, `move_record`, `clear_cache`, `switch_workspace`
+`update_record`, `add_child_record`, `localize_record`, `add_file_from_url`, `add_file_from_content`,
+`create_file_upload`, `add_file_reference`, `delete_file`, `delete_record`, `move_record`, `clear_cache`, `switch_workspace`
 
 Pages and content elements have their own tools; `create_record` and `update_record` cover every other table the
 backend user may write, for example a form or a news entry. `search_files` finds files that already exist and
 `add_file_reference` connects one to a file field - with title, alternative text, caption or link of the new
 reference in the same call. `get_schema` lists the allowed values of select fields, restricted by the page
 TSconfig of a page and by a record type (for example the content type). `add_file_from_url` brings a new file in - it is **off by
-default**, because it makes the server perform an outgoing request that a client decides on. `delete_file` deletes a
+default**, because it makes the server perform an outgoing request that a client decides on. `add_file_from_content` (small
+files as base64) and `create_file_upload` (a one-time upload url for a local file, for clients with a shell like
+Claude Code) bring in a file of the client - both are **off by default** as well (setting `fileUpload`). `delete_file` deletes a
 file through the file storage, but only one that no record uses anymore.
 
 ## Permissions
