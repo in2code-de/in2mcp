@@ -246,6 +246,19 @@ parent table in `foreign_table_field` and the values of `foreign_match_fields`. 
 tables or fields (like `sys_file_reference`, which tells its parents apart by `tablenames` and `fieldname`)
 therefore never mixes up the children of `tt_content:5` and `pages:5`.
 
+### Fields of a translation
+
+Not every field of a translation can be written. A field with `l10n_mode` `exclude` always has the value of the
+record in the default language, and a field with `allowLanguageSynchronization` takes that value as long as its
+localization state is not `custom` - in the backend form it is greyed out behind the checkbox "Use value of
+default language". The DataHandler drops a value for such a field silently and still reports success, so in2mcp
+refuses it with the reason instead, for `update_*` as well as for `add_file_reference` and `add_child_record`.
+
+The state is changed with the field `l10n_state`, exactly like that checkbox: `{"author": "Own author",
+"l10n_state": {"author": "custom"}}` gives the translation its own value, `{"l10n_state": {"author": "parent"}}`
+takes the value of the default language again. Before a file or a child record is added to a synchronized field,
+switch the field to `custom` with an update that contains only `l10n_state`.
+
 ### Sorting
 
 `sorting` is readable on every record and on the content elements of `get_page`, so a client can tell in which

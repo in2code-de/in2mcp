@@ -59,6 +59,7 @@ class DataHandlerService
         private readonly InlineRelationService $inlineRelationService,
         private readonly ContentTypeService $contentTypeService,
         private readonly ContentRepository $contentRepository,
+        private readonly TranslationFieldService $translationFieldService,
     ) {
     }
 
@@ -134,13 +135,15 @@ class DataHandlerService
     public function updateRecord(string $table, int $uid, array $fields): void
     {
         $this->tableAccessService->assertWritable($table);
-        $this->assertKnownFields($table, $fields);
-        $this->assertPermittedFields($table, $fields);
-        $this->assertWritableValues($table, $fields, $uid);
+        $recordFields = $this->translationFieldService->withoutStateField($fields);
+        $this->assertKnownFields($table, $recordFields);
+        $this->assertPermittedFields($table, $recordFields);
+        $this->assertWritableValues($table, $recordFields, $uid);
 
         if ($fields === []) {
             throw new ToolExecutionException('No fields to update were given', 1756800808);
         }
+        $this->translationFieldService->assertWritable($table, $uid, $fields);
 
         if ($table === ContentRepository::TABLE_NAME && isset($fields[self::CONTENT_TYPE_FIELD])) {
             $this->assertContentTypeChangeAvailable($uid, (string)$fields[self::CONTENT_TYPE_FIELD]);
@@ -235,6 +238,7 @@ class DataHandlerService
         $this->tableAccessService->assertWritable($relation['foreignTable']);
         $this->assertKnownFields($relation['foreignTable'], $fields);
         $this->assertWritableValues($relation['foreignTable'], $fields, 0);
+        $this->translationFieldService->assertWritable($parentTable, $parentUid, [$parentField => '']);
 
         $children = $this->inlineRelationService->findChildUids($relation, $parentTable, $parentUid);
         $children[] = self::NEW_RECORD_PLACEHOLDER;
@@ -292,6 +296,7 @@ class DataHandlerService
         $relation = $this->getFileRelation($table, $fieldName);
         // The DataHandler drops a field the user may not write, and the reference would be created without parent
         $this->assertPermittedFields($table, [$fieldName => '']);
+        $this->translationFieldService->assertWritable($table, $uid, [$fieldName => '']);
         if ($fields !== []) {
             $this->assertUnprotectedFileReferenceFields($fields);
             $this->assertKnownFields(self::FILE_REFERENCE_TABLE, $fields);

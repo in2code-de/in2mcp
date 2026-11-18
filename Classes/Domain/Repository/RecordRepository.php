@@ -18,6 +18,7 @@ use TYPO3\CMS\Core\Database\Query\QueryBuilder;
  */
 readonly class RecordRepository
 {
+    public const LOCALIZATION_STATE_FIELD = 'l10n_state';
     private const DEFAULT_LIMIT = 50;
     private const MAXIMUM_LIMIT = 500;
 
@@ -53,6 +54,31 @@ readonly class RecordRepository
             $table,
             $this->tcaService->cleanUpRecord($table, $record)
         );
+    }
+
+    /**
+     * The default language record a translation belongs to, and the localization state of its synchronized
+     * fields - both as stored, because a cleaned up record leaves the state out. Null for a missing record.
+     *
+     * @return array{translationParent: int, localizationState: array<string, string>}|null
+     * @throws Exception
+     */
+    public function findTranslationState(string $table, int $uid, string $translationParentField): ?array
+    {
+        $queryBuilder = $this->getQueryBuilder($table);
+        $record = $queryBuilder
+            ->select('uid', $translationParentField, self::LOCALIZATION_STATE_FIELD)
+            ->from($table)
+            ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, Connection::PARAM_INT)))
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchAssociative();
+        $record = $record === false ? null : $this->workspaceService->overlayRecord($table, $record);
+
+        return $record === null ? null : [
+            'translationParent' => (int)($record[$translationParentField] ?? 0),
+            'localizationState' => (array)json_decode((string)($record[self::LOCALIZATION_STATE_FIELD] ?? ''), true),
+        ];
     }
 
     /**

@@ -10,6 +10,7 @@ use In2code\In2mcp\Exception\UserNotFoundException;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Localization\LanguageServiceFactory;
 use TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability;
+use TYPO3\CMS\Core\Schema\Field\FieldTranslationBehaviour;
 use TYPO3\CMS\Core\Schema\Field\FieldTypeInterface;
 use TYPO3\CMS\Core\Schema\Field\FileFieldType;
 use TYPO3\CMS\Core\Schema\Field\InlineFieldType;
@@ -311,12 +312,34 @@ class TcaService
         };
     }
 
-    private function getTranslationParentField(string $table): ?string
+    public function getTranslationParentField(string $table): ?string
     {
         $schema = $this->getSchema($table);
         return $schema?->hasCapability(TcaSchemaCapability::Language) === true
             ? $schema->getCapability(TcaSchemaCapability::Language)->getTranslationOriginPointerField()->getName()
             : null;
+    }
+
+    /**
+     * A field with l10n_mode "exclude" always has the value of the default language in a translation
+     */
+    public function isExcludedFromTranslation(string $table, string $fieldName): bool
+    {
+        $schema = $this->getSchema($table);
+        return $schema?->hasField($fieldName) === true
+            && $schema->getField($fieldName)->getTranslationBehaviour() === FieldTranslationBehaviour::Excluded;
+    }
+
+    /**
+     * A field with "allowLanguageSynchronization" takes the value of the default language in a translation until
+     * its localization state says "custom"
+     */
+    public function isSynchronizedInTranslation(string $table, string $fieldName): bool
+    {
+        $schema = $this->getSchema($table);
+        return $schema?->hasField($fieldName) === true
+            && (bool)($schema->getField($fieldName)->getConfiguration()['behaviour']['allowLanguageSynchronization']
+                ?? false);
     }
 
     /**
