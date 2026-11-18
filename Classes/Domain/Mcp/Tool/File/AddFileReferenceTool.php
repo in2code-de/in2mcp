@@ -10,6 +10,7 @@ use In2code\In2mcp\Domain\Repository\FileRepository;
 use In2code\In2mcp\Domain\Repository\RecordRepository;
 use In2code\In2mcp\Domain\Service\BackendUserService;
 use In2code\In2mcp\Domain\Service\DataHandlerService;
+use In2code\In2mcp\Domain\Service\TcaService;
 use In2code\In2mcp\Exception\DataHandlerException;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
 use In2code\In2mcp\Exception\ToolExecutionException;
@@ -28,6 +29,7 @@ class AddFileReferenceTool extends AbstractTool
         private readonly FileRepository $fileRepository,
         private readonly RecordRepository $recordRepository,
         private readonly BackendUserService $backendUserService,
+        private readonly TcaService $tcaService,
     ) {
     }
 
@@ -124,7 +126,7 @@ class AddFileReferenceTool extends AbstractTool
             $table,
             $uid,
             $fieldName,
-            (int)($record['pid'] ?? 0),
+            $this->tcaService->getPidOfChildren($table, $record),
             $fields
         );
 

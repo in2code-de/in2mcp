@@ -97,7 +97,7 @@ class AddChildRecordTool extends AbstractTool
             $parentTable,
             $parentUid,
             $parentField,
-            (int)($parent['pid'] ?? 0),
+            $this->tcaService->getPidOfChildren($parentTable, $parent),
             $this->getArrayArgument($arguments, 'fields')
         );
 

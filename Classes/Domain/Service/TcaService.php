@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Service;
 
 use In2code\In2mcp\Domain\Repository\ContentRepository;
+use In2code\In2mcp\Domain\Repository\PageRepository;
 use In2code\In2mcp\Exception\UserNotFoundException;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Localization\LanguageServiceFactory;
@@ -288,6 +289,34 @@ class TcaService
             }
         }
         return $relations;
+    }
+
+    /**
+     * Page the children of a record are stored on, determined like DatabaseEffectivePid of the backend does it:
+     * a page keeps its children itself, a page translation leaves them to the page of the default language, and
+     * every other record puts them next to itself
+     *
+     * @param array<string, mixed> $record
+     */
+    public function getPidOfChildren(string $table, array $record): int
+    {
+        $isPage = $table === PageRepository::TABLE_NAME;
+        $translationParentField = $isPage ? $this->getTranslationParentField($table) : null;
+        $defaultLanguagePageUid = $translationParentField === null ? 0 : (int)($record[$translationParentField] ?? 0);
+
+        return match (true) {
+            $defaultLanguagePageUid > 0 => $defaultLanguagePageUid,
+            $isPage => (int)($record['uid'] ?? 0),
+            default => (int)($record['pid'] ?? 0),
+        };
+    }
+
+    private function getTranslationParentField(string $table): ?string
+    {
+        $schema = $this->getSchema($table);
+        return $schema?->hasCapability(TcaSchemaCapability::Language) === true
+            ? $schema->getCapability(TcaSchemaCapability::Language)->getTranslationOriginPointerField()->getName()
+            : null;
     }
 
     /**
