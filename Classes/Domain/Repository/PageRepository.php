@@ -19,6 +19,7 @@ readonly class PageRepository
 {
     public const TABLE_NAME = 'pages';
 
+    private const DEFAULT_LANGUAGE = 0;
     private const TREE_FIELDS = ['uid', 'pid', 'title', 'nav_title', 'slug', 'doktype', 'hidden', 'sorting'];
 
     public function __construct(
@@ -117,10 +118,11 @@ readonly class PageRepository
             '%' . $queryBuilder->escapeLikeWildcards($searchTerm) . '%'
         );
 
+        $this->restrictToReadableLanguages($queryBuilder);
         $pages = $queryBuilder
             ->select(...self::TREE_FIELDS)
             ->from(self::TABLE_NAME)
-            ->where(
+            ->andWhere(
                 $queryBuilder->expr()->or(
                     $queryBuilder->expr()->like('title', $searchParameter),
                     $queryBuilder->expr()->like('nav_title', $searchParameter),
@@ -234,6 +236,26 @@ readonly class PageRepository
             ->fetchOne();
 
         return $uid === false ? 0 : (int)$uid;
+    }
+
+    /**
+     * Translations only in the languages the user may access - the default language stays, because the page tree
+     * of the backend shows its pages to everybody
+     *
+     * @throws UserNotFoundException
+     */
+    private function restrictToReadableLanguages(QueryBuilder $queryBuilder): void
+    {
+        $allowedLanguageIds = $this->backendUserService->getAllowedLanguageIds();
+        if ($allowedLanguageIds !== null) {
+            $queryBuilder->andWhere($queryBuilder->expr()->in(
+                'sys_language_uid',
+                $queryBuilder->createNamedParameter(
+                    array_values(array_unique([self::DEFAULT_LANGUAGE, ...$allowedLanguageIds])),
+                    Connection::PARAM_INT_ARRAY
+                )
+            ));
+        }
     }
 
     private function getQueryBuilder(): QueryBuilder

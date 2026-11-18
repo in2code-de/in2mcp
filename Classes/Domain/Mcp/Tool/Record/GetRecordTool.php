@@ -7,7 +7,7 @@ namespace In2code\In2mcp\Domain\Mcp\Tool\Record;
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\RecordRepository;
-use In2code\In2mcp\Domain\Service\BackendUserService;
+use In2code\In2mcp\Domain\Service\RecordAccessService;
 use In2code\In2mcp\Domain\Service\TableAccessService;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
 use In2code\In2mcp\Exception\ToolExecutionException;
@@ -20,7 +20,7 @@ class GetRecordTool extends AbstractTool
     public function __construct(
         private readonly RecordRepository $recordRepository,
         private readonly TableAccessService $tableAccessService,
-        private readonly BackendUserService $backendUserService,
+        private readonly RecordAccessService $recordAccessService,
     ) {
     }
 
@@ -71,9 +71,10 @@ class GetRecordTool extends AbstractTool
             );
         }
 
-        if ($this->backendUserService->isRecordReachable($table, $record) === false) {
+        if ($this->recordAccessService->isRecordReadable($table, $record) === false) {
             throw new ToolExecutionException(
-                'The record lies outside the page mounts of this backend user or on a page it may not read',
+                'The record lies outside the page mounts of this backend user, on a page it may not read or in a'
+                . ' language it may not access',
                 1756801024
             );
         }

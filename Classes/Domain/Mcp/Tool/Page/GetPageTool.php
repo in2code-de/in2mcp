@@ -7,6 +7,8 @@ namespace In2code\In2mcp\Domain\Mcp\Tool\Page;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\ContentRepository;
 use In2code\In2mcp\Domain\Repository\PageRepository;
+use In2code\In2mcp\Domain\Service\RecordAccessService;
+use In2code\In2mcp\Domain\Service\TableAccessService;
 use In2code\In2mcp\Exception\ToolExecutionException;
 
 class GetPageTool extends AbstractTool
@@ -16,6 +18,8 @@ class GetPageTool extends AbstractTool
     public function __construct(
         private readonly PageRepository $pageRepository,
         private readonly ContentRepository $contentRepository,
+        private readonly TableAccessService $tableAccessService,
+        private readonly RecordAccessService $recordAccessService,
     ) {
     }
 
@@ -69,10 +73,10 @@ class GetPageTool extends AbstractTool
 
         $result = ['page' => $page];
         if ((bool)$this->getArgument($arguments, 'withContent')) {
-            $result['content'] = $this->getContentByColumn(
-                $pageUid,
-                $this->getIntArgument($arguments, 'languageId')
-            );
+            $languageId = $this->getIntArgument($arguments, 'languageId');
+            $this->tableAccessService->assertReadable(ContentRepository::TABLE_NAME);
+            $this->recordAccessService->assertLanguageReadable($languageId);
+            $result['content'] = $this->getContentByColumn($pageUid, $languageId);
         }
 
         return $result;

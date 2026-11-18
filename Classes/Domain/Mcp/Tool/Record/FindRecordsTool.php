@@ -8,6 +8,7 @@ use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\RecordRepository;
 use In2code\In2mcp\Domain\Service\BackendUserService;
+use In2code\In2mcp\Domain\Service\RecordAccessService;
 use In2code\In2mcp\Domain\Service\TableAccessService;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
 use In2code\In2mcp\Exception\ToolExecutionException;
@@ -25,6 +26,7 @@ class FindRecordsTool extends AbstractTool
         private readonly RecordRepository $recordRepository,
         private readonly TableAccessService $tableAccessService,
         private readonly BackendUserService $backendUserService,
+        private readonly RecordAccessService $recordAccessService,
     ) {
     }
 
@@ -142,7 +144,7 @@ class FindRecordsTool extends AbstractTool
     {
         return array_filter(
             $records,
-            fn(array $record): bool => $this->backendUserService->isRecordReachable($table, $record)
+            fn(array $record): bool => $this->recordAccessService->isRecordReadable($table, $record)
         );
     }
 }

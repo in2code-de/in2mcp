@@ -439,6 +439,11 @@ in a regular backend request, and every read and write runs through the regular 
   backend page tree. An empty list of page mounts never means "no restriction": for an administrator it is the
   whole tree, for everybody else it is no page at all. This applies to pages read with `get_record` and
   `find_records` as well, and records of other tables follow the page they are stored on.
+- **Languages**: a user with a list of allowed languages reads records only in these languages, as the page and
+  the list module show only these. The pages of the default language stay readable, because the page tree shows
+  them to everybody. `get_page` and `get_page_tree` refuse a language the user may not access, and `get_page`
+  returns content elements only to a user who may read `tt_content`. Administrators and users without such a
+  list are not checked at all.
 - **Exclude fields** are only returned when `non_exclude_fields` allows them, and only those can be used as a
   filter of `find_records`. The language fields and the container of a content element stay readable, because
   they describe where a record belongs.

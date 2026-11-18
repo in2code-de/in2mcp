@@ -47,6 +47,7 @@ class GetBackendUserTool extends AbstractTool
             'email' => (string)($backendUser->user['email'] ?? ''),
             'isAdmin' => $this->backendUserService->isAdmin(),
             'workspace' => (int)($backendUser->workspace ?? 0),
+            'allowedLanguages' => $this->backendUserService->getAllowedLanguageIds() ?? 'all',
             'pageMounts' => $this->getPageMounts(),
             'tablePermissions' => $this->getTablePermissions(),
         ];

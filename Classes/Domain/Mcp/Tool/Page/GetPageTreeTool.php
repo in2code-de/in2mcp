@@ -6,6 +6,7 @@ namespace In2code\In2mcp\Domain\Mcp\Tool\Page;
 
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\PageRepository;
+use In2code\In2mcp\Domain\Service\RecordAccessService;
 
 class GetPageTreeTool extends AbstractTool
 {
@@ -13,8 +14,12 @@ class GetPageTreeTool extends AbstractTool
 
     private const MAX_DEPTH = 10;
 
-    public function __construct(private readonly PageRepository $pageRepository)
-    {
+    private const DEFAULT_LANGUAGE = 0;
+
+    public function __construct(
+        private readonly PageRepository $pageRepository,
+        private readonly RecordAccessService $recordAccessService,
+    ) {
     }
 
     public function getName(): string
@@ -52,6 +57,11 @@ class GetPageTreeTool extends AbstractTool
     public function execute(array $arguments): array
     {
         $depth = min($this->getIntArgument($arguments, 'depth'), self::MAX_DEPTH);
+        $languageId = $this->getIntArgument($arguments, 'languageId');
+        // The page tree of the backend shows the pages of the default language to everybody
+        if ($languageId !== self::DEFAULT_LANGUAGE) {
+            $this->recordAccessService->assertLanguageReadable($languageId);
+        }
 
         return [
             'pageUid' => $this->getIntArgument($arguments, 'pageUid'),
@@ -59,7 +69,7 @@ class GetPageTreeTool extends AbstractTool
             'tree' => $this->pageRepository->findTree(
                 $this->getIntArgument($arguments, 'pageUid'),
                 $depth,
-                $this->getIntArgument($arguments, 'languageId')
+                $languageId
             ),
         ];
     }

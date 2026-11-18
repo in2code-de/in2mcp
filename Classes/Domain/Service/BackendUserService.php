@@ -77,6 +77,16 @@ class BackendUserService
     }
 
     /**
+     * Uses the check of the core, which treats an empty list as "every language" and always allows -1
+     *
+     * @throws UserNotFoundException
+     */
+    public function isLanguageAllowed(int $languageId): bool
+    {
+        return $this->isAdmin() || $this->getBackendUser()->checkLanguageAccess($languageId);
+    }
+
+    /**
      * @throws UserNotFoundException
      */
     public function isRecordReachable(string $table, array $record): bool
