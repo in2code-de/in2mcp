@@ -126,6 +126,7 @@ class AddFileReferenceTool extends AbstractTool
                 1756801036
             );
         }
+        $this->assertFileExtensionAllowed($table, $fieldName, $record, $file);
 
         $referenceUid = $this->dataHandlerService->addFileReference(
             $fileUid,
@@ -149,5 +150,29 @@ class AddFileReferenceTool extends AbstractTool
         }
 
         return $result;
+    }
+
+    /**
+     * The DataHandler filters such a reference out silently and still hands out its uid
+     *
+     * @param array<string, mixed> $record
+     * @param array<string, mixed> $file
+     * @throws ToolExecutionException
+     */
+    private function assertFileExtensionAllowed(string $table, string $fieldName, array $record, array $file): void
+    {
+        $recordType = $this->tcaService->getRecordTypeOfRecord($table, $record);
+        $fileExtension = (string)($file['extension'] ?? '');
+        if ($this->tcaService->isFileExtensionAllowed($table, $fieldName, $recordType, $fileExtension) === false) {
+            $allowedFileExtensions = $this->tcaService->getAllowedFileExtensions($table, $fieldName, $recordType);
+            throw new ToolExecutionException(
+                'The file "' . ($file['name'] ?? '') . '" can not be added to the field "' . $fieldName . '" of "'
+                . $table . '", ' . ($allowedFileExtensions === []
+                    ? 'the file extension "' . $fileExtension . '" is not allowed there.'
+                    : 'it accepts the file extensions ' . implode(', ', $allowedFileExtensions) . ' only.')
+                . ' Nothing was written.',
+                1756801060
+            );
+        }
     }
 }

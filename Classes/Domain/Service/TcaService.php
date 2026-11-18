@@ -413,6 +413,47 @@ class TcaService
         return $field;
     }
 
+    /**
+     * Value of the record type field when the table knows that type, an empty string otherwise
+     *
+     * @param array<string, mixed> $record
+     */
+    public function getRecordTypeOfRecord(string $table, array $record): string
+    {
+        $recordType = (string)($record[$this->getRecordTypeField($table) ?? ''] ?? '');
+        return $this->hasRecordType($table, $recordType) ? $recordType : '';
+    }
+
+    /**
+     * Placeholders like "common-media-types" are already resolved by the TCA preparation of the core
+     *
+     * @return list<string> Empty when the field accepts every file extension or is no file field
+     */
+    public function getAllowedFileExtensions(string $table, string $fieldName, string $recordType): array
+    {
+        $field = $this->getFileField($table, $fieldName, $recordType);
+        return $field instanceof FileFieldType ? $this->toLowerCase($field->getAllowedFileExtensions()) : [];
+    }
+
+    // The same rule as FileExtensionFilter::isAllowed() of the core, which is internal
+    public function isFileExtensionAllowed(
+        string $table,
+        string $fieldName,
+        string $recordType,
+        string $fileExtension
+    ): bool {
+        $field = $this->getFileField($table, $fieldName, $recordType);
+        $isAllowed = true;
+        if ($field instanceof FileFieldType) {
+            $fileExtension = strtolower($fileExtension);
+            $allowedFileExtensions = $this->toLowerCase($field->getAllowedFileExtensions());
+            $disallowedFileExtensions = $this->toLowerCase($field->getDisallowedFileExtensions());
+            $isAllowed = ($allowedFileExtensions === [] || in_array($fileExtension, $allowedFileExtensions, true))
+                && in_array($fileExtension, $disallowedFileExtensions, true) === false;
+        }
+        return $isAllowed;
+    }
+
     public function isSortingField(string $table, string $fieldName): bool
     {
         return $this->getSortingField($table) === $fieldName;
@@ -427,6 +468,22 @@ class TcaService
     {
         // A name with a dot is a record type like "tt_content.textmedia", which the factory knows as well
         return str_contains($table, '.') === false && $this->tcaSchemaFactory->has($table);
+    }
+
+    // The filter of the DataHandler belongs to the column, so it applies to a field outside the record type too
+    private function getFileField(string $table, string $fieldName, string $recordType): ?FieldTypeInterface
+    {
+        return $this->getFieldDefinition($table, $fieldName, $recordType)
+            ?? $this->getFieldDefinition($table, $fieldName);
+    }
+
+    /**
+     * @param array<int|string, mixed> $values
+     * @return list<string>
+     */
+    private function toLowerCase(array $values): array
+    {
+        return array_values(array_map(static fn(mixed $value): string => strtolower((string)$value), $values));
     }
 
     /**

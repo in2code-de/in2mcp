@@ -93,6 +93,47 @@ final class FileToolsTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
+    public function addFileReferenceRefusesAFileTypeTheFieldDoesNotAccept(): void
+    {
+        $this->loginAs(self::EDITOR);
+        $contentUid = $this->callTool(
+            'create_content_element',
+            ['pageUid' => 2, 'contentType' => 'textmedia']
+        )['contentUid'];
+
+        $exception = null;
+        try {
+            $this->callTool(
+                'add_file_reference',
+                [
+                    'fileUid' => self::UNUSED_FILE_IN_MOUNT,
+                    'table' => 'tt_content',
+                    'uid' => $contentUid,
+                    'fieldName' => 'assets',
+                ]
+            );
+        } catch (ClientFacingException $exception) {
+        }
+
+        self::assertInstanceOf(ClientFacingException::class, $exception);
+        self::assertStringContainsString('"unused.txt"', $exception->getMessage());
+        self::assertStringContainsString('png', $exception->getMessage());
+        self::assertSame([], $this->callTool('find_records', ['table' => 'sys_file_reference'])['records']);
+    }
+
+    #[Test]
+    public function addFileReferenceRefusesAFileTypeTheFieldDoesNotAcceptForAnAdministrator(): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        $this->expectException(ClientFacingException::class);
+        $this->callTool(
+            'add_file_reference',
+            ['fileUid' => self::UNUSED_FILE_IN_MOUNT, 'table' => 'tt_content', 'uid' => 1, 'fieldName' => 'assets']
+        );
+    }
+
+    #[Test]
     public function addFileReferenceRefusesAFieldThatHoldsNoFiles(): void
     {
         $this->loginAs(self::EDITOR);
