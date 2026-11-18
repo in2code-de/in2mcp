@@ -7,7 +7,7 @@
                 <source>MCP api key</source>
             </trans-unit>
             <trans-unit id="be_users.in2mcp_apikey.description">
-                <source>A MCP client that sends this api key acts as this backend user and is restricted to its permissions. The client has to send it together with the uid of this user: &lt;uid&gt;.&lt;key&gt;, for example 4.AbC123... for the user with uid 4. The key is stored as a hash and can not be read again, so save it right after generating it. Emptying this field or disabling the user revokes the access immediately.</source>
+                <source>API key for the MCP connection: Clicking the button creates a new key. Copy it right away, it will not be shown in the backend again. Important: the uid of the user has to be put in front, for user 4 that is "4.AbC123…". Note: a new key can also be created on the command line (in2mcp:apikey &lt;uid&gt;). It is printed there with the uid already in front, and the previous key stops working.</source>
             </trans-unit>
             <trans-unit id="be_users.in2mcp_apikey.generate">
                 <source>Create random base64 string</source>
