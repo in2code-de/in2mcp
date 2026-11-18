@@ -130,6 +130,7 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `get_recently_changed_content` | Content elements changed most recently with their page, optionally below one page            |
 | `get_backend_users`  | Administrators only: backend users with last login, active MFA providers and last change   |
 | `get_recent_changes` | Administrators only: newest entries of the record history - who changed which record when |
+| `get_workspaces`     | Live and the workspaces the user may enter, with the current one                          |
 
 ### Writing
 
@@ -149,6 +150,7 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `delete_file`            | Delete a file that is not used anymore, through the file storage |
 | `delete_record`          | Delete a record of any table (recoverable)                       |
 | `move_record`            | Move a record, including into another column or container        |
+| `switch_workspace`       | Change the workspace, like the workspace selector of the backend  |
 
 `get_schema` exists because page types, content types, tables and fields differ per installation. A client that
 asks first does not have to guess field names - and unknown field names are rejected with a message that points
@@ -427,7 +429,9 @@ in a regular backend request, and every read and write runs through the regular 
   the drafts of another workspace. Inside a workspace a record is returned as it looks there, under the uid of
   its live record like in the backend, and a record deleted in the workspace is left out. Two limits remain:
   filters and searches compare the live values, and a record moved inside the workspace is still listed on its
-  live page.
+  live page. `get_workspaces` lists the workspaces the user may enter, and `switch_workspace` changes the
+  workspace exactly like the selector of the backend: the choice is stored at the backend user, so the backend
+  follows after its next reload. Without EXT:workspaces both tools answer with an error and everything is live.
 - **Writing** goes through the **DataHandler**, so page permissions, `tables_modify`, `non_exclude_fields`, web
   mounts, hooks, reference index, slug generation, workspaces and the record history all apply unchanged. A
   refused write is reported back to the client with the reason TYPO3 gave. An update of an exclude field the

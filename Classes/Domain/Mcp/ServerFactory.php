@@ -24,8 +24,10 @@ class ServerFactory
         . ' tools to read the page tree and the content of pages, and to create or change pages and content'
         . ' elements. All actions run with the permissions of the connected TYPO3 backend user, so a denied'
         . ' action means that this user is not allowed to perform it. Call "get_backend_user" first to learn'
-        . ' about these permissions. Before creating new content, look at comparable existing pages to follow'
-        . ' the structure and the wording of the installation.';
+        . ' about these permissions and the current workspace: in live (0) every change is visible at once, in'
+        . ' a workspace it is a draft. Check it before changing anything, "switch_workspace" changes it. Before'
+        . ' creating new content, look at comparable existing pages to follow the structure and the wording of'
+        . ' the installation.';
 
     public function __construct(
         protected readonly ToolRegistry $toolRegistry,
