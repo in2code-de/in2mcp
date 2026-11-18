@@ -160,6 +160,23 @@ class TcaService
     }
 
     /**
+     * Administrators read every field, so only the fields of an editor are checked
+     *
+     * @param list<string> $fieldNames
+     * @return list<string>
+     * @throws UserNotFoundException
+     */
+    public function filterReadableFields(string $table, array $fieldNames): array
+    {
+        return $this->backendUserService->isAdmin()
+            ? $fieldNames
+            : array_values(array_filter(
+                $fieldNames,
+                fn(string $fieldName): bool => $this->isFieldReadable($table, $fieldName)
+            ));
+    }
+
+    /**
      * @throws UserNotFoundException
      */
     public function isFieldWritable(string $table, string $fieldName): bool

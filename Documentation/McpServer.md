@@ -460,6 +460,9 @@ in a regular backend request, and every read and write runs through the regular 
 - **Password fields** (TCA type `password`) are never returned, not even masked, for administrators neither: a
   client that sends a record back with a mask would store the mask as new password. Writing them stays possible
   for whoever may write the field, the DataHandler hashes the value as usual.
+- **Page tree, page search and recently changed pages** return `nav_title` and search `nav_title` and
+  `subtitle` only for a user who may read these exclude fields. Page type and visibility stay, because the page
+  tree of the backend shows them to everybody.
 - **Exclude fields** are only returned when `non_exclude_fields` allows them, and only those can be used as a
   filter of `find_records`. The language fields and the container of a content element stay readable, because
   they describe where a record belongs.

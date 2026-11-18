@@ -6,6 +6,7 @@ namespace In2code\In2mcp\Domain\Repository;
 
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Service\BackendUserService;
+use In2code\In2mcp\Domain\Service\TcaService;
 use In2code\In2mcp\Exception\UserNotFoundException;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -13,7 +14,12 @@ use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
 readonly class RecentChangeRepository
 {
-    private const PAGE_FIELDS = ['uid', 'pid', 'title', 'nav_title', 'slug', 'doktype', 'hidden'];
+    private const PAGE_FIELDS = ['uid', 'pid', 'title', 'slug', 'doktype', 'hidden'];
+
+    /**
+     * Exclude fields, returned only for a user who may read them
+     */
+    private const OPTIONAL_PAGE_FIELDS = ['nav_title'];
     private const CONTENT_FIELDS = ['uid', 'pid', 'CType', 'header', 'colPos', 'sys_language_uid', 'hidden', 'tstamp'];
     private const DEFAULT_LANGUAGE = 0;
     private const ALL_LANGUAGES = -1;
@@ -22,6 +28,7 @@ readonly class RecentChangeRepository
         private ConnectionPool $connectionPool,
         private RecordQueryBuilderFactory $recordQueryBuilderFactory,
         private BackendUserService $backendUserService,
+        private TcaService $tcaService,
     ) {
     }
 
@@ -118,7 +125,10 @@ readonly class RecentChangeRepository
 
         $queryBuilder = $this->getQueryBuilder(PageRepository::TABLE_NAME);
         $pages = $queryBuilder
-            ->select(...self::PAGE_FIELDS)
+            ->select(
+                ...self::PAGE_FIELDS,
+                ...$this->tcaService->filterReadableFields(PageRepository::TABLE_NAME, self::OPTIONAL_PAGE_FIELDS)
+            )
             ->from(PageRepository::TABLE_NAME)
             ->where(
                 $queryBuilder->expr()->in(

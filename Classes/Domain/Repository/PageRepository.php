@@ -20,7 +20,17 @@ readonly class PageRepository
     public const TABLE_NAME = 'pages';
 
     private const DEFAULT_LANGUAGE = 0;
-    private const TREE_FIELDS = ['uid', 'pid', 'title', 'nav_title', 'slug', 'doktype', 'hidden', 'sorting'];
+    /**
+     * Shown by the page tree of the backend to everybody, even where doktype and hidden are exclude fields
+     */
+    private const TREE_FIELDS = ['uid', 'pid', 'title', 'slug', 'doktype', 'hidden', 'sorting'];
+
+    /**
+     * Exclude fields, returned and searched only for a user who may read them
+     */
+    private const OPTIONAL_TREE_FIELDS = ['nav_title'];
+    private const OPTIONAL_SEARCH_FIELDS = ['nav_title', 'subtitle'];
+    private const SEARCH_FIELDS = ['title', 'slug'];
 
     public function __construct(
         private RecordQueryBuilderFactory $recordQueryBuilderFactory,
@@ -80,7 +90,7 @@ readonly class PageRepository
 
         $queryBuilder = $this->getQueryBuilder();
         $pages = $queryBuilder
-            ->select(...self::TREE_FIELDS)
+            ->select(...$this->getTreeFields())
             ->from(self::TABLE_NAME)
             ->where(
                 $queryBuilder->expr()->eq(
@@ -120,15 +130,19 @@ readonly class PageRepository
 
         $this->restrictToReadableLanguages($queryBuilder);
         $pages = $queryBuilder
-            ->select(...self::TREE_FIELDS)
+            ->select(...$this->getTreeFields())
             ->from(self::TABLE_NAME)
             ->andWhere(
-                $queryBuilder->expr()->or(
-                    $queryBuilder->expr()->like('title', $searchParameter),
-                    $queryBuilder->expr()->like('nav_title', $searchParameter),
-                    $queryBuilder->expr()->like('subtitle', $searchParameter),
-                    $queryBuilder->expr()->like('slug', $searchParameter)
-                ),
+                $queryBuilder->expr()->or(...array_map(
+                    static fn(string $fieldName): string => (string)$queryBuilder->expr()->like(
+                        $fieldName,
+                        $searchParameter
+                    ),
+                    [
+                        ...self::SEARCH_FIELDS,
+                        ...$this->tcaService->filterReadableFields(self::TABLE_NAME, self::OPTIONAL_SEARCH_FIELDS),
+                    ]
+                )),
                 $queryBuilder->expr()->and($this->backendUserService->getPagePermissionClause())
             )
             ->orderBy('title')
@@ -154,7 +168,7 @@ readonly class PageRepository
         foreach ($this->backendUserService->getWebMounts() as $mountUid) {
             $queryBuilder = $this->getQueryBuilder();
             $page = $queryBuilder
-                ->select(...self::TREE_FIELDS)
+                ->select(...$this->getTreeFields())
                 ->from(self::TABLE_NAME)
                 ->where(
                     $queryBuilder->expr()->eq(
@@ -256,6 +270,18 @@ readonly class PageRepository
                 )
             ));
         }
+    }
+
+    /**
+     * @return list<string>
+     * @throws UserNotFoundException
+     */
+    private function getTreeFields(): array
+    {
+        return [
+            ...self::TREE_FIELDS,
+            ...$this->tcaService->filterReadableFields(self::TABLE_NAME, self::OPTIONAL_TREE_FIELDS),
+        ];
     }
 
     private function getQueryBuilder(): QueryBuilder
