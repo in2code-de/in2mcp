@@ -122,6 +122,20 @@ readonly class ConfigurationService
     /**
      * @return string[] Lowercase host names, an empty list allows every public host
      */
+    /**
+     * Addresses and ranges (CIDR or wildcards, as GeneralUtility::cmpIP() reads them) that may use the MCP server.
+     * An empty list allows every address.
+     *
+     * @return list<string>
+     */
+    public function getMcpServerAllowedIps(): array
+    {
+        return array_values(array_filter(array_map(
+            static fn(string $address): string => trim($address),
+            explode(',', (string)$this->get('mcpServerAllowedIps'))
+        )));
+    }
+
     public function getFileImportAllowedHosts(): array
     {
         $hosts = array_filter(array_map(

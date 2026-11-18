@@ -36,6 +36,7 @@ exposes `tools`, `resources` and `prompts`, the LLM decides when to call them.
 ```bash
 # 1. activate the server in the extension configuration (setting "mcpServer")
 #    the endpoint is /typo3/mcp and can be renamed with the setting "mcpServerPath"
+#    "mcpServerAllowedIps" restricts the client addresses, [BE][IPmaskList] applies as well
 # 2. create an api key for a backend user - an editor also needs a group with the custom
 #    module option "Use MCP clients with an api key", administrators always may
 vendor/bin/typo3 in2mcp:apikey <uid|username>

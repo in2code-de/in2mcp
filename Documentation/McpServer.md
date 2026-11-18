@@ -10,10 +10,11 @@ TYPO3 backend user and then works on the CMS **with exactly the permissions of t
 
 ### 1. Activate the server
 
-| Setting         | Description                                  | Default |
-|-----------------|----------------------------------------------|---------|
-| `mcpServer`     | Answers MCP requests on the endpoint         | `0`     |
-| `mcpServerPath` | Path of the endpoint below the TYPO3 backend | `mcp`   |
+| Setting               | Description                                                  | Default |
+|-----------------------|--------------------------------------------------------------|---------|
+| `mcpServer`           | Answers MCP requests on the endpoint                         | `0`     |
+| `mcpServerPath`       | Path of the endpoint below the TYPO3 backend                 | `mcp`   |
+| `mcpServerAllowedIps` | Client addresses that may use the endpoint, `*` for every one | `*`     |
 
 The endpoint is `/typo3/mcp` by default and is configured with `mcpServerPath`, which is a path **below the
 TYPO3 backend**: `mcp` answers on `/typo3/mcp`, `intern/mcp-a7f3` answers on `/typo3/intern/mcp-a7f3`. A
@@ -27,6 +28,34 @@ middleware at all or, if it did, run without those checks.
 
 Renaming the endpoint hides it from someone scanning for known paths. It is not a secret and not a
 replacement for the api key - treat it as one less thing an automated scanner finds, nothing more.
+
+#### Restricting the client addresses
+
+`mcpServerAllowedIps` is a comma separated list of addresses or ranges - CIDR like `192.168.0.0/24` and
+`2001:db8::/32`, or wildcards like `192.168.*.*`, as `GeneralUtility::cmpIP()` reads them. A request from any
+other address is answered with `403` before its api key is even looked at. `*` (the default) and an empty value
+allow every address.
+
+Which addresses a client connects from depends on where it runs:
+
+- **claude.ai** (and connectors added there) calls the server from the cloud of Anthropic. Its outbound ranges are
+  published at https://platform.claude.com/docs/en/api/ip-addresses - at the time of writing `160.79.104.0/21` and
+  `153.61.208.0/20`, IPv4 only. Anthropic announces changes there.
+- **Clients on a computer**, like Claude Code, connect from the address of that computer or of its network, for
+  example the office or the VPN.
+
+Example for claude.ai plus the office network:
+
+```php
+$GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['mcpServerAllowedIps']
+    = '160.79.104.0/21,153.61.208.0/20,203.0.113.0/24';
+```
+
+**The IP restriction of the TYPO3 backend applies as well.** The endpoint lives below `/typo3`, so
+`$GLOBALS['TYPO3_CONF_VARS']['BE']['IPmaskList']` is checked by the core before in2mcp runs. If an installation
+restricts the backend to the office, a client from anywhere else gets `403` from TYPO3 - for claude.ai the
+ranges above have to be added to `IPmaskList` too, otherwise `mcpServerAllowedIps` never gets the chance to
+allow them. Behind a proxy both lists only see the real client when `[SYS][reverseProxyIP]` is configured.
 
 It lives in the **backend** context, because the tools need a backend user and
 because a request to a path below `/typo3` must be answered before the backend routing rejects it.

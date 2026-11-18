@@ -4,6 +4,9 @@ mcpServer = 0
 # cat=basic/enable/0020; type=string; label= Endpoint: Path of the endpoint below the TYPO3 backend, without slashes. "mcp" answers on /typo3/mcp. The endpoint always stays below the backend, because that is what makes TYPO3 treat the request as a backend request and apply the page and file permissions of the user. An empty or invalid value falls back to "mcp".
 mcpServerPath = mcp
 
+# cat=basic/enable/0030; type=string; label= Allowed client addresses: Comma separated list of IP addresses or ranges that may use the MCP server, as CIDR ("192.168.0.0/24", "2001:db8::/32") or with wildcards ("192.168.*.*"). Every other address is refused before its api key is looked at. "*" (default) or an empty value allow every address. Claude.ai connects from "160.79.104.0/21,153.61.208.0/20". [BE][IPmaskList] of TYPO3 applies to the MCP endpoint as well and has to contain these addresses, too. Behind a proxy, set [SYS][reverseProxyIP] so the address of the client is seen instead of the one of the proxy.
+mcpServerAllowedIps = *
+
 # cat=file import/enable/0100; type=boolean; label= Import files by url: Allow MCP clients to import a file from a http(s) url into the file storage. The server performs the outgoing request, so only switch this on if that is intended. Local and private addresses are refused in any case.
 fileImport = 0
 

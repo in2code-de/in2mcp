@@ -52,6 +52,7 @@ return [
             'fileImportAllowedHosts' => '',
             'fileImportMaximumSize' => '10485760',
             'mcpServer' => '1',
+            'mcpServerAllowedIps' => '*',
             'mcpServerPath' => 'mcp',
         ],
         'scheduler' => [

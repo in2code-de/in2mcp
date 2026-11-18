@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Tests\Unit\Domain\Mcp\RateLimiter;
 
+use In2code\In2mcp\Domain\Mcp\Authentication\ClientAddressService;
 use In2code\In2mcp\Domain\Mcp\RateLimiter\RateLimiterFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -44,7 +45,8 @@ final class RateLimiterFactoryTest extends UnitTestCase
     {
         $subject = new class (
             $this->createStub(CachingFrameworkStorage::class),
-            $this->createStub(LockFactory::class)
+            $this->createStub(LockFactory::class),
+            $this->createStub(ClientAddressService::class)
         ) extends RateLimiterFactory {
             public function getLimitedAddressForTest(string $remoteAddress): string
             {

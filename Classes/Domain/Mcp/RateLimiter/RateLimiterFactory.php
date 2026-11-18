@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Domain\Mcp\RateLimiter;
 
+use In2code\In2mcp\Domain\Mcp\Authentication\ClientAddressService;
 use Psr\Http\Message\ServerRequestInterface;
 use Symfony\Component\RateLimiter\LimiterInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory as SymfonyRateLimiterFactory;
-use TYPO3\CMS\Core\Http\NormalizedParams;
 use TYPO3\CMS\Core\Locking\LockFactory;
 use TYPO3\CMS\Core\RateLimiter\Storage\CachingFrameworkStorage;
 
@@ -38,12 +38,13 @@ class RateLimiterFactory
     public function __construct(
         protected readonly CachingFrameworkStorage $storage,
         protected readonly LockFactory $lockFactory,
+        protected readonly ClientAddressService $clientAddressService,
     ) {
     }
 
     public function create(ServerRequestInterface $request): LimiterInterface
     {
-        $limitedAddress = $this->getLimitedAddress($this->getRemoteAddress($request));
+        $limitedAddress = $this->getLimitedAddress($this->clientAddressService->getClientAddress($request));
         $factory = new SymfonyRateLimiterFactory($this->getConfiguration(), $this->storage);
         return new LockedLimiter(
             $factory->create($limitedAddress),
@@ -61,15 +62,6 @@ class RateLimiterFactory
             return self::CONFIGURATION;
         }
         return array_replace(self::CONFIGURATION, $overrides);
-    }
-
-    protected function getRemoteAddress(ServerRequestInterface $request): string
-    {
-        $normalizedParams = $request->getAttribute('normalizedParams');
-        if (($normalizedParams instanceof NormalizedParams) === false) {
-            $normalizedParams = NormalizedParams::createFromRequest($request);
-        }
-        return $normalizedParams->getRemoteAddress();
     }
 
     protected function getLimitedAddress(string $remoteAddress): string

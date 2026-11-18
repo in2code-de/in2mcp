@@ -6,6 +6,7 @@ namespace In2code\In2mcp\Middleware;
 
 use In2code\In2mcp\Domain\Mcp\Authentication\AuthenticationContext;
 use In2code\In2mcp\Domain\Mcp\Authentication\BackendUserAuthenticator;
+use In2code\In2mcp\Domain\Mcp\Authentication\ClientAddressService;
 use In2code\In2mcp\Domain\Mcp\RateLimiter\RateLimiterFactory;
 use In2code\In2mcp\Domain\Mcp\SdkCompatibility;
 use In2code\In2mcp\Domain\Mcp\ServerFactory;
@@ -43,6 +44,7 @@ class McpServer implements MiddlewareInterface
         protected readonly ResponseFactory $responseFactory,
         protected readonly StreamFactory $streamFactory,
         protected readonly RateLimiterFactory $rateLimiterFactory,
+        protected readonly ClientAddressService $clientAddressService,
         protected readonly LoggerInterface $logger
     ) {
     }
@@ -51,6 +53,14 @@ class McpServer implements MiddlewareInterface
     {
         if ($this->isMcpRequest($request) === false || $this->isMcpEnabled() === false) {
             return $handler->handle($request);
+        }
+
+        if ($this->clientAddressService->isAllowedClient($request) === false) {
+            $this->logger->warning(
+                'MCP: Request from ' . $this->clientAddressService->getClientAddress($request) . ' was refused, the'
+                . ' address is not in the allowed client addresses of the extension configuration'
+            );
+            return $this->getErrorResponse(403, -32003, 'Forbidden');
         }
 
         $request = $this->initializeRequestForMcp($request);

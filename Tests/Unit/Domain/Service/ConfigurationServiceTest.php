@@ -18,6 +18,7 @@ final class ConfigurationServiceTest extends UnitTestCase
         'fileImport' => '0',
         'fileImportMaximumSize' => '10485760',
         'fileImportAllowedHosts' => '',
+        'mcpServerAllowedIps' => '*',
     ];
 
     private ConfigurationService $subject;
@@ -153,6 +154,24 @@ final class ConfigurationServiceTest extends UnitTestCase
         $this->configure(['fileImportAllowedHosts' => $configuredHosts]);
 
         self::assertSame($expectedHosts, $this->subject->getFileImportAllowedHosts());
+    }
+
+    public static function mcpServerAllowedIpsDataProvider(): array
+    {
+        return [
+            'empty' => ['', []],
+            'trimmed' => [' 192.168.0.0/24 , 2001:db8::/32 ', ['192.168.0.0/24', '2001:db8::/32']],
+            'empty entries removed' => [',10.0.0.1,,', ['10.0.0.1']],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('mcpServerAllowedIpsDataProvider')]
+    public function getMcpServerAllowedIpsReturnsNormalizedList(string $configuredIps, array $expectedIps): void
+    {
+        $this->configure(['mcpServerAllowedIps' => $configuredIps]);
+
+        self::assertSame($expectedIps, $this->subject->getMcpServerAllowedIps());
     }
 
     private function configure(array $configuration): void
