@@ -8,8 +8,8 @@
                 <target>MCP API-Key</target>
             </trans-unit>
             <trans-unit id="be_users.in2mcp_apikey.description">
-                <source>A MCP client that sends this api key acts as this backend user and is restricted to its permissions. The key is stored as a hash and can not be read again, so save it right after generating it. Emptying this field or disabling the user revokes the access immediately.</source>
-                <target>Ein MCP-Client, der diesen API-Key sendet, handelt als dieser Backend-Benutzer und ist auf dessen Rechte beschränkt. Der Key wird als Hash gespeichert und kann nicht erneut ausgelesen werden – bitte direkt nach dem Erzeugen sichern. Das Leeren dieses Feldes oder das Deaktivieren des Benutzers entzieht den Zugang sofort.</target>
+                <source>A MCP client that sends this api key acts as this backend user and is restricted to its permissions. The client has to send it together with the uid of this user: &lt;uid&gt;.&lt;key&gt;, for example 4.AbC123... for the user with uid 4. The key is stored as a hash and can not be read again, so save it right after generating it. Emptying this field or disabling the user revokes the access immediately.</source>
+                <target>Ein MCP-Client, der diesen API-Key sendet, handelt als dieser Backend-Benutzer und ist auf dessen Rechte beschränkt. Der Client muss ihn zusammen mit der uid dieses Benutzers senden: &lt;uid&gt;.&lt;key&gt;, zum Beispiel 4.AbC123... für den Benutzer mit der uid 4. Der Key wird als Hash gespeichert und kann nicht erneut ausgelesen werden – bitte direkt nach dem Erzeugen sichern. Das Leeren dieses Feldes oder das Deaktivieren des Benutzers entzieht den Zugang sofort.</target>
             </trans-unit>
             <trans-unit id="be_users.in2mcp_apikey.generate">
                 <source>Create random base64 string</source>
