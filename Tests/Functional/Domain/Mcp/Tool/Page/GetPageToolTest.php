@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Tests\Functional\Domain\Mcp\Tool\Page;
 
+use In2code\In2mcp\Exception\ClientFacingException;
 use In2code\In2mcp\Exception\ToolExecutionException;
 use In2code\In2mcp\Tests\Functional\AbstractFunctionalTestCase;
 use PHPUnit\Framework\Attributes\Test;
 
 final class GetPageToolTest extends AbstractFunctionalTestCase
 {
+    private const EDITOR_GROUP = 1;
+
     #[Test]
     public function returnsPageWithContentGroupedByColumn(): void
     {
@@ -47,5 +50,45 @@ final class GetPageToolTest extends AbstractFunctionalTestCase
         $result = $this->callTool('get_page', ['pageUid' => 4]);
 
         self::assertSame('Outside of the mount', $result['page']['title']);
+    }
+
+    #[Test]
+    public function refusesALanguageTheEditorMayNotAccess(): void
+    {
+        $this->loginAs(self::EDITOR);
+
+        $this->expectException(ClientFacingException::class);
+        $this->callTool('get_page', ['pageUid' => 2, 'languageId' => 1]);
+    }
+
+    #[Test]
+    public function refusesTheContentForAnEditorWhoMayNotReadContentElements(): void
+    {
+        $this->allowEditorsOnlyPages();
+        $this->loginAs(self::EDITOR);
+
+        $this->expectException(ClientFacingException::class);
+        $this->callTool('get_page', ['pageUid' => 2]);
+    }
+
+    #[Test]
+    public function returnsThePageWithoutContentForAnEditorWhoMayNotReadContentElements(): void
+    {
+        $this->allowEditorsOnlyPages();
+        $this->loginAs(self::EDITOR);
+
+        $result = $this->callTool('get_page', ['pageUid' => 2, 'withContent' => false]);
+
+        self::assertSame('About', $result['page']['title']);
+        self::assertArrayNotHasKey('content', $result);
+    }
+
+    private function allowEditorsOnlyPages(): void
+    {
+        $this->getConnectionPool()->getConnectionForTable('be_groups')->update(
+            'be_groups',
+            ['tables_select' => 'pages', 'tables_modify' => 'pages'],
+            ['uid' => self::EDITOR_GROUP]
+        );
     }
 }

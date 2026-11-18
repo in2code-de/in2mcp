@@ -104,6 +104,36 @@ final class RecordToolsTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
+    public function findRecordsWithNullFindsEmptyFields(): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        $result = $this->callTool('find_records', ['table' => 'pages', 'filters' => ['nav_title' => null]]);
+
+        self::assertSame([1, 2, 4, 5], $this->getSortedUids($result['records']));
+    }
+
+    #[Test]
+    public function findRecordsWithNullFindsEmptyNumbers(): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        $result = $this->callTool('find_records', ['table' => 'pages', 'filters' => ['media' => null]]);
+
+        self::assertNotContains(2, $this->getSortedUids($result['records']));
+        self::assertContains(3, $this->getSortedUids($result['records']));
+    }
+
+    #[Test]
+    public function findRecordsWithNullRefusesAFieldWithoutAnEmptyValue(): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        $this->expectException(ClientFacingException::class);
+        $this->callTool('find_records', ['table' => 'tt_content', 'filters' => ['CType' => null]]);
+    }
+
+    #[Test]
     public function findRecordsRefusesAPageOutsideOfTheMount(): void
     {
         $this->loginAs(self::EDITOR);
@@ -279,5 +309,16 @@ final class RecordToolsTest extends AbstractFunctionalTestCase
     {
         $this->getConnectionPool()->getConnectionForTable('tt_content')
             ->update('tt_content', [self::PASSWORD_FIELD => $secret], ['uid' => $contentUid]);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $records
+     * @return list<int>
+     */
+    private function getSortedUids(array $records): array
+    {
+        $uids = array_map('intval', array_column($records, 'uid'));
+        sort($uids);
+        return $uids;
     }
 }

@@ -10,6 +10,7 @@ use Mcp\Schema\RequestMeta;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Http\StreamFactory;
 
 final class McpServerTest extends AbstractMiddlewareTestCase
@@ -19,6 +20,9 @@ final class McpServerTest extends AbstractMiddlewareTestCase
     private const STATELESS_PROTOCOL_VERSION = '2026-07-28';
     private const SESSION_HEADER = 'Mcp-Session-Id';
     private const REGISTERED_TOOLS = 30;
+    private const RATE_LIMITED_ADDRESS = '203.0.113.20';
+    private const FAILED_AUTHENTICATIONS_LIMIT = 3;
+    private const RATE_LIMITER_CACHE = 'ratelimiter';
 
     #[Test]
     public function administratorListsEveryToolWithItsAnnotations(): void
@@ -155,6 +159,36 @@ final class McpServerTest extends AbstractMiddlewareTestCase
     }
 
     #[Test]
+    public function tooManyFailedAuthenticationsBlockEvenAValidApiKey(): void
+    {
+        $this->limitFailedAuthentications();
+        $apiKey = $this->createApiKey('admin');
+        for ($attempt = 0; $attempt < self::FAILED_AUTHENTICATIONS_LIMIT; $attempt++) {
+            self::assertSame(401, $this->process($this->createRequest('too-short', 'initialize'))->getStatusCode());
+        }
+
+        $response = $this->process($this->createRequest($apiKey, 'initialize'));
+
+        self::assertSame(429, $response->getStatusCode());
+    }
+
+    #[Test]
+    public function successfulAuthenticationResetsTheCountOfFailures(): void
+    {
+        $this->limitFailedAuthentications();
+        $apiKey = $this->createApiKey('admin');
+        for ($attempt = 1; $attempt < self::FAILED_AUTHENTICATIONS_LIMIT; $attempt++) {
+            $this->process($this->createRequest('too-short', 'initialize'));
+        }
+        $this->initialize($apiKey);
+
+        for ($attempt = 1; $attempt < self::FAILED_AUTHENTICATIONS_LIMIT; $attempt++) {
+            self::assertSame(401, $this->process($this->createRequest('too-short', 'initialize'))->getStatusCode());
+        }
+        self::assertNotSame('', $this->initialize($apiKey));
+    }
+
+    #[Test]
     public function clientAddressOutsideOfTheAllowedAddressesIsRefused(): void
     {
         $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['mcpServerAllowedIps'] = '198.51.100.0/24';
@@ -180,6 +214,16 @@ final class McpServerTest extends AbstractMiddlewareTestCase
         $response = $this->process($this->createRequest($this->createApiKey('admin'), 'initialize'));
 
         self::assertSame(self::NOT_HANDLED_STATUS, $response->getStatusCode());
+    }
+
+    // The counter lives in a cache of the test instance, which outlasts a single test and even a test run
+    private function limitFailedAuthentications(): void
+    {
+        $this->get(CacheManager::class)->getCache(self::RATE_LIMITER_CACHE)->flush();
+        $this->clientAddress = self::RATE_LIMITED_ADDRESS;
+        $GLOBALS['TYPO3_CONF_VARS']['SYS']['rateLimiter']['in2mcp'] = [
+            'limit' => self::FAILED_AUTHENTICATIONS_LIMIT,
+        ];
     }
 
     private function createApiKey(string $username): string

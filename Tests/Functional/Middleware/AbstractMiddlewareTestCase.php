@@ -22,6 +22,8 @@ abstract class AbstractMiddlewareTestCase extends AbstractFunctionalTestCase
 
     private const HOST = 'typo3-testing.local';
 
+    protected string $clientAddress = self::CLIENT_ADDRESS;
+
     /**
      * @param array<string, string> $headers
      */
@@ -36,7 +38,7 @@ abstract class AbstractMiddlewareTestCase extends AbstractFunctionalTestCase
             $method,
             $body,
             $headers,
-            ['HTTP_HOST' => self::HOST, 'REMOTE_ADDR' => self::CLIENT_ADDRESS, 'HTTPS' => 'on']
+            ['HTTP_HOST' => self::HOST, 'REMOTE_ADDR' => $this->clientAddress, 'HTTPS' => 'on']
         );
         return $request
             ->withAttribute('applicationType', SystemEnvironmentBuilder::REQUESTTYPE_BE)

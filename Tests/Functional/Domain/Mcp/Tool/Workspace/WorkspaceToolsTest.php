@@ -91,6 +91,40 @@ final class WorkspaceToolsTest extends AbstractFunctionalTestCase
         self::assertSame('Second element', $this->getLiveHeader(2));
     }
 
+    #[Test]
+    public function draftsOfAWorkspaceTheEditorIsNoMemberOfStayInvisible(): void
+    {
+        $this->createDraftsInTheForeignWorkspace();
+
+        foreach ([self::LIVE_WORKSPACE, self::DRAFT_WORKSPACE] as $workspaceId) {
+            $this->loginAs(self::EDITOR);
+            $this->callTool('switch_workspace', ['workspaceId' => $workspaceId]);
+
+            $record = $this->callTool('get_record', ['table' => 'tt_content', 'uid' => 1])['record'];
+            $headers = array_column($this->callTool('get_page', ['pageUid' => 2])['content']['colPos_0'], 'header');
+            $found = $this->callTool('find_records', ['table' => 'tt_content', 'pid' => 2]);
+
+            self::assertSame('First element', $record['header']);
+            self::assertSame(['First element', 'Second element'], $headers);
+            self::assertSame(['First element', 'Second element'], array_column($found['records'], 'header'));
+        }
+    }
+
+    private function createDraftsInTheForeignWorkspace(): void
+    {
+        $this->loginAs(self::ADMIN);
+        $this->callTool('switch_workspace', ['workspaceId' => self::FOREIGN_WORKSPACE]);
+        $this->callTool('update_content_element', ['contentUid' => 1, 'fields' => ['header' => 'Foreign draft']]);
+        $this->callTool(
+            'create_content_element',
+            ['pageUid' => 2, 'contentType' => 'text', 'fields' => ['header' => 'Foreign element']]
+        );
+        self::assertSame(
+            'Foreign draft',
+            $this->callTool('get_record', ['table' => 'tt_content', 'uid' => 1])['record']['header']
+        );
+    }
+
     private function getLiveHeader(int $uid): string
     {
         $queryBuilder = $this->getConnectionPool()->getQueryBuilderForTable('tt_content');
