@@ -10,8 +10,11 @@ mcpServerAllowedIps = *
 # cat=file import/enable/0100; type=boolean; label= Import files by url: Allow MCP clients to import a file from a http(s) url into the file storage. The server performs the outgoing request, so only switch this on if that is intended. Local and private addresses are refused in any case.
 fileImport = 0
 
-# cat=file import/basic/0110; type=int+; label= Maximum file size in bytes: Downloads larger than this are aborted. Default is 10 MB.
+# cat=file import/basic/0110; type=int+; label= Maximum file size in bytes: Applies to every way a file comes in - downloads larger than this are aborted, larger uploads refused. Default is 10 MB.
 fileImportMaximumSize = 10485760
 
 # cat=file import/basic/0120; type=string; label= Allowed hosts: Comma separated list of hosts a file may be imported from, for example "images.example.org,cdn.example.org". Empty allows every public host.
 fileImportAllowedHosts =
+
+# cat=file upload/enable/0200; type=boolean; label= Upload files from the client: Allow MCP clients to send the content of a file, which is stored in the file storage. No outgoing request is made, the file mounts and file permissions of the backend user apply like for an upload in the backend. The maximum file size above applies.
+fileUpload = 0

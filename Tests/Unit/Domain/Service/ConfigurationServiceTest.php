@@ -18,6 +18,7 @@ final class ConfigurationServiceTest extends UnitTestCase
         'fileImport' => '0',
         'fileImportMaximumSize' => '10485760',
         'fileImportAllowedHosts' => '',
+        'fileUpload' => '0',
         'mcpServerAllowedIps' => '*',
     ];
 
@@ -115,6 +116,22 @@ final class ConfigurationServiceTest extends UnitTestCase
         $this->configure(['fileImport' => '1']);
 
         self::assertTrue($this->subject->isFileImportActivated());
+    }
+
+    #[Test]
+    public function isFileUploadActivatedReadsSwitch(): void
+    {
+        $this->configure(['fileUpload' => '1']);
+
+        self::assertTrue($this->subject->isFileUploadActivated());
+    }
+
+    #[Test]
+    public function isFileUploadActivatedIsOffByDefault(): void
+    {
+        $this->configure([]);
+
+        self::assertFalse($this->subject->isFileUploadActivated());
     }
 
     public static function fileImportMaximumSizeDataProvider(): array

@@ -12,6 +12,7 @@ use TYPO3\CMS\Core\Resource\Folder;
 use TYPO3\CMS\Core\Resource\Security\FileNameValidator;
 use TYPO3\CMS\Core\SysLog\Action\File as SystemLogFileAction;
 use TYPO3\CMS\Core\SysLog\Error as SystemLogErrorClassification;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 // Folder::addFile() is ResourceStorage::addFile(), which applies file mounts, permissions and fileDenyPattern
 class FileStorageService
@@ -47,6 +48,23 @@ class FileStorageService
             ['origin' => $origin, 'identifier' => $file->getIdentifier()]
         );
         return $file;
+    }
+
+    /**
+     * @throws FileImportException
+     */
+    public function addContent(string $content, Folder $folder, string $fileName, string $origin): File
+    {
+        $temporaryFile = GeneralUtility::tempnam('in2mcp_upload_');
+
+        try {
+            if (file_put_contents($temporaryFile, $content) === false) {
+                throw new FileImportException('The content could not be written to a temporary file', 1795028804);
+            }
+            return $this->addFile($temporaryFile, $folder, $fileName, $origin);
+        } finally {
+            GeneralUtility::unlink_tempfile($temporaryFile);
+        }
     }
 
     /**

@@ -113,6 +113,11 @@ readonly class ConfigurationService
         return (bool)$this->get('fileImport');
     }
 
+    public function isFileUploadActivated(): bool
+    {
+        return (bool)$this->get('fileUpload');
+    }
+
     public function getFileImportMaximumSize(): int
     {
         $maximumSize = (int)$this->get('fileImportMaximumSize');
