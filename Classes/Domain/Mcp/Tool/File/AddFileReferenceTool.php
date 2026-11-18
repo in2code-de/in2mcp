@@ -10,6 +10,8 @@ use In2code\In2mcp\Domain\Repository\FileRepository;
 use In2code\In2mcp\Domain\Repository\RecordRepository;
 use In2code\In2mcp\Domain\Service\BackendUserService;
 use In2code\In2mcp\Domain\Service\DataHandlerService;
+use In2code\In2mcp\Domain\Service\RecordAccessService;
+use In2code\In2mcp\Domain\Service\TableAccessService;
 use In2code\In2mcp\Domain\Service\TcaService;
 use In2code\In2mcp\Exception\DataHandlerException;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
@@ -30,6 +32,8 @@ class AddFileReferenceTool extends AbstractTool
         private readonly RecordRepository $recordRepository,
         private readonly BackendUserService $backendUserService,
         private readonly TcaService $tcaService,
+        private readonly TableAccessService $tableAccessService,
+        private readonly RecordAccessService $recordAccessService,
     ) {
     }
 
@@ -113,10 +117,12 @@ class AddFileReferenceTool extends AbstractTool
             );
         }
 
+        // Permissions first: a different answer for a missing record would tell which uids exist
+        $this->tableAccessService->assertWritable($table);
         $record = $this->recordRepository->findByUid($table, $uid);
-        if ($record === null) {
+        if ($record === null || $this->recordAccessService->isRecordReadable($table, $record) === false) {
             throw new ToolExecutionException(
-                'There is no record with uid ' . $uid . ' in "' . $table . '"',
+                'There is no record with uid ' . $uid . ' in "' . $table . '" that this backend user may access',
                 1756801036
             );
         }
