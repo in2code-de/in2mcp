@@ -161,7 +161,7 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `get_schema`        | Page types, content element types of a page, writable tables, fields and values |
 | `get_record`        | One record of any table                                                         |
 | `find_records`      | Records of a table by page, by field values and by language                     |
-| `search_files`      | Files of the file abstraction layer by name, path or title                      |
+| `search_files`      | Files of the file abstraction layer by name, path or title, or by empty metadata |
 | `get_recently_changed_pages`   | Pages changed most recently (properties, translations or content), optionally below one page |
 | `get_recently_changed_content` | Content elements changed most recently with their page, optionally below one page            |
 | `get_backend_users`  | Administrators only: backend users with last login, active MFA providers and last change   |
@@ -340,6 +340,11 @@ behind the container itself, never at the top of the page.
 `search_files` finds files that already exist in this installation and returns the file uid that
 `add_file_reference` needs. Existing files of a field are kept, a new one is appended. Which fields accept a file
 is visible in `get_schema` as fields of type `file`.
+
+`emptyMetadata` finds files whose metadata of the default language lacks a `title`, an `alternative` or a
+`description`, for example `{"emptyMetadata": ["alternative"]}` for images without an alternative text. The search
+stays inside the file mounts of the user. A file reference may override the text of its file, so a file without
+an alternative text is not necessarily an image without one in the frontend.
 
 `add_file_reference` takes optional `fields` of the new `sys_file_reference`, which are written in the same
 DataHandler run as the reference itself - no `update_record` afterwards:

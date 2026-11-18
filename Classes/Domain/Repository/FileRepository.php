@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Repository;
 
 use Doctrine\DBAL\Exception;
+use In2code\In2mcp\Exception\ToolExecutionException;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
@@ -17,7 +18,9 @@ readonly class FileRepository
 {
     public const TABLE_NAME = 'sys_file';
     public const REFERENCE_TABLE_NAME = 'sys_file_reference';
+    public const METADATA_FIELDS = ['title', 'alternative', 'description'];
     private const METADATA_TABLE_NAME = 'sys_file_metadata';
+    private const DEFAULT_LANGUAGE = 0;
     private const REFERENCE_INDEX_TABLE_NAME = 'sys_refindex';
 
     private const FALLBACK_STORAGE_UID = 0;
@@ -34,14 +37,17 @@ readonly class FileRepository
      * Searches files by a part of their name or path. Metadata is joined in, because the title and the
      * alternative text tell a client much better whether a file fits than the file name alone.
      *
+     * @param array<int, string> $emptyMetadataFields
      * @return array<int, array<string, mixed>>
      * @throws Exception
+     * @throws ToolExecutionException
      */
     public function findFiles(
         string $searchTerm,
         string $fileExtension = '',
         int $limit = self::DEFAULT_LIMIT,
-        ?array $fileMounts = null
+        ?array $fileMounts = null,
+        array $emptyMetadataFields = []
     ): array {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
         $queryBuilder->getRestrictions()->removeAll();
@@ -61,9 +67,15 @@ readonly class FileRepository
             ->from(self::TABLE_NAME, 'f')
             ->leftJoin(
                 'f',
-                'sys_file_metadata',
+                self::METADATA_TABLE_NAME,
                 'm',
-                $queryBuilder->expr()->eq('m.file', $queryBuilder->quoteIdentifier('f.uid'))
+                (string)$queryBuilder->expr()->and(
+                    $queryBuilder->expr()->eq('m.file', $queryBuilder->quoteIdentifier('f.uid')),
+                    $queryBuilder->expr()->eq(
+                        'm.sys_language_uid',
+                        $queryBuilder->createNamedParameter(self::DEFAULT_LANGUAGE, Connection::PARAM_INT)
+                    )
+                )
             )
             ->where(
                 $queryBuilder->expr()->eq(
@@ -94,9 +106,33 @@ readonly class FileRepository
             );
         }
 
+        foreach ($emptyMetadataFields as $fieldName) {
+            $this->assertMetadataField($fieldName);
+            $queryBuilder->andWhere(
+                $queryBuilder->expr()->or(
+                    $queryBuilder->expr()->isNull('m.' . $fieldName),
+                    $queryBuilder->expr()->eq('m.' . $fieldName, $queryBuilder->createNamedParameter(''))
+                )
+            );
+        }
+
         $this->restrictToFileMounts($queryBuilder, $fileMounts);
 
         return $queryBuilder->executeQuery()->fetchAllAssociative();
+    }
+
+    /**
+     * @throws ToolExecutionException
+     */
+    private function assertMetadataField(mixed $fieldName): void
+    {
+        if (in_array($fieldName, self::METADATA_FIELDS, true) === false) {
+            throw new ToolExecutionException(
+                'Files can only be searched for an empty ' . implode(', ', self::METADATA_FIELDS) . ', not for "'
+                . (is_scalar($fieldName) ? (string)$fieldName : gettype($fieldName)) . '"',
+                1795478402
+            );
+        }
     }
 
     /**

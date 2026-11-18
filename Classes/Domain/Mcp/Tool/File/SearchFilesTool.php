@@ -34,7 +34,8 @@ class SearchFilesTool extends AbstractTool
     {
         return 'Searches files that already exist in this installation by a part of their name, their path or'
             . ' their title. Returns the file uid that "add_file_reference" needs. Files cannot be uploaded'
-            . ' through MCP.';
+            . ' through MCP. With "emptyMetadata" it finds files without an alternative text, a title or a'
+            . ' description in the metadata of the default language.';
     }
 
     public function getParameters(): array
@@ -56,6 +57,13 @@ class SearchFilesTool extends AbstractTool
                 'description' => 'Maximum number of files to return',
                 'default' => 25,
             ],
+            'emptyMetadata' => [
+                'type' => 'array',
+                'description' => 'Metadata fields that have to be empty, for example ["alternative"] for files'
+                    . ' without an alternative text. A file reference may still set its own text.',
+                'items' => ['type' => 'string', 'enum' => FileRepository::METADATA_FIELDS],
+                'default' => [],
+            ],
         ];
     }
 
@@ -75,7 +83,8 @@ class SearchFilesTool extends AbstractTool
             $this->getStringArgument($arguments, 'searchTerm'),
             $this->getStringArgument($arguments, 'fileExtension'),
             $this->getIntArgument($arguments, 'limit'),
-            $this->backendUserService->hasFullFileAccess() ? null : $this->backendUserService->getFileMounts()
+            $this->backendUserService->hasFullFileAccess() ? null : $this->backendUserService->getFileMounts(),
+            $this->getArrayArgument($arguments, 'emptyMetadata')
         );
 
         return ['count' => count($files), 'files' => $files];
