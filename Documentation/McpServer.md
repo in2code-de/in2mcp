@@ -42,8 +42,13 @@ vendor/bin/typo3 in2mcp:apikey <uid|username> -r  # revokes the key
 
 The key is stored as a salted hash and can never be read back. A key typed into the backend field by hand has to
 be at least 64 characters long (password policy `in2mcp_apikey`, which an installation can override in
-`$GLOBALS['TYPO3_CONF_VARS']['SYS']['passwordPolicies']`) - the generator of the field creates 128. Emptying the field or disabling the user revokes
-the access immediately.
+`$GLOBALS['TYPO3_CONF_VARS']['SYS']['passwordPolicies']`) - the generator of the field creates 128. Emptying the
+field or disabling the user revokes the access immediately.
+
+**An editor additionally needs the permission of a backend group.** A key alone is refused unless one of the
+groups of the user has the option *Use MCP clients with an api key* under *Access Lists > Custom module options >
+MCP server (in2mcp)* (`custom_options` `in2mcp:access`). Administrators always may. This keeps MCP a decision of
+the integrator per group, not a side effect of somebody creating a key.
 
 The generated key uses a url safe alphabet (`A-Z a-z 0-9 - _`), so it needs no quoting in a shell, a url or a
 json file. The CLI prints it on its own unwrapped line: a key copied from a wrapped terminal line carries the

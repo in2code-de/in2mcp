@@ -1,6 +1,7 @@
 <?php
 
 use In2code\In2mcp\Domain\Mcp\Authentication\ApiKeyAuthenticationService;
+use In2code\In2mcp\Domain\Mcp\Authentication\BackendUserAuthenticator;
 use In2code\In2mcp\Domain\Repository\BackendUserRepository;
 use TYPO3\CMS\Core\PasswordPolicy\Validator\CorePasswordValidator;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
@@ -42,6 +43,20 @@ $GLOBALS['TYPO3_CONF_VARS']['SYS']['passwordPolicies'][BackendUserRepository::AP
                 'specialCharacterRequired' => false,
             ],
             'excludeActions' => [],
+        ],
+    ],
+];
+
+/**
+ * MCP is opened to editors per backend group ("Custom module options"), administrators always have it
+ */
+$GLOBALS['TYPO3_CONF_VARS']['BE']['customPermOptions'][BackendUserAuthenticator::PERMISSION_OPTIONS] = [
+    'header' => 'LLL:EXT:in2mcp/Resources/Private/Language/locallang_db.xlf:custom_options.header',
+    'items' => [
+        BackendUserAuthenticator::PERMISSION_ACCESS => [
+            'LLL:EXT:in2mcp/Resources/Private/Language/locallang_db.xlf:custom_options.access',
+            '',
+            'LLL:EXT:in2mcp/Resources/Private/Language/locallang_db.xlf:custom_options.access.description',
         ],
     ],
 ];

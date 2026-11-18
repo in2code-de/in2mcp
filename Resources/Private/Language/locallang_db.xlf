@@ -12,6 +12,15 @@
             <trans-unit id="be_users.in2mcp_apikey.generate">
                 <source>Create random base64 string</source>
             </trans-unit>
+            <trans-unit id="custom_options.header">
+                <source>MCP server (in2mcp)</source>
+            </trans-unit>
+            <trans-unit id="custom_options.access">
+                <source>Use MCP clients with an api key</source>
+            </trans-unit>
+            <trans-unit id="custom_options.access.description">
+                <source>Members of this group may connect MCP clients like Claude or ChatGPT with their api key and work within their permissions. Without this option an api key is refused. Administrators always may.</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>

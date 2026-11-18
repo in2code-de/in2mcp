@@ -15,6 +15,18 @@
                 <source>Create random base64 string</source>
                 <target>Zufälligen base64-String erzeugen</target>
             </trans-unit>
+            <trans-unit id="custom_options.header">
+                <source>MCP server (in2mcp)</source>
+                <target>MCP-Server (in2mcp)</target>
+            </trans-unit>
+            <trans-unit id="custom_options.access">
+                <source>Use MCP clients with an api key</source>
+                <target>MCP-Clients mit API-Key nutzen</target>
+            </trans-unit>
+            <trans-unit id="custom_options.access.description">
+                <source>Members of this group may connect MCP clients like Claude or ChatGPT with their api key and work within their permissions. Without this option an api key is refused. Administrators always may.</source>
+                <target>Mitglieder dieser Gruppe dürfen MCP-Clients wie Claude oder ChatGPT mit ihrem API-Key verbinden und im Rahmen ihrer Rechte arbeiten. Ohne diese Option wird ein API-Key abgelehnt. Administratoren dürfen immer.</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

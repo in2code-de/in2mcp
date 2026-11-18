@@ -22,6 +22,12 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class BackendUserAuthenticator
 {
+    /**
+     * Custom permission option of a backend group, registered in ext_localconf.php
+     */
+    public const PERMISSION_OPTIONS = 'in2mcp';
+    public const PERMISSION_ACCESS = 'access';
+
     public function __construct(
         protected readonly LoggerInterface $logger,
         protected readonly LanguageServiceFactory $languageServiceFactory,
@@ -64,6 +70,7 @@ class BackendUserAuthenticator
         $GLOBALS['BE_USER'] = $backendUserAuthentication;
         $this->setBackendUserAspect($backendUserAuthentication);
         $this->initializeBackendUserWithoutLogin($backendUserAuthentication);
+        $this->assertMcpAccess($backendUserAuthentication);
         $GLOBALS['LANG'] = $this->languageServiceFactory->createFromUserPreferences($backendUserAuthentication);
         $this->setBackendUserAspect($backendUserAuthentication);
 
@@ -97,6 +104,26 @@ class BackendUserAuthenticator
             throw new UserNotFoundException(
                 'MCP: The backend is locked to administrators by [BE][adminOnly], request was refused',
                 1756800312
+            );
+        }
+    }
+
+    /**
+     * An api key alone is not enough: MCP is opened to editors by their backend group, so an editor does not get
+     * it just because somebody created a key. check() answers true for administrators.
+     *
+     * @throws UserNotFoundException
+     */
+    protected function assertMcpAccess(BackendUserAuthentication $backendUserAuthentication): void
+    {
+        $permission = self::PERMISSION_OPTIONS . ':' . self::PERMISSION_ACCESS;
+        if ($backendUserAuthentication->check('custom_options', $permission) === false) {
+            $userIdentifier = (int)($backendUserAuthentication->user['uid'] ?? 0);
+            $this->removeSession($backendUserAuthentication);
+            throw new UserNotFoundException(
+                'MCP: Backend user ' . $userIdentifier . ' has an api key, but none of its groups allows MCP'
+                . ' (custom option "' . $permission . '"), request was refused',
+                1756800316
             );
         }
     }
