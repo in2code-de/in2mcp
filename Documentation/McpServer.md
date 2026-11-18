@@ -40,7 +40,9 @@ vendor/bin/typo3 in2mcp:apikey <uid|username>     # creates and prints a new key
 vendor/bin/typo3 in2mcp:apikey <uid|username> -r  # revokes the key
 ```
 
-The key is stored as a salted hash and can never be read back. Emptying the field or disabling the user revokes
+The key is stored as a salted hash and can never be read back. A key typed into the backend field by hand has to
+be at least 64 characters long (password policy `in2mcp_apikey`, which an installation can override in
+`$GLOBALS['TYPO3_CONF_VARS']['SYS']['passwordPolicies']`) - the generator of the field creates 128. Emptying the field or disabling the user revokes
 the access immediately.
 
 The generated key uses a url safe alphabet (`A-Z a-z 0-9 - _`), so it needs no quoting in a shell, a url or a

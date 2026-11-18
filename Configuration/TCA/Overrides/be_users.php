@@ -14,6 +14,7 @@ $columns = [
         'description' => $llPrefix . 'be_users.' . $field . '.description',
         'config' => [
             'type' => 'password',
+            'passwordPolicy' => BackendUserRepository::API_KEY_PASSWORD_POLICY,
             'fieldControl' => [
                 'passwordGenerator' => [
                     'renderType' => 'passwordGenerator',

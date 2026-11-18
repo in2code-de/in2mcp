@@ -24,6 +24,11 @@ readonly class BackendUserRepository
     public const API_KEY_FIELD = 'in2mcp_apikey';
 
     /**
+     * Password policy of the api key field, defined in ext_localconf.php
+     */
+    public const API_KEY_PASSWORD_POLICY = 'in2mcp_apikey';
+
+    /**
      * Separates the user part from the secret part of an api key. It is not part of the alphabet the secret is
      * built from, so the two can never be confused.
      */
