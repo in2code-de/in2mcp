@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Domain\Mcp\Authentication;
 
+use In2code\In2mcp\Domain\Repository\BackendUserRepository;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
@@ -67,6 +68,21 @@ class AuthenticationContext
     public function hasApiKey(): bool
     {
         return $this->apiKey !== '';
+    }
+
+    /**
+     * <uid>.<secret> with a secret of a possible length and without whitespace or control characters. Anything
+     * else can never be valid, and refusing it here saves the database lookup and the password hash check.
+     */
+    public function hasWellFormedApiKey(): bool
+    {
+        $pattern = sprintf(
+            '~^[1-9][0-9]*%s[^\\s\\x00-\\x1F\\x7F]{%d,%d}$~',
+            preg_quote(BackendUserRepository::API_KEY_SEPARATOR, '~'),
+            BackendUserRepository::API_KEY_MINIMUM_LENGTH,
+            BackendUserRepository::API_KEY_MAXIMUM_LENGTH
+        );
+        return preg_match($pattern, $this->apiKey) === 1;
     }
 
     public function setAuthenticatedUserIdentifier(int $authenticatedUserIdentifier): void

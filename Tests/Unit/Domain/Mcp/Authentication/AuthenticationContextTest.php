@@ -86,4 +86,31 @@ final class AuthenticationContextTest extends UnitTestCase
         self::assertTrue($context->isAuthenticatedUser(1));
         self::assertFalse($context->isAuthenticatedUser(2));
     }
+
+    public static function wellFormedApiKeyDataProvider(): array
+    {
+        return [
+            'generated key' => ['4.' . str_repeat('aB3-_', 25) . 'xyz', true],
+            'minimum length' => ['12.' . str_repeat('a', 64), true],
+            'special characters set by hand' => ['4.' . str_repeat('!$%&/()=?', 8), true],
+            'maximum length' => ['4.' . str_repeat('a', 1024), true],
+            'secret too short' => ['4.' . str_repeat('a', 63), false],
+            'secret too long' => ['4.' . str_repeat('a', 1025), false],
+            'empty secret' => ['4.', false],
+            'no user part' => [str_repeat('a', 128), false],
+            'user part is no number' => ['x.' . str_repeat('a', 128), false],
+            'user zero' => ['0.' . str_repeat('a', 128), false],
+            'leading zero' => ['04.' . str_repeat('a', 128), false],
+            'whitespace in secret' => ['4.' . str_repeat('a', 64) . ' ' . str_repeat('a', 64), false],
+            'control character in secret' => ['4.' . str_repeat('a', 64) . "\t", false],
+            'empty' => ['', false],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('wellFormedApiKeyDataProvider')]
+    public function hasWellFormedApiKeyChecksFormatAndLength(string $apiKey, bool $expected): void
+    {
+        self::assertSame($expected, (new AuthenticationContext($apiKey))->hasWellFormedApiKey());
+    }
 }

@@ -29,6 +29,12 @@ readonly class BackendUserRepository
     public const API_KEY_PASSWORD_POLICY = 'in2mcp_apikey';
 
     /**
+     * Length of the secret part of a key - the generator and the command create 128 characters
+     */
+    public const API_KEY_MINIMUM_LENGTH = 64;
+    public const API_KEY_MAXIMUM_LENGTH = 1024;
+
+    /**
      * Separates the user part from the secret part of an api key. It is not part of the alphabet the secret is
      * built from, so the two can never be confused.
      */

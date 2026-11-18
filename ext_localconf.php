@@ -36,7 +36,7 @@ $GLOBALS['TYPO3_CONF_VARS']['SYS']['passwordPolicies'][BackendUserRepository::AP
     'validators' => [
         CorePasswordValidator::class => [
             'options' => [
-                'minimumLength' => 64,
+                'minimumLength' => BackendUserRepository::API_KEY_MINIMUM_LENGTH,
                 'upperCaseCharacterRequired' => false,
                 'lowerCaseCharacterRequired' => false,
                 'digitCharacterRequired' => false,

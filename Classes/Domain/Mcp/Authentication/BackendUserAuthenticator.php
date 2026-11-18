@@ -46,6 +46,12 @@ class BackendUserAuthenticator
         if ($authenticationContext === null || $authenticationContext->hasApiKey() === false) {
             throw new UserNotFoundException('MCP: Request does not provide an api key', 1756800304);
         }
+        if ($authenticationContext->hasWellFormedApiKey() === false) {
+            throw new UserNotFoundException(
+                'MCP: Request provides an api key that is malformed or too short',
+                1756800320
+            );
+        }
 
         // Authentication services are only asked for a user if a login form was submitted or if this option is
         // set. It is enabled for the current MCP request only.
