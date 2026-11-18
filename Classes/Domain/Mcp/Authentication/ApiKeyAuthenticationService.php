@@ -37,7 +37,7 @@ class ApiKeyAuthenticationService extends AbstractAuthenticationService
         }
 
         try {
-            return $this->findBackendUserByApiKey($context->getApiKey());
+            return $this->findBackendUser($context);
         } catch (InvalidArgumentException $exception) {
             $this->logger->warning('MCP: Authentication failed: ' . $exception->getMessage());
             return null;
@@ -52,7 +52,7 @@ class ApiKeyAuthenticationService extends AbstractAuthenticationService
         }
 
         try {
-            $authenticatedUser = $this->findBackendUserByApiKey($context->getApiKey());
+            $authenticatedUser = $this->findBackendUser($context);
             $this->assertValidUser($authenticatedUser, $user);
         } catch (InvalidArgumentException | WrongUserException | UserNotFoundException $exception) {
             $this->logger->warning('MCP: Authentication failed: ' . $exception->getMessage());
@@ -63,9 +63,19 @@ class ApiKeyAuthenticationService extends AbstractAuthenticationService
         $context->setAuthenticatedUserIdentifier((int)$authenticatedUser['uid']);
 
         $this->logger->info(
-            'MCP: Backend user "' . ($authenticatedUser['username'] ?? '') . '" authenticated by api key'
+            'MCP: Backend user "' . ($authenticatedUser['username'] ?? '') . '" authenticated by '
+            . ($context->getUploadUserIdentifier() === null ? 'api key' : 'upload token')
         );
         return self::AUTHENTICATION_SUCCESSFUL;
+    }
+
+    private function findBackendUser(AuthenticationContext $context): ?array
+    {
+        $uploadUserIdentifier = $context->getUploadUserIdentifier();
+        if ($uploadUserIdentifier !== null) {
+            return $this->backendUserRepository->findByUidWithApiKey($uploadUserIdentifier);
+        }
+        return $this->findBackendUserByApiKey($context->getApiKey());
     }
 
     private function findBackendUserByApiKey(string $apiKey): ?array
@@ -94,7 +104,7 @@ class ApiKeyAuthenticationService extends AbstractAuthenticationService
     private function assertValidUser(?array $apiKeyUser, array $userToAuthenticate): void
     {
         if ($apiKeyUser === null) {
-            throw new UserNotFoundException('No backend user found for the given api key', 1756800200);
+            throw new UserNotFoundException('No backend user found for the given credential', 1756800200);
         }
 
         $apiKeyUid = (int)($apiKeyUser['uid']

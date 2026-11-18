@@ -119,6 +119,14 @@ final class ConfigurationServiceTest extends UnitTestCase
     }
 
     #[Test]
+    public function getFileUploadPathIsBelowMcpServerPath(): void
+    {
+        $this->configure(['mcpServerPath' => 'ai/mcp']);
+
+        self::assertSame('/typo3/ai/mcp/upload', $this->subject->getFileUploadPath());
+    }
+
+    #[Test]
     public function isFileUploadActivatedReadsSwitch(): void
     {
         $this->configure(['fileUpload' => '1']);

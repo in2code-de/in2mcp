@@ -66,7 +66,7 @@ readonly class BackendUserRepository
 
         [$backendUserUid, $secret] = $this->splitApiKey($apiKey);
 
-        $backendUser = $this->findByUid($backendUserUid);
+        $backendUser = $this->findByUidWithApiKey($backendUserUid);
 
         // A request for a user that has no key must cost the same as one for a user that has: without this the
         // answer time tells an attacker exactly which backend users an api key was created for.
@@ -137,9 +137,9 @@ readonly class BackendUserRepository
     }
 
     /**
-     * @throws Exception
+     * Only a user that still has an api key - revoking the key also ends every upload token of that user
      */
-    private function findByUid(int $uid): ?array
+    public function findByUidWithApiKey(int $uid): ?array
     {
         if ($uid < 1) {
             return null;

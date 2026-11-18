@@ -40,17 +40,12 @@ class BackendUserAuthenticator
      */
     public function authenticate(ServerRequestInterface $request): BackendUserAuthentication
     {
-        // The middleware has removed every cookie of the request, so a request without an api key can not be
-        // authenticated at all and never has to reach the authentication of the core.
         $authenticationContext = AuthenticationContext::fromRequestAttribute($request);
-        if ($authenticationContext === null || $authenticationContext->hasApiKey() === false) {
+        if ($authenticationContext === null) {
             throw new UserNotFoundException('MCP: Request does not provide an api key', 1756800304);
         }
-        if ($authenticationContext->hasWellFormedApiKey() === false) {
-            throw new UserNotFoundException(
-                'MCP: Request provides an api key that is malformed or too short',
-                1756800320
-            );
+        if ($authenticationContext->getUploadUserIdentifier() === null) {
+            $this->assertWellFormedApiKey($authenticationContext);
         }
 
         // Authentication services are only asked for a user if a login form was submitted or if this option is
@@ -81,6 +76,44 @@ class BackendUserAuthenticator
         $this->setBackendUserAspect($backendUserAuthentication);
 
         return $backendUserAuthentication;
+    }
+
+    /**
+     * A MCP request is authenticated by its credential alone. Dropping any backend session cookie makes sure that
+     * neither the authentication nor anything that runs afterwards can fall back to a browser session, which the
+     * core would use before an authentication service is asked at all.
+     */
+    public function prepareRequest(
+        ServerRequestInterface $request,
+        AuthenticationContext $authenticationContext
+    ): ServerRequestInterface {
+        $request = $request->withCookieParams([])
+            ->withoutHeader('Cookie')
+            ->withAttribute(AuthenticationContext::REQUEST_ATTRIBUTE, $authenticationContext);
+
+        // Parts of TYPO3 read their configuration and their environment from the global request, which is not
+        // set in this early state of the backend request.
+        $GLOBALS['TYPO3_REQUEST'] = $request;
+        return $request;
+    }
+
+    /**
+     * The middleware has removed every cookie of the request, so a request without an api key can not be
+     * authenticated at all and never has to reach the authentication of the core.
+     *
+     * @throws UserNotFoundException
+     */
+    protected function assertWellFormedApiKey(AuthenticationContext $authenticationContext): void
+    {
+        if ($authenticationContext->hasApiKey() === false) {
+            throw new UserNotFoundException('MCP: Request does not provide an api key', 1756800304);
+        }
+        if ($authenticationContext->hasWellFormedApiKey() === false) {
+            throw new UserNotFoundException(
+                'MCP: Request provides an api key that is malformed or too short',
+                1756800320
+            );
+        }
     }
 
     /**

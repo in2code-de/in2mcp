@@ -19,3 +19,12 @@ services:
   In2code\In2mcp\Domain\Repository\BackendUserRepository:
     arguments:
       $hashCache: '@cache.hash'
+
+  cache.in2mcp_upload:
+    class: TYPO3\CMS\Core\Cache\Frontend\FrontendInterface
+    factory: ['@TYPO3\CMS\Core\Cache\CacheManager', 'getCache']
+    arguments: ['in2mcp_upload']
+
+  In2code\In2mcp\Domain\Service\UploadTokenService:
+    arguments:
+      $uploadTokenCache: '@cache.in2mcp_upload'

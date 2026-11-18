@@ -113,4 +113,21 @@ final class AuthenticationContextTest extends UnitTestCase
     {
         self::assertSame($expected, (new AuthenticationContext($apiKey))->hasWellFormedApiKey());
     }
+
+    #[Test]
+    public function uploadContextCarriesTheUserAndNoApiKey(): void
+    {
+        $subject = AuthenticationContext::forUploadUser(4);
+
+        self::assertSame(4, $subject->getUploadUserIdentifier());
+        self::assertFalse($subject->hasApiKey());
+    }
+
+    #[Test]
+    public function apiKeyContextHasNoUploadUser(): void
+    {
+        $subject = AuthenticationContext::fromRequest(new ServerRequest('https://example.org/typo3/mcp'));
+
+        self::assertNull($subject->getUploadUserIdentifier());
+    }
 }

@@ -3,6 +3,9 @@
 use In2code\In2mcp\Domain\Mcp\Authentication\ApiKeyAuthenticationService;
 use In2code\In2mcp\Domain\Mcp\Authentication\BackendUserAuthenticator;
 use In2code\In2mcp\Domain\Repository\BackendUserRepository;
+use In2code\In2mcp\Domain\Service\UploadTokenService;
+use TYPO3\CMS\Core\Cache\Backend\FileBackend;
+use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;
 use TYPO3\CMS\Core\PasswordPolicy\Validator\CorePasswordValidator;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
@@ -58,5 +61,17 @@ $GLOBALS['TYPO3_CONF_VARS']['BE']['customPermOptions'][BackendUserAuthenticator:
             '',
             'LLL:EXT:in2mcp/Resources/Private/Language/locallang_db.xlf:custom_options.access.description',
         ],
+    ],
+];
+
+/**
+ * One-time tokens of the upload endpoint. A file backend needs no database table, and a flushed cache only
+ * invalidates tokens that are open - they are requested again with "create_file_upload".
+ */
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations'][UploadTokenService::CACHE_IDENTIFIER] ??= [
+    'frontend' => VariableFrontend::class,
+    'backend' => FileBackend::class,
+    'options' => [
+        'defaultLifetime' => UploadTokenService::LIFETIME,
     ],
 ];

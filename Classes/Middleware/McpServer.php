@@ -63,7 +63,10 @@ class McpServer implements MiddlewareInterface
             return $this->getErrorResponse(403, -32003, 'Forbidden');
         }
 
-        $request = $this->initializeRequestForMcp($request);
+        $request = $this->backendUserAuthenticator->prepareRequest(
+            $request,
+            AuthenticationContext::fromRequest($request)
+        );
 
         $rateLimiter = $this->rateLimiterFactory->create($request);
         if ($rateLimiter->consume()->isAccepted() === false) {
@@ -144,23 +147,5 @@ class McpServer implements MiddlewareInterface
     {
         return rtrim($request->getUri()->getPath(), '/')
             === rtrim($this->configurationService->getMcpServerPath(), '/');
-    }
-
-    private function initializeRequestForMcp(ServerRequestInterface $request): ServerRequestInterface
-    {
-        // A MCP request is authenticated by its api key alone. Dropping any backend session cookie here makes
-        // sure that neither the authentication nor anything that runs afterwards can fall back to a browser
-        // session, which the core would use before an authentication service is asked at all.
-        $request = $request->withCookieParams([])
-            ->withoutHeader('Cookie')
-            ->withAttribute(
-                AuthenticationContext::REQUEST_ATTRIBUTE,
-                AuthenticationContext::fromRequest($request)
-            );
-
-        // Parts of TYPO3 read their configuration and their environment from the global request, which is not
-        // set in this early state of the backend request.
-        $GLOBALS['TYPO3_REQUEST'] = $request;
-        return $request;
     }
 }

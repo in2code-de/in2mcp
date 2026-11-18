@@ -8,6 +8,7 @@ use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Model\Base64FileContent;
 use In2code\In2mcp\Domain\Service\ConfigurationService;
 use In2code\In2mcp\Domain\Service\FileStorageService;
+use In2code\In2mcp\Domain\Service\FileUploadService;
 use In2code\In2mcp\Domain\Service\TargetFolderService;
 use In2code\In2mcp\Exception\FileImportException;
 use In2code\In2mcp\Exception\FileUploadException;
@@ -24,6 +25,7 @@ class AddFileFromContentTool extends AbstractTool
         private readonly ConfigurationService $configurationService,
         private readonly TargetFolderService $targetFolderService,
         private readonly FileStorageService $fileStorageService,
+        private readonly FileUploadService $fileUploadService,
     ) {
     }
 
@@ -73,7 +75,7 @@ class AddFileFromContentTool extends AbstractTool
      */
     public function execute(array $arguments): array
     {
-        $this->assertUploadIsActivated();
+        $this->fileUploadService->assertUploadIsActivated();
         $folder = $this->targetFolderService->getWritableFolder($this->getStringArgument($arguments, 'targetFolder'));
         $fileName = $this->fileStorageService->getValidFileName($this->getStringArgument($arguments, 'fileName'));
 
@@ -82,19 +84,6 @@ class AddFileFromContentTool extends AbstractTool
 
         $file = $this->fileStorageService->addContent($content->decode(), $folder, $fileName, self::ORIGIN);
         return ['imported' => true] + $this->fileStorageService->describe($file, $folder);
-    }
-
-    /**
-     * @throws FileUploadException
-     */
-    private function assertUploadIsActivated(): void
-    {
-        if ($this->configurationService->isFileUploadActivated() === false) {
-            throw new FileUploadException(
-                'Uploading files is switched off in the extension configuration of in2mcp',
-                1795028808
-            );
-        }
     }
 
     /**

@@ -30,8 +30,23 @@ class AuthenticationContext
 
     protected ?int $authenticatedUserIdentifier = null;
 
-    public function __construct(protected readonly string $apiKey)
+    public function __construct(
+        protected readonly string $apiKey,
+        protected readonly ?int $uploadUserIdentifier = null
+    ) {
+    }
+
+    /**
+     * The upload endpoint has already resolved its one-time token to the backend user who requested it
+     */
+    public static function forUploadUser(int $userIdentifier): self
     {
+        return new self('', $userIdentifier);
+    }
+
+    public function getUploadUserIdentifier(): ?int
+    {
+        return $this->uploadUserIdentifier;
     }
 
     /**

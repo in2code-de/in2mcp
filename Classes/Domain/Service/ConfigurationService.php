@@ -28,6 +28,8 @@ readonly class ConfigurationService
 
     private const DEFAULT_BACKEND_ENTRY_POINT = '/typo3';
 
+    private const FILE_UPLOAD_PATH_SEGMENT = 'upload';
+
     /**
      * Everything a path segment may consist of. A path is not a place for anything else, and this is the only
      * value of the extension configuration that ends up in a route comparison. "." and ".." pass this pattern
@@ -58,6 +60,11 @@ readonly class ConfigurationService
     public function getMcpServerPath(): string
     {
         return $this->getBackendEntryPoint() . '/' . $this->getMcpServerPathSegment();
+    }
+
+    public function getFileUploadPath(): string
+    {
+        return $this->getMcpServerPath() . '/' . self::FILE_UPLOAD_PATH_SEGMENT;
     }
 
     /**
