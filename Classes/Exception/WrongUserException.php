@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Exception;
 
-use Exception;
-
-class WrongUserException extends Exception
+class WrongUserException extends ClientFacingException
 {
 }

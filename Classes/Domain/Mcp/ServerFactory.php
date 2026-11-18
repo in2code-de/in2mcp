@@ -48,7 +48,7 @@ class ServerFactory
             ->setSession(new FileSessionStore($this->getSessionDirectory(), self::SESSION_TIME_TO_LIVE));
 
         foreach ($this->toolRegistry->getTools() as $tool) {
-            $builder->add($this->toolSchemaConverter->convert($tool), new ToolExecuter($tool));
+            $builder->add($this->toolSchemaConverter->convert($tool), new ToolExecuter($tool, $this->logger));
         }
 
         return $builder->build();

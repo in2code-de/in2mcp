@@ -123,9 +123,10 @@ class UrlValidationService
 
         foreach ($addresses as $address) {
             if ($this->isPublicAddress($address) === false) {
+                // The address itself is not named: the answer would map the internal network for the client
                 throw new FileImportException(
-                    'The host "' . $host . '" resolves to the local or private address ' . $address
-                    . ', which this server does not download from',
+                    'The host "' . $host . '" resolves to a local or private address, which this server does not'
+                    . ' download from',
                     1756801116
                 );
             }

@@ -533,6 +533,13 @@ authentication resets the counter, so only failing requests count. Configurable 
 | `429`  | Too many failed authentications from this ip address            |
 | `405`  | Request method not supported (only `POST`, `DELETE`, `OPTIONS`) |
 
+A tool that fails answers with a tool result marked as error, not with an http status. Its text tells the client
+what went wrong and what to call instead - but only for the errors in2mcp raises itself. Any other error, like a
+database error or a message of a third party library, can carry internals such as paths, table structures or
+addresses of the internal network. The client then only gets "Internal error while running ..." with a reference,
+and the full message is written to the TYPO3 log under that reference. For the same reason a refused import does
+not name the internal address a host resolved to.
+
 ---
 
 ## Architecture
