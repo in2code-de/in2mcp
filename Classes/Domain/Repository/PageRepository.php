@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Repository;
 
 use Doctrine\DBAL\Exception;
+use In2code\In2mcp\Domain\Model\PageTreeBudget;
 use In2code\In2mcp\Domain\Service\BackendUserService;
 use In2code\In2mcp\Domain\Service\TcaService;
 use In2code\In2mcp\Domain\Service\WorkspaceService;
@@ -72,7 +73,24 @@ readonly class PageRepository
      * @throws Exception
      * @throws UserNotFoundException
      */
-    public function findTree(int $parentUid, int $depth, int $languageId = 0): array
+    /**
+     * @return array{tree: list<array<string, mixed>>, truncated: bool}
+     * @throws Exception
+     * @throws UserNotFoundException
+     */
+    public function findTree(int $parentUid, int $depth, int $languageId, int $maximumPages): array
+    {
+        $budget = new PageTreeBudget($maximumPages);
+        $tree = $this->buildTree($parentUid, $depth, $languageId, $budget);
+        return ['tree' => $tree, 'truncated' => $budget->isTruncated()];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     * @throws Exception
+     * @throws UserNotFoundException
+     */
+    private function buildTree(int $parentUid, int $depth, int $languageId, PageTreeBudget $budget): array
     {
         if ($depth < 1) {
             return [];
@@ -81,7 +99,7 @@ readonly class PageRepository
         // An editor sees the tree of its page mounts, not the tree of the installation. Pages above a mount can
         // be readable by permission and are still outside the reach of that user.
         if ($parentUid === 0 && $this->backendUserService->hasFullTreeAccess() === false) {
-            return $this->findMountedTrees($depth, $languageId);
+            return $this->findMountedTrees($depth, $languageId, $budget);
         }
 
         if ($parentUid > 0 && $this->backendUserService->isInWebMount($parentUid) === false) {
@@ -104,13 +122,18 @@ readonly class PageRepository
                 $queryBuilder->expr()->and($this->backendUserService->getPagePermissionClause())
             )
             ->orderBy('sorting')
+            // One more than the budget allows, so a cut is noticed without loading the rest
+            ->setMaxResults($budget->getRemainingPages() + 1)
             ->executeQuery()
             ->fetchAllAssociative();
 
         $tree = [];
         foreach ($this->workspaceService->overlayRecords(self::TABLE_NAME, $pages) as $page) {
+            if ($budget->take() === false) {
+                break;
+            }
             $page['doktypeName'] = $this->tcaService->getPageTypeName((int)$page['doktype']);
-            $page['children'] = $this->findTree((int)$page['uid'], $depth - 1, $languageId);
+            $page['children'] = $this->buildTree((int)$page['uid'], $depth - 1, $languageId, $budget);
             $tree[] = $page;
         }
 
@@ -162,10 +185,13 @@ readonly class PageRepository
      * @throws Exception
      * @throws UserNotFoundException
      */
-    private function findMountedTrees(int $depth, int $languageId): array
+    private function findMountedTrees(int $depth, int $languageId, PageTreeBudget $budget): array
     {
         $tree = [];
         foreach ($this->backendUserService->getWebMounts() as $mountUid) {
+            if ($budget->take() === false) {
+                break;
+            }
             $queryBuilder = $this->getQueryBuilder();
             $page = $queryBuilder
                 ->select(...$this->getTreeFields())
@@ -187,7 +213,7 @@ readonly class PageRepository
             }
 
             $page['doktypeName'] = $this->tcaService->getPageTypeName((int)$page['doktype']);
-            $page['children'] = $this->findTree($mountUid, $depth - 1, $languageId);
+            $page['children'] = $this->buildTree($mountUid, $depth - 1, $languageId, $budget);
             $tree[] = $page;
         }
 

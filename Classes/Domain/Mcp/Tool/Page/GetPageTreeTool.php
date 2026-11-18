@@ -13,6 +13,7 @@ class GetPageTreeTool extends AbstractTool
     protected const READ_ONLY = true;
 
     private const MAX_DEPTH = 10;
+    private const MAX_PAGES = 500;
 
     private const DEFAULT_LANGUAGE = 0;
 
@@ -30,7 +31,8 @@ class GetPageTreeTool extends AbstractTool
     public function getDescription(): string
     {
         return 'Returns the TYPO3 page tree as a nested structure. Start with pageUid 0 for the root of the'
-            . ' installation. Only pages the backend user may see are returned.';
+            . ' installation. Only pages the backend user may see are returned. A tree holds at most '
+            . self::MAX_PAGES . ' pages - when "truncated" is true, ask for a subpage or a smaller depth.';
     }
 
     public function getParameters(): array
@@ -63,14 +65,18 @@ class GetPageTreeTool extends AbstractTool
             $this->recordAccessService->assertLanguageReadable($languageId);
         }
 
+        $pageTree = $this->pageRepository->findTree(
+            $this->getIntArgument($arguments, 'pageUid'),
+            $depth,
+            $languageId,
+            self::MAX_PAGES
+        );
+
         return [
             'pageUid' => $this->getIntArgument($arguments, 'pageUid'),
             'depth' => $depth,
-            'tree' => $this->pageRepository->findTree(
-                $this->getIntArgument($arguments, 'pageUid'),
-                $depth,
-                $languageId
-            ),
+            'tree' => $pageTree['tree'],
+            'truncated' => $pageTree['truncated'],
         ];
     }
 }

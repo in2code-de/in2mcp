@@ -48,7 +48,7 @@ class SearchPagesTool extends AbstractTool
     {
         return $this->pageRepository->search(
             $this->getStringArgument($arguments, 'searchTerm'),
-            min($this->getIntArgument($arguments, 'limit'), self::MAX_LIMIT)
+            max(1, min($this->getIntArgument($arguments, 'limit'), self::MAX_LIMIT))
         );
     }
 }
