@@ -10,6 +10,8 @@ use In2code\In2mcp\Domain\Service\DataHandlerService;
 
 class CreatePageTool extends AbstractTool
 {
+    protected const DESTRUCTIVE = false;
+
     public function __construct(
         private readonly DataHandlerService $dataHandlerService,
         private readonly PageRepository $pageRepository,

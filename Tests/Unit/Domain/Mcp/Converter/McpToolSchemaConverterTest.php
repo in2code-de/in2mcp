@@ -83,4 +83,14 @@ final class McpToolSchemaConverterTest extends UnitTestCase
         $properties = (array)$inputSchema['properties'];
         self::assertSame(['type' => 'string', 'description' => ''], (array)$properties['value']);
     }
+
+    #[Test]
+    public function convertMarksAToolWithoutHintsAsDestructive(): void
+    {
+        $annotations = $this->subject->convert(new ArgumentTool())->annotations;
+
+        self::assertFalse($annotations?->readOnlyHint);
+        self::assertTrue($annotations?->destructiveHint);
+        self::assertFalse($annotations?->openWorldHint);
+    }
 }

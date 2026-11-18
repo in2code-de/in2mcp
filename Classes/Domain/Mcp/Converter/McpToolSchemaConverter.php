@@ -18,7 +18,23 @@ class McpToolSchemaConverter
             'name' => $tool->getName(),
             'description' => $tool->getDescription(),
             'inputSchema' => $this->getInputSchema($tool),
+            'annotations' => $this->getAnnotations($tool),
         ]);
+    }
+
+    /**
+     * Content of the installation can carry instructions for the model (prompt injection), so a client has to know
+     * which tools change something and should be confirmed by a human
+     *
+     * @return array{readOnlyHint: bool, destructiveHint: bool, openWorldHint: bool}
+     */
+    protected function getAnnotations(ToolInterface $tool): array
+    {
+        return [
+            'readOnlyHint' => $tool->isReadOnly(),
+            'destructiveHint' => $tool->isDestructive(),
+            'openWorldHint' => $tool->isOpenWorld(),
+        ];
     }
 
     protected function getInputSchema(ToolInterface $tool): array

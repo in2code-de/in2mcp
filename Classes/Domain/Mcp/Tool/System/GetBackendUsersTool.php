@@ -9,6 +9,8 @@ use In2code\In2mcp\Domain\Service\BackendUserActivityService;
 
 class GetBackendUsersTool extends AbstractTool
 {
+    protected const READ_ONLY = true;
+
     public function __construct(private readonly BackendUserActivityService $backendUserActivityService)
     {
     }

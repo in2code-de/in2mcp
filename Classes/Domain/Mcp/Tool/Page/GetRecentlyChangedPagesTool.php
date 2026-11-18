@@ -11,6 +11,8 @@ use In2code\In2mcp\Domain\Service\TableAccessService;
 
 class GetRecentlyChangedPagesTool extends AbstractTool
 {
+    protected const READ_ONLY = true;
+
     private const MAX_LIMIT = 100;
 
     public function __construct(

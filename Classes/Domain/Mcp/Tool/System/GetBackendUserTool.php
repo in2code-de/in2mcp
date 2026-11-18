@@ -14,6 +14,8 @@ use In2code\In2mcp\Exception\UserNotFoundException;
  */
 class GetBackendUserTool extends AbstractTool
 {
+    protected const READ_ONLY = true;
+
     private const RELEVANT_TABLES = ['pages', 'tt_content', 'sys_file_reference'];
 
     public function __construct(private readonly BackendUserService $backendUserService)

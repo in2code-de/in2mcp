@@ -21,6 +21,8 @@ use In2code\In2mcp\Exception\UserNotFoundException;
  */
 class GetSchemaTool extends AbstractTool
 {
+    protected const READ_ONLY = true;
+
     /**
      * Fields whose values are listed as "pageTypes" and "contentTypes" already, so they are not repeated as items
      */

@@ -11,6 +11,8 @@ use In2code\In2mcp\Domain\Service\TableAccessService;
 
 class GetRecentlyChangedContentTool extends AbstractTool
 {
+    protected const READ_ONLY = true;
+
     private const MAX_LIMIT = 100;
     private const ALL_LANGUAGES = -1;
 

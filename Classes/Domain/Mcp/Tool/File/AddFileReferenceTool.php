@@ -21,6 +21,8 @@ use In2code\In2mcp\Exception\UserNotFoundException;
  */
 class AddFileReferenceTool extends AbstractTool
 {
+    protected const DESTRUCTIVE = false;
+
     public function __construct(
         private readonly DataHandlerService $dataHandlerService,
         private readonly FileRepository $fileRepository,

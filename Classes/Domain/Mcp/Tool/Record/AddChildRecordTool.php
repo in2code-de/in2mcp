@@ -20,6 +20,8 @@ use In2code\In2mcp\Exception\UserNotFoundException;
  */
 class AddChildRecordTool extends AbstractTool
 {
+    protected const DESTRUCTIVE = false;
+
     public function __construct(
         private readonly DataHandlerService $dataHandlerService,
         private readonly RecordRepository $recordRepository,

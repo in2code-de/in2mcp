@@ -9,6 +9,8 @@ use In2code\In2mcp\Domain\Repository\PageRepository;
 
 class SearchPagesTool extends AbstractTool
 {
+    protected const READ_ONLY = true;
+
     private const MAX_LIMIT = 100;
 
     public function __construct(private readonly PageRepository $pageRepository)

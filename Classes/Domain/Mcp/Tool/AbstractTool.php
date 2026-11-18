@@ -8,9 +8,32 @@ use In2code\In2mcp\Exception\ToolExecutionException;
 
 abstract class AbstractTool implements ToolInterface
 {
+    /**
+     * The defaults are the careful ones: a tool that does not say otherwise is taken as one that may destroy
+     * something, so a client asks before running it.
+     */
+    protected const READ_ONLY = false;
+    protected const DESTRUCTIVE = true;
+    protected const OPEN_WORLD = false;
+
     public function getParameters(): array
     {
         return [];
+    }
+
+    public function isReadOnly(): bool
+    {
+        return static::READ_ONLY;
+    }
+
+    public function isDestructive(): bool
+    {
+        return static::READ_ONLY === false && static::DESTRUCTIVE;
+    }
+
+    public function isOpenWorld(): bool
+    {
+        return static::OPEN_WORLD;
     }
 
     /**

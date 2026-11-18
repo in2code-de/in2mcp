@@ -11,6 +11,8 @@ use In2code\In2mcp\Exception\UserNotFoundException;
 
 class SwitchWorkspaceTool extends AbstractTool
 {
+    protected const DESTRUCTIVE = false;
+
     public function __construct(private readonly WorkspaceService $workspaceService)
     {
     }

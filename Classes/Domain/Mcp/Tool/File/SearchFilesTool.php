@@ -17,6 +17,8 @@ use In2code\In2mcp\Exception\UserNotFoundException;
  */
 class SearchFilesTool extends AbstractTool
 {
+    protected const READ_ONLY = true;
+
     public function __construct(
         private readonly FileRepository $fileRepository,
         private readonly BackendUserService $backendUserService,

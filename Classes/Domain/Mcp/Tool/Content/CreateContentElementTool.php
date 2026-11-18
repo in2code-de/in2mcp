@@ -11,6 +11,8 @@ use In2code\In2mcp\Exception\ToolExecutionException;
 
 class CreateContentElementTool extends AbstractTool
 {
+    protected const DESTRUCTIVE = false;
+
     public function __construct(
         private readonly DataHandlerService $dataHandlerService,
         private readonly ContentRepository $contentRepository,

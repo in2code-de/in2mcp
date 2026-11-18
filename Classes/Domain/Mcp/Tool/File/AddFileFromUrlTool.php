@@ -22,6 +22,9 @@ use TYPO3\CMS\Core\Resource\ResourceFactory;
  */
 class AddFileFromUrlTool extends AbstractTool
 {
+    protected const DESTRUCTIVE = false;
+    protected const OPEN_WORLD = true;
+
     public function __construct(
         private readonly FileImportService $fileImportService,
         private readonly ResourceFactory $resourceFactory,

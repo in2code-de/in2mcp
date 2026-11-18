@@ -12,6 +12,8 @@ use In2code\In2mcp\Exception\UserNotFoundException;
 
 class GetWorkspacesTool extends AbstractTool
 {
+    protected const READ_ONLY = true;
+
     public function __construct(private readonly WorkspaceService $workspaceService)
     {
     }

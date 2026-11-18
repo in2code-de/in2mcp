@@ -11,6 +11,8 @@ use In2code\In2mcp\Exception\ToolExecutionException;
 
 class GetPageTool extends AbstractTool
 {
+    protected const READ_ONLY = true;
+
     public function __construct(
         private readonly PageRepository $pageRepository,
         private readonly ContentRepository $contentRepository,

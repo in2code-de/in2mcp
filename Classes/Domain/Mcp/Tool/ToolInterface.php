@@ -21,6 +21,21 @@ interface ToolInterface
     public function getParameters(): array;
 
     /**
+     * Hint for the client that the tool changes nothing. A client may run such a tool without asking.
+     */
+    public function isReadOnly(): bool;
+
+    /**
+     * Hint for the client that the tool may overwrite or delete something, so it should ask before running it
+     */
+    public function isDestructive(): bool;
+
+    /**
+     * Hint for the client that the tool reaches outside of this installation
+     */
+    public function isOpenWorld(): bool;
+
+    /**
      * @param array<string, mixed> $arguments
      */
     public function execute(array $arguments): mixed;

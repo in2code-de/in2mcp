@@ -120,4 +120,15 @@ final class AbstractToolTest extends UnitTestCase
 
         self::assertSame([], $tool->getParameters());
     }
+
+    #[Test]
+    public function readOnlyToolIsNeverDestructive(): void
+    {
+        $tool = new class () extends ArgumentTool {
+            protected const READ_ONLY = true;
+        };
+
+        self::assertTrue($tool->isReadOnly());
+        self::assertFalse($tool->isDestructive());
+    }
 }

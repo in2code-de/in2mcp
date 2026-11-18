@@ -383,6 +383,18 @@ file of a MCP client, in plain text. Treat it like a password: one key per perso
 `in2mcp:apikey` whenever a machine is lost or a client configuration is shared. Emptying the field or disabling
 the backend user revokes it immediately.
 
+**Content can carry instructions for the model** (prompt injection). A text an anonymous visitor entered into a
+form, or a page an external author wrote, ends up in the context of the model as soon as a tool reads it, and a
+model may follow what it finds there. This cannot be solved on the server, but in2mcp tells the client which
+tools are harmless: every tool carries the MCP annotations `readOnlyHint`, `destructiveHint` and `openWorldHint`.
+Reading tools are marked read only, `update_*`, `delete_*` and `move_record` destructive, and `add_file_from_url`
+open world, because it makes the server send a request to an address the model chose. Clients use these hints to
+decide what they run without asking. Recommendations:
+
+- never let a client run the writing tools without confirmation, only the read only ones
+- switch `fileImport` on only where it is needed - it is the one tool that reaches outside of the installation
+- give an api key to a backend user with exactly the permissions the work needs, not to an administrator
+
 **A key is only as valid as its user.** Disabling, deleting or time-limiting the backend user revokes the access
 immediately, because the regular TYPO3 authentication chain runs afterwards.
 
@@ -532,6 +544,11 @@ Sessions are stored in the filesystem (`var/in2mcp/mcp`), because a client sends
 Implement `ToolInterface` (or extend `AbstractTool`) anywhere under `Classes/Domain/Mcp/Tool/`. The service
 configuration tags every implementation as `in2mcp.tool` and the `ToolRegistry` picks it up - no registration
 needed.
+
+A tool that extends `AbstractTool` is taken as destructive unless it says otherwise, so a client asks before it
+runs it. A tool that only reads sets `protected const READ_ONLY = true;`, a tool that only adds something sets
+`protected const DESTRUCTIVE = false;`, and a tool that reaches outside of the installation sets
+`protected const OPEN_WORLD = true;`. These become the MCP tool annotations.
 
 ### Tool results
 

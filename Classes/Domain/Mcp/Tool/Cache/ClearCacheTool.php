@@ -17,6 +17,8 @@ use In2code\In2mcp\Exception\UserNotFoundException;
  */
 class ClearCacheTool extends AbstractTool
 {
+    protected const DESTRUCTIVE = false;
+
     private const SCOPE_PAGES = 'pages';
     private const SCOPE_ALL = 'all';
 

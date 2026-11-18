@@ -15,6 +15,8 @@ use In2code\In2mcp\Exception\UserNotFoundException;
 
 class FindRecordsTool extends AbstractTool
 {
+    protected const READ_ONLY = true;
+
     private const ANY_PAGE = -1;
     private const ANY_LANGUAGE = -1;
     private const MAXIMUM_SCANNED_RECORDS = 5000;
