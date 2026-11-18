@@ -6,26 +6,18 @@ namespace In2code\In2mcp\Tests\Functional\Middleware;
 
 use In2code\In2mcp\Domain\Service\ApiKeyService;
 use In2code\In2mcp\Middleware\McpServer;
-use In2code\In2mcp\Tests\Functional\AbstractFunctionalTestCase;
 use Mcp\Schema\RequestMeta;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\RequestHandlerInterface;
-use TYPO3\CMS\Core\Core\SystemEnvironmentBuilder;
-use TYPO3\CMS\Core\Http\NormalizedParams;
-use TYPO3\CMS\Core\Http\Response;
-use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\Http\StreamFactory;
 
-final class McpServerTest extends AbstractFunctionalTestCase
+final class McpServerTest extends AbstractMiddlewareTestCase
 {
     private const ENDPOINT_URL = 'https://typo3-testing.local/typo3/mcp';
-    private const CLIENT_ADDRESS = '192.0.2.10';
     private const PROTOCOL_VERSION = '2025-06-18';
     private const STATELESS_PROTOCOL_VERSION = '2026-07-28';
     private const SESSION_HEADER = 'Mcp-Session-Id';
-    private const NOT_HANDLED_STATUS = 418;
     private const REGISTERED_TOOLS = 30;
 
     #[Test]
@@ -249,7 +241,7 @@ final class McpServerTest extends AbstractFunctionalTestCase
             $message['id'] = 1;
         }
 
-        $request = new ServerRequest(
+        $request = $this->createBackendRequest(
             self::ENDPOINT_URL,
             'POST',
             (new StreamFactory())->createStream(json_encode($message, JSON_THROW_ON_ERROR)),
@@ -257,8 +249,7 @@ final class McpServerTest extends AbstractFunctionalTestCase
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json, text/event-stream',
                 'MCP-Protocol-Version' => self::PROTOCOL_VERSION,
-            ],
-            ['HTTP_HOST' => 'typo3-testing.local', 'REMOTE_ADDR' => self::CLIENT_ADDRESS, 'HTTPS' => 'on']
+            ]
         );
         if ($apiKey !== '') {
             $request = $request->withHeader('Authorization', 'Bearer ' . $apiKey);
@@ -266,10 +257,7 @@ final class McpServerTest extends AbstractFunctionalTestCase
         if ($sessionId !== '') {
             $request = $request->withHeader(self::SESSION_HEADER, $sessionId);
         }
-
-        return $request
-            ->withAttribute('applicationType', SystemEnvironmentBuilder::REQUESTTYPE_BE)
-            ->withAttribute('normalizedParams', NormalizedParams::createFromRequest($request));
+        return $request;
     }
 
     /**
@@ -301,16 +289,6 @@ final class McpServerTest extends AbstractFunctionalTestCase
 
     private function process(ServerRequestInterface $request): ResponseInterface
     {
-        $backend = new class (self::NOT_HANDLED_STATUS) implements RequestHandlerInterface {
-            public function __construct(private readonly int $status)
-            {
-            }
-
-            public function handle(ServerRequestInterface $request): ResponseInterface
-            {
-                return new Response(null, $this->status);
-            }
-        };
-        return $this->get(McpServer::class)->process($request, $backend);
+        return $this->processWith($this->get(McpServer::class), $request);
     }
 }
