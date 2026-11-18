@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Repository;
 
 use Doctrine\DBAL\Exception;
+use In2code\In2mcp\Domain\Service\EmptyFieldService;
 use In2code\In2mcp\Domain\Service\InlineRelationService;
 use In2code\In2mcp\Exception\ToolExecutionException;
 use In2code\In2mcp\Domain\Service\TcaService;
 use In2code\In2mcp\Domain\Service\WorkspaceService;
 use TYPO3\CMS\Core\Database\Connection;
+use TYPO3\CMS\Core\Database\Query\Expression\CompositeExpression;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
 /**
@@ -27,6 +29,7 @@ readonly class RecordRepository
         private TcaService $tcaService,
         private InlineRelationService $inlineRelationService,
         private WorkspaceService $workspaceService,
+        private EmptyFieldService $emptyFieldService,
     ) {
     }
 
@@ -127,12 +130,7 @@ readonly class RecordRepository
             $this->assertFilterableField($table, (string)$fieldName);
             // The name is whitelisted against the TCA above and quoted by the QueryBuilder itself; quoting it
             // here as well produces a column name with backticks in it.
-            $queryBuilder->andWhere(
-                $queryBuilder->expr()->eq(
-                    (string)$fieldName,
-                    $queryBuilder->createNamedParameter($value)
-                )
-            );
+            $queryBuilder->andWhere($this->createFilterCondition($queryBuilder, $table, (string)$fieldName, $value));
         }
 
         foreach ($this->getOrderingFields($table) as $orderingField) {
@@ -148,6 +146,32 @@ readonly class RecordRepository
             ),
             $this->workspaceService->overlayRecords($table, $records)
         );
+    }
+
+    /**
+     * @throws ToolExecutionException
+     */
+    private function createFilterCondition(
+        QueryBuilder $queryBuilder,
+        string $table,
+        string $fieldName,
+        mixed $value
+    ): string|CompositeExpression {
+        $condition = $queryBuilder->expr()->eq($fieldName, $queryBuilder->createNamedParameter($value));
+        if ($value === null) {
+            $emptyValue = $this->emptyFieldService->getEmptyValue($table, $fieldName);
+            $condition = $queryBuilder->expr()->or(
+                $queryBuilder->expr()->isNull($fieldName),
+                $queryBuilder->expr()->eq(
+                    $fieldName,
+                    $queryBuilder->createNamedParameter(
+                        $emptyValue,
+                        is_int($emptyValue) ? Connection::PARAM_INT : Connection::PARAM_STR
+                    )
+                )
+            );
+        }
+        return $condition;
     }
 
     /**

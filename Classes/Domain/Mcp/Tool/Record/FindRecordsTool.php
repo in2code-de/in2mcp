@@ -60,7 +60,8 @@ class FindRecordsTool extends AbstractTool
             'filters' => [
                 'type' => 'object',
                 'description' => 'Field values that all have to match, for example {"form": 57} or'
-                    . ' {"title": "Contact"}. Only fields that exist in the table are accepted.',
+                    . ' {"title": "Contact"}. null finds empty fields: {"description": null} matches NULL, an empty'
+                    . ' text and 0 in a number or in a file field. Only fields that exist in the table are accepted.',
                 'default' => [],
             ],
             'languageId' => [

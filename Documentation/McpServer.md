@@ -193,6 +193,22 @@ asks first does not have to guess field names - and unknown field names are reje
 back to `get_schema` instead of being dropped silently. Call it with a `table` to get the fields of that table
 before writing a record with `create_record`.
 
+### Empty fields
+
+`null` as a value in the `filters` of `find_records` finds records whose field is empty - pages without a meta
+description, content elements without a header or without an image:
+
+```json
+{"table": "pages", "languageId": 0, "filters": {"description": null}}
+{"table": "tt_content", "pid": 12, "filters": {"image": null}}
+```
+
+What empty means follows the TCA type of the field: `NULL` or an empty string for text fields (`input`, `text`,
+`email`, `link`, `slug`, `color`), `NULL` or `0` for numbers, checkboxes, timestamps and the file and inline fields
+that store the number of their children. Any other field (a select field, a native date column) is refused,
+because its empty value is not known. An empty string as a filter value does not match `NULL`, which is how most
+empty fields are stored.
+
 ### Content element types per page
 
 The TCA lists every content element type that is registered in the installation, but an integrator narrows that
