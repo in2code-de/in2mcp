@@ -285,6 +285,17 @@ class FieldItemService
      * @return array<array{value: int|string, label: string}>
      * @throws UserNotFoundException
      */
+    public function filterByAuthMode(string $table, string $fieldName, array $items): array
+    {
+        $field = $this->tcaService->getFieldDefinition($table, $fieldName);
+        return $field === null ? $items : $this->removeItemsByAuthMode($table, $field, $items);
+    }
+
+    /**
+     * @param array<array{value: int|string, label: string}> $items
+     * @return array<array{value: int|string, label: string}>
+     * @throws UserNotFoundException
+     */
     private function removeItemsByAuthMode(string $table, FieldTypeInterface $field, array $items): array
     {
         if (is_string($field->getConfiguration()['authMode'] ?? null)) {

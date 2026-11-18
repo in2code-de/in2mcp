@@ -106,7 +106,27 @@ final class SystemToolsTest extends AbstractFunctionalTestCase
 
         $result = $this->callTool('get_schema', ['pageUid' => 2]);
 
-        self::assertContains('text', array_column($result['contentTypes'], 'value'));
+        self::assertSame(['header', 'text', 'textmedia'], array_column($result['contentTypes'], 'value'));
+    }
+
+    #[Test]
+    public function schemaOverviewWithoutPageListsOnlyTheContentTypesOfTheGroups(): void
+    {
+        $this->loginAs(self::EDITOR);
+
+        $result = $this->callTool('get_schema');
+
+        self::assertNotContains('html', array_column($result['contentTypes'], 'value'));
+    }
+
+    #[Test]
+    public function schemaOverviewListsEveryContentTypeForAnAdministrator(): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        $result = $this->callTool('get_schema', ['pageUid' => 2]);
+
+        self::assertContains('html', array_column($result['contentTypes'], 'value'));
     }
 
     #[Test]

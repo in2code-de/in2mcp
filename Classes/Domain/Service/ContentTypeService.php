@@ -33,10 +33,12 @@ class ContentTypeService
     }
 
     /**
-     * Content types of the installation, restricted by the page TSconfig of the given page. Without a page the
-     * unrestricted list of the TCA is returned, because there is no page whose configuration could apply.
+     * Content types of the installation, restricted by the page TSconfig of the given page and by the explicitly
+     * allowed values of the backend groups. Without a page the page TSconfig is left out, because there is no page
+     * whose configuration could apply - the groups belong to the user and always apply.
      *
      * @return array<array{value: int|string, label: string}>
+     * @throws UserNotFoundException
      */
     public function getContentTypes(int $pageUid): array
     {
@@ -52,7 +54,8 @@ class ContentTypeService
                 )
             );
         }
-        return $contentTypes;
+        // Last, like the form engine: an item added by "addItems" is still subject to the groups
+        return $this->fieldItemService->filterByAuthMode(self::CONTENT_TABLE, self::CONTENT_TYPE_FIELD, $contentTypes);
     }
 
     /**

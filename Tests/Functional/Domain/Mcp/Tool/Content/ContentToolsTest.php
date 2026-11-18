@@ -122,15 +122,18 @@ final class ContentToolsTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
-    public function updateContentElementNeverWritesAContentTypeTheEditorMayNotUse(): void
+    public function updateContentElementRefusesAContentTypeTheEditorMayNotUse(): void
     {
         $this->loginAs(self::EDITOR);
 
+        $exception = null;
         try {
             $this->callTool('update_content_element', ['contentUid' => 1, 'fields' => ['CType' => 'html']]);
-        } catch (ClientFacingException) {
+        } catch (ClientFacingException $exception) {
         }
 
+        self::assertInstanceOf(ClientFacingException::class, $exception);
+        self::assertStringContainsString('Available types: header, text, textmedia.', $exception->getMessage());
         $contentElement = $this->callTool('get_record', ['table' => 'tt_content', 'uid' => 1])['record'];
         self::assertSame('text', $contentElement['CType']);
     }
