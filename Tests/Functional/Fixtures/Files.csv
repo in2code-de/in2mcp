@@ -1,0 +1,16 @@
+"sys_file_storage"
+,"uid","pid","name","driver","configuration","is_default","is_browsable","is_public","is_writable","is_online","auto_extract_metadata","processingfolder"
+,1,0,"fileadmin","Local","<T3FlexForms><data><sheet index=""sDEF""><language index=""lDEF""><field index=""basePath""><value index=""vDEF"">fileadmin/</value></field><field index=""pathType""><value index=""vDEF"">relative</value></field><field index=""caseSensitive""><value index=""vDEF"">1</value></field></language></sheet></data></T3FlexForms>",1,1,1,1,1,0,""
+"sys_filemounts"
+,"uid","pid","title","identifier","read_only"
+,1,0,"Editor files","1:/editor/",0
+"sys_file"
+,"uid","pid","storage","identifier","identifier_hash","folder_hash","name","extension","mime_type","type","size","sha1","missing"
+,1,0,1,"/editor/image.png","6880c3765d2cbdadc8ea00bd9e394de8920f8119","c4bb87320e740907bb7803008d44f772ed5f9c58","image.png","png","image/png",2,70,"4a5eb7171b58e08a6881721e3b43d5a44419a2be",0
+,2,0,1,"/private/secret.txt","c5e473882898039f39ff63d1497943fa4552e043","935be62d4477a549d3b457244db8bfa416a2e6c0","secret.txt","txt","text/plain",1,12,"982b29c9b7c54df988238e42f41e318ce99c02d2",0
+,3,0,1,"/editor/unused.txt","412049a0753d60ff508abc76372f25363e57bfac","c4bb87320e740907bb7803008d44f772ed5f9c58","unused.txt","txt","text/plain",1,11,"f309b5ecf8f1ec1c00c934c4126c44cc991e6a96",0
+"sys_file_metadata"
+,"uid","pid","file","sys_language_uid","title","alternative","description"
+,1,0,1,0,"Image","",""
+,2,0,2,0,"Secret","",""
+,3,0,3,0,"","",""
