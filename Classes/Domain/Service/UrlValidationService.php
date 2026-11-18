@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Domain\Service;
 
+use In2code\In2mcp\Domain\Model\ValidatedUrl;
 use In2code\In2mcp\Exception\FileImportException;
 
 /**
@@ -17,6 +18,8 @@ use In2code\In2mcp\Exception\FileImportException;
 class UrlValidationService
 {
     private const ALLOWED_SCHEMES = ['http', 'https'];
+
+    private const DEFAULT_PORTS = ['http' => 80, 'https' => 443];
 
     /**
      * Carrier grade NAT, which the PHP filter flags do not cover
@@ -53,9 +56,10 @@ class UrlValidationService
     }
 
     /**
+     * @return ValidatedUrl The url and the address the download has to connect to
      * @throws FileImportException
      */
-    public function assertImportable(string $url): void
+    public function assertImportable(string $url): ValidatedUrl
     {
         $parts = parse_url($url);
         if ($parts === false || isset($parts['host']) === false) {
@@ -70,9 +74,17 @@ class UrlValidationService
             );
         }
 
-        $host = (string)$parts['host'];
+        $port = (int)($parts['port'] ?? self::DEFAULT_PORTS[$scheme]);
+        if (in_array($port, self::DEFAULT_PORTS, true) === false) {
+            throw new FileImportException(
+                'Only the ports ' . implode(' and ', self::DEFAULT_PORTS) . ' are allowed, not ' . $port,
+                1756801120
+            );
+        }
+
+        $host = trim((string)$parts['host'], '[]');
         $this->assertAllowedHost($host);
-        $this->assertPublicHost($host);
+        return new ValidatedUrl($url, $host, $port, $this->getPublicAddress($host));
     }
 
     /**
@@ -97,11 +109,12 @@ class UrlValidationService
 
     /**
      * Every address a host resolves to has to be public. A host with one public and one private address is
-     * refused as a whole, because which one is used at connection time is not in the hands of this code.
+     * refused as a whole, because a name server that answers like that is not to be trusted with the next answer.
      *
+     * @return string The first of the public addresses, which the download connects to
      * @throws FileImportException
      */
-    private function assertPublicHost(string $host): void
+    private function getPublicAddress(string $host): string
     {
         $addresses = $this->resolve($host);
         if ($addresses === []) {
@@ -117,6 +130,8 @@ class UrlValidationService
                 );
             }
         }
+
+        return $addresses[0];
     }
 
     /**
@@ -124,7 +139,6 @@ class UrlValidationService
      */
     private function resolve(string $host): array
     {
-        $host = trim($host, '[]');
         if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
             return [$host];
         }

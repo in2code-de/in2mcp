@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Domain\Service;
 
+use GuzzleHttp\Handler\CurlHandler;
+use GuzzleHttp\HandlerStack;
+use In2code\In2mcp\Domain\Model\ValidatedUrl;
 use In2code\In2mcp\Exception\FileImportException;
 use Psr\Http\Message\ResponseInterface;
 use Throwable;
@@ -19,15 +22,15 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 /**
  * Downloads a file from a public url into a folder of the file storage.
  *
- * The download is streamed and aborted as soon as it exceeds the configured maximum, so a client cannot fill
- * the disk with a url that answers endlessly. Redirects are followed by hand instead of by the http client,
- * because every hop has to pass the url validation again - otherwise a public url could redirect the server to
- * an internal one and the guard would be worthless.
+ * The download goes straight into a temporary file and is aborted as soon as it exceeds the configured maximum, so
+ * a client cannot fill the disk with a url that answers endlessly. Redirects are followed by hand instead of by
+ * the http client, because every hop has to pass the url validation again - otherwise a public url could redirect
+ * the server to an internal one and the guard would be worthless. And every hop connects to exactly the address
+ * that was validated, so a name server cannot answer with an internal address after the check.
  */
 class FileImportService
 {
     private const MAXIMUM_REDIRECTS = 3;
-    private const CHUNK_SIZE = 65536;
     private const CONNECT_TIMEOUT = 5;
     private const TIMEOUT = 30;
 
@@ -55,6 +58,13 @@ class FileImportService
             );
         }
 
+        if (function_exists('curl_init') === false) {
+            throw new FileImportException(
+                'Importing files by url needs the PHP extension curl, which is not available on this server',
+                1756801260
+            );
+        }
+
         try {
             $this->urlValidationService->assertImportable($url);
         } catch (FileImportException $exception) {
@@ -75,12 +85,11 @@ class FileImportService
     public function importFromUrl(string $url, Folder $folder, string $fileName = ''): File
     {
         $this->assertImportable($url);
-
-        $response = $this->fetch($url);
         $fileName = $this->getFileName($fileName, $url);
-        $temporaryFile = $this->writeToTemporaryFile($response);
+        $temporaryFile = GeneralUtility::tempnam('in2mcp_import_');
 
         try {
+            $this->download($url, $temporaryFile);
             $file = $folder->addFile($temporaryFile, $fileName, DuplicationBehavior::RENAME);
             $this->log(
                 SystemLogErrorClassification::MESSAGE,
@@ -88,6 +97,8 @@ class FileImportService
                 ['url' => $url, 'identifier' => $file->getIdentifier()]
             );
             return $file;
+        } catch (FileImportException $exception) {
+            throw $exception;
         } catch (Throwable $exception) {
             throw new FileImportException(
                 'The file could not be added to "' . $folder->getCombinedIdentifier() . '": '
@@ -121,11 +132,10 @@ class FileImportService
     /**
      * @throws FileImportException
      */
-    private function fetch(string $url): ResponseInterface
+    private function download(string $url, string $temporaryFile): void
     {
         for ($redirect = 0; $redirect <= self::MAXIMUM_REDIRECTS; $redirect++) {
-            $this->urlValidationService->assertImportable($url);
-            $response = $this->request($url);
+            $response = $this->request($this->urlValidationService->assertImportable($url), $temporaryFile);
             $statusCode = $response->getStatusCode();
 
             if ($statusCode >= 300 && $statusCode < 400) {
@@ -140,8 +150,8 @@ class FileImportService
                 );
             }
 
-            $this->assertSizeAllowed((int)($response->getHeaderLine('Content-Length') ?: 0));
-            return $response;
+            $this->assertDownloadedFile($temporaryFile);
+            return;
         }
 
         throw new FileImportException(
@@ -151,24 +161,50 @@ class FileImportService
     }
 
     /**
+     * The handler is curl on purpose: only curl connects to a given address (CURLOPT_RESOLVE), the stream handler
+     * of Guzzle would resolve the host again and silently ignore every curl option.
+     *
      * @throws FileImportException
      */
-    private function request(string $url): ResponseInterface
+    private function request(ValidatedUrl $target, string $temporaryFile): ResponseInterface
     {
+        $maximumSize = $this->configurationService->getFileImportMaximumSize();
+        $isTooLarge = false;
+        $curlOptions = [
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_NOPROGRESS => false,
+            // Covers the announced size as well as a body without Content-Length that just does not end
+            CURLOPT_XFERINFOFUNCTION => static function (
+                mixed $handle,
+                int $announcedBytes,
+                int $receivedBytes
+            ) use ($maximumSize, &$isTooLarge): int {
+                $isTooLarge = $announcedBytes > $maximumSize || $receivedBytes > $maximumSize;
+                return $isTooLarge ? 1 : 0;
+            },
+        ];
+        if ($target->getCurlResolveEntry() !== null) {
+            $curlOptions[CURLOPT_RESOLVE] = [$target->getCurlResolveEntry()];
+        }
+
         try {
-            return $this->requestFactory->request($url, 'GET', [
+            return $this->requestFactory->request($target->getUrl(), 'GET', [
+                'handler' => HandlerStack::create(new CurlHandler()),
                 'allow_redirects' => false,
                 'http_errors' => false,
-                'stream' => true,
+                'sink' => $temporaryFile,
                 'connect_timeout' => self::CONNECT_TIMEOUT,
                 'timeout' => self::TIMEOUT,
+                'curl' => $curlOptions,
             ]);
         } catch (Throwable $exception) {
-            throw new FileImportException(
-                'The url could not be requested: ' . $exception->getMessage(),
-                1756801216,
-                $exception
-            );
+            throw $isTooLarge
+                ? new FileImportException('The file is larger than the allowed ' . $maximumSize . ' bytes', 1756801238)
+                : new FileImportException(
+                    'The url could not be requested: ' . $exception->getMessage(),
+                    1756801216,
+                    $exception
+                );
         }
     }
 
@@ -201,68 +237,21 @@ class FileImportService
     }
 
     /**
-     * The body is read in chunks so the download can be stopped at the maximum instead of being held in memory
-     * completely before anybody looks at its size.
-     *
-     * @return string Path of the temporary file
      * @throws FileImportException
      */
-    private function writeToTemporaryFile(ResponseInterface $response): string
+    private function assertDownloadedFile(string $temporaryFile): void
     {
-        $temporaryFile = GeneralUtility::tempnam('in2mcp_import_');
+        clearstatcache(true, $temporaryFile);
+        $size = (int)filesize($temporaryFile);
         $maximumSize = $this->configurationService->getFileImportMaximumSize();
-        $handle = fopen($temporaryFile, 'wb');
 
-        if ($handle === false) {
-            throw new FileImportException('A temporary file could not be opened', 1756801232);
-        }
-
-        $body = $response->getBody();
-        $writtenBytes = 0;
-
-        try {
-            while ($body->eof() === false) {
-                $chunk = $body->read(self::CHUNK_SIZE);
-                if ($chunk === '') {
-                    break;
-                }
-
-                $writtenBytes += strlen($chunk);
-                if ($writtenBytes > $maximumSize) {
-                    throw new FileImportException(
-                        'The file is larger than the allowed ' . $maximumSize . ' bytes',
-                        1756801236
-                    );
-                }
-
-                fwrite($handle, $chunk);
-            }
-        } catch (FileImportException $exception) {
-            fclose($handle);
-            GeneralUtility::unlink_tempfile($temporaryFile);
-            throw $exception;
-        }
-
-        fclose($handle);
-
-        if ($writtenBytes === 0) {
-            GeneralUtility::unlink_tempfile($temporaryFile);
+        if ($size === 0) {
             throw new FileImportException('The url answered with an empty file', 1756801240);
         }
-
-        return $temporaryFile;
-    }
-
-    /**
-     * @throws FileImportException
-     */
-    private function assertSizeAllowed(int $announcedSize): void
-    {
-        $maximumSize = $this->configurationService->getFileImportMaximumSize();
-        if ($announcedSize > $maximumSize) {
+        if ($size > $maximumSize) {
             throw new FileImportException(
-                'The url announces ' . $announcedSize . ' bytes, which is more than the allowed ' . $maximumSize,
-                1756801244
+                'The file is larger than the allowed ' . $maximumSize . ' bytes',
+                1756801236
             );
         }
     }

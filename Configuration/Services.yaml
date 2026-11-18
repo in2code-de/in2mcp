@@ -10,6 +10,7 @@ services:
 
   In2code\In2mcp\:
     resource: '../Classes/*'
+    exclude: '../Classes/Domain/Model/*'
 
   In2code\In2mcp\Domain\Mcp\Tool\ToolRegistry:
     arguments:

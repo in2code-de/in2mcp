@@ -37,7 +37,8 @@ final class UrlValidationServiceTest extends UnitTestCase
     {
         return [
             'http ipv4' => ['http://93.184.215.14/image.jpg'],
-            'https ipv4 with port' => ['https://1.1.1.1:8443/image.jpg'],
+            'https ipv4 with default port' => ['https://1.1.1.1:443/image.jpg'],
+            'http ipv4 with default port' => ['http://1.1.1.1:80/image.jpg'],
             'uppercase scheme' => ['HTTPS://1.1.1.1/image.jpg'],
             'ipv6' => ['https://[2606:4700:4700::1111]/image.jpg'],
             'just outside carrier grade nat' => ['https://100.128.0.1/image.jpg'],
@@ -53,6 +54,34 @@ final class UrlValidationServiceTest extends UnitTestCase
     public function assertImportableAcceptsPublicAddress(string $url): void
     {
         $this->subject->assertImportable($url);
+    }
+
+    public static function forbiddenPortDataProvider(): array
+    {
+        return [
+            'https on another port' => ['https://1.1.1.1:8443/image.jpg'],
+            'redis' => ['http://1.1.1.1:6379/'],
+            'ssh' => ['http://1.1.1.1:22/'],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('forbiddenPortDataProvider')]
+    public function assertImportableRefusesOtherPorts(string $url): void
+    {
+        $this->expectException(FileImportException::class);
+        $this->expectExceptionCode(1756801120);
+        $this->subject->assertImportable($url);
+    }
+
+    #[Test]
+    public function assertImportableReturnsTheValidatedAddress(): void
+    {
+        $validatedUrl = $this->subject->assertImportable('https://[2606:4700:4700::1111]/image.jpg');
+
+        self::assertSame('https://[2606:4700:4700::1111]/image.jpg', $validatedUrl->getUrl());
+        self::assertSame('2606:4700:4700::1111', $validatedUrl->getAddress());
+        self::assertSame(443, $validatedUrl->getPort());
     }
 
     public static function invalidUrlDataProvider(): array

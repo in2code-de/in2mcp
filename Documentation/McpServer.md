@@ -310,16 +310,19 @@ server, not the client, performs the download, so this has to be a decision of t
 
 What the import refuses, in this order:
 
-1. everything but `http` and `https`
-2. hosts outside `fileImportAllowedHosts`, when that list is filled
-3. hosts that resolve to a local, private, link local or carrier grade NAT address - **every** address a host
+1. a server without the PHP extension `curl` - only curl can be told which address to connect to
+2. everything but `http` and `https`, and every port but `80` and `443`
+3. hosts outside `fileImportAllowedHosts`, when that list is filled
+4. hosts that resolve to a local, private, link local or carrier grade NAT address - **every** address a host
    resolves to has to be public, and every redirect hop is validated again, so a public url cannot redirect the
    server into the internal network. An IPv6 address that carries an IPv4 address (IPv4-mapped `::ffff:0:0/96`,
-   IPv4-compatible, 6to4 and NAT64) is judged by that IPv4 address, Teredo and NAT64 for local use are refused
-4. more than three redirects, and relative redirect targets
-5. a `Content-Length` above the maximum, and a body that exceeds it while streaming
-6. file names with a path in them, and names the `fileDenyPattern` of the installation rejects
-7. the fallback storage `0:`, which is the web root and evaluates no permissions - the core refuses it for every
+   IPv4-compatible, 6to4 and NAT64) is judged by that IPv4 address, Teredo and NAT64 for local use are refused.
+   The download then connects to exactly the address that was validated (`CURLOPT_RESOLVE`), so a name server
+   cannot answer with a public address for the check and an internal one for the download (DNS rebinding)
+5. more than three redirects, and relative redirect targets
+6. a file above the maximum - announced or not, curl aborts the download as soon as it exceeds it
+7. file names with a path in them, and names the `fileDenyPattern` of the installation rejects
+8. the fallback storage `0:`, which is the web root and evaluates no permissions - the core refuses it for every
    user, administrators included, and so does every file tool of this extension
 
 Afterwards the file goes into the storage through `ResourceStorage::addFile()`, which applies what the backend
