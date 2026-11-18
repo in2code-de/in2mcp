@@ -24,6 +24,7 @@ Ready created frontend without the need of a backend login:
 - [Permissions](#permissions)
 - [Contribution with DDEV](#contribution-with-ddev)
 - [Changelog](#changelog)
+- [Breaking Changes](#breaking-changes)
 
 ## Introduction
 
@@ -144,13 +145,16 @@ ddev mysql                                  # database shell
 ddev createdumpfile                         # update .ddev/data/db.sql.gz from current database
 ddev createfilesarchive                     # update .ddev/data/fileadmin.tar.gz from current files
 ddev composer test:php:lint                 # lint all php files
-ddev composer test:unit                     # run the unit tests (both also run in GitHub Actions)
+ddev composer test:php:cs                   # check the code style with PHP CS Fixer
+ddev composer test:unit                     # run the unit tests
+ddev composer test:functional               # run the functional tests (all four also run in GitHub Actions)
 ```
 
 ## Changelog
 
 | Version | Date       | Description                                                                                                                        |
 |---------|------------|------------------------------------------------------------------------------------------------------------------------------------|
+| 5.0.0   | 2026-11-18 | New tools get_workspaces, switch_workspace, add_file_from_content and create_file_upload with an upload endpoint, find records with empty fields and files with empty metadata, restrict the client addresses (mcpServerAllowedIps), MCP for editors per backend group, tool annotations (read only, destructive, open world), functional tests and PHP CS Fixer. Fixes: accept clients of the MCP revision 2026-07-28, refuse content types the backend groups do not allow, refuse files the file field does not accept, store children of a page on the page itself, refuse fields of a translation TYPO3 would not write, no warning for the navigation title in get_recently_changed_pages. Security Hardening |
 | 4.1.0   | 2026-11-12 | get_recently_changed_pages and get_recently_changed_content name the last editor (changedBy) for administrators |
 | 4.0.0   | 2026-11-12 | New tools get_recently_changed_pages and get_recently_changed_content, new administrator tools get_backend_users and get_recent_changes |
 | 3.0.1   | 2026-11-11 | Allow mcp/sdk 0.9 again, so the extension can be installed on TYPO3 13 (remove SdkCompatibility with TYPO3 13 support)             |
@@ -162,3 +166,12 @@ ddev composer test:unit                     # run the unit tests (both also run 
 | 2.1.0   | 2026-09-03 | Update extension icon, use schema API from TYPO3, update documentation                                                             |
 | 2.0.0   | 2026-09-02 | Allow creating of any records, adjust endpoint, allow inserting images, security reviews                                           |
 | 1.0.0   | 2026-09-02 | Initial extension release                                                                                                          |
+
+## Breaking Changes
+
+### 5.0.0
+
+- **Editors need a backend group option.** An api key alone is not enough anymore: an editor may use MCP only if
+  one of their backend groups has the option *MCP server (in2mcp) > Use MCP clients with an api key* in "Custom
+  module options" (`custom_options` `in2mcp:access`). Administrators always may. Without it, every request of an
+  editor is answered with 401.
