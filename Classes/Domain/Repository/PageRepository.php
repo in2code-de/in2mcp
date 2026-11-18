@@ -9,8 +9,7 @@ use In2code\In2mcp\Domain\Service\BackendUserService;
 use In2code\In2mcp\Domain\Service\TcaService;
 use In2code\In2mcp\Exception\UserNotFoundException;
 use TYPO3\CMS\Core\Database\Connection;
-use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
+use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
 /**
  * Reads pages restricted to what the authenticated backend user is allowed to see
@@ -22,7 +21,7 @@ readonly class PageRepository
     private const TREE_FIELDS = ['uid', 'pid', 'title', 'nav_title', 'slug', 'doktype', 'hidden', 'sorting'];
 
     public function __construct(
-        private ConnectionPool $connectionPool,
+        private RecordQueryBuilderFactory $recordQueryBuilderFactory,
         private BackendUserService $backendUserService,
         private TcaService $tcaService,
     ) {
@@ -233,11 +232,8 @@ readonly class PageRepository
         return $uid === false ? 0 : (int)$uid;
     }
 
-    private function getQueryBuilder()
+    private function getQueryBuilder(): QueryBuilder
     {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
-        // Hidden pages stay visible, because an editor sees them in the backend as well. Deleted ones do not.
-        $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
-        return $queryBuilder;
+        return $this->recordQueryBuilderFactory->create(self::TABLE_NAME);
     }
 }

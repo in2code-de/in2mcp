@@ -9,9 +9,7 @@ use In2code\In2mcp\Domain\Service\InlineRelationService;
 use In2code\In2mcp\Exception\ToolExecutionException;
 use In2code\In2mcp\Domain\Service\TcaService;
 use TYPO3\CMS\Core\Database\Connection;
-use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
-use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 
 /**
  * Reads records of any table of the installation. Pages and content elements have their own repositories,
@@ -23,7 +21,7 @@ readonly class RecordRepository
     private const MAXIMUM_LIMIT = 500;
 
     public function __construct(
-        private ConnectionPool $connectionPool,
+        private RecordQueryBuilderFactory $recordQueryBuilderFactory,
         private TcaService $tcaService,
         private InlineRelationService $inlineRelationService,
     ) {
@@ -198,8 +196,6 @@ readonly class RecordRepository
 
     private function getQueryBuilder(string $table): QueryBuilder
     {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
-        $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
-        return $queryBuilder;
+        return $this->recordQueryBuilderFactory->create($table);
     }
 }

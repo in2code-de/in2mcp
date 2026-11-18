@@ -422,6 +422,9 @@ in a regular backend request, and every read and write runs through the regular 
 - **Exclude fields** are only returned when `non_exclude_fields` allows them, and only those can be used as a
   filter of `find_records`. The language fields and the container of a content element stay readable, because
   they describe where a record belongs.
+- **Workspaces**: a request works in the workspace the user has selected in the backend, without
+  EXT:workspaces that is always live. Every read returns live records and the records of that workspace, never
+  the drafts of another workspace.
 - **Writing** goes through the **DataHandler**, so page permissions, `tables_modify`, `non_exclude_fields`, web
   mounts, hooks, reference index, slug generation, workspaces and the record history all apply unchanged. A
   refused write is reported back to the client with the reason TYPO3 gave. An update of an exclude field the
@@ -502,6 +505,7 @@ authentication resets the counter, so only failing requests count. Configurable 
 | `Service\TableAccessService`   | Decides which tables may be read and written at all                             |
 | `Repository\RecordRepository`  | Reads records of any table                                                      |
 | `Repository\FileRepository`    | Reads files and the references that point at them                               |
+| `Repository\RecordQueryBuilderFactory` | Query builder for records: no deleted ones, no drafts of other workspaces |
 | `Service\FileImportService`    | Downloads a file into the storage, streamed and size limited                    |
 | `Service\UrlValidationService` | The only guard on the one outgoing request this extension makes                 |
 | `Service\InlineRelationService`| Translates between the child counter and the list of child uids                 |

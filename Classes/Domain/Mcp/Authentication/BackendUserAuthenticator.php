@@ -12,6 +12,7 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Authentication\Mfa\MfaRequiredException;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Context\UserAspect;
+use TYPO3\CMS\Core\Context\WorkspaceAspect;
 use TYPO3\CMS\Core\Localization\LanguageServiceFactory;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -121,5 +122,7 @@ class BackendUserAuthenticator
     protected function setBackendUserAspect(BackendUserAuthentication $backendUserAuthentication): void
     {
         $this->context->setAspect('backend.user', new UserAspect($backendUserAuthentication));
+        // The workspace of the user is -99 until fetchGroupData() has run, which is the second call of this method
+        $this->context->setAspect('workspace', new WorkspaceAspect(max(0, $backendUserAuthentication->workspace)));
     }
 }

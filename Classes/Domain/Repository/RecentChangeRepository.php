@@ -10,7 +10,6 @@ use In2code\In2mcp\Exception\UserNotFoundException;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
-use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 
 readonly class RecentChangeRepository
 {
@@ -21,6 +20,7 @@ readonly class RecentChangeRepository
 
     public function __construct(
         private ConnectionPool $connectionPool,
+        private RecordQueryBuilderFactory $recordQueryBuilderFactory,
         private BackendUserService $backendUserService,
     ) {
     }
@@ -256,8 +256,6 @@ readonly class RecentChangeRepository
 
     private function getQueryBuilder(string $table): QueryBuilder
     {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
-        $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
-        return $queryBuilder;
+        return $this->recordQueryBuilderFactory->create($table);
     }
 }

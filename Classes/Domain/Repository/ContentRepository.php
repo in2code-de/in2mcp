@@ -7,8 +7,6 @@ namespace In2code\In2mcp\Domain\Repository;
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Service\TcaService;
 use TYPO3\CMS\Core\Database\Connection;
-use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 
 /**
  * Reads content elements of a page
@@ -24,7 +22,7 @@ readonly class ContentRepository
     public const CONTAINER_PARENT_FIELD = 'tx_container_parent';
 
     public function __construct(
-        private ConnectionPool $connectionPool,
+        private RecordQueryBuilderFactory $recordQueryBuilderFactory,
         private TcaService $tcaService,
     ) {
     }
@@ -34,8 +32,7 @@ readonly class ContentRepository
      */
     public function findByPage(int $pageUid, int $languageId = 0): array
     {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
-        $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
+        $queryBuilder = $this->recordQueryBuilderFactory->create(self::TABLE_NAME);
 
         $contentElements = $queryBuilder
             ->select('*')
@@ -76,8 +73,7 @@ readonly class ContentRepository
         int $containerParentUid = 0,
         int $languageId = 0
     ): int {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
-        $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
+        $queryBuilder = $this->recordQueryBuilderFactory->create(self::TABLE_NAME);
 
         $queryBuilder
             ->select('uid')
@@ -154,8 +150,7 @@ readonly class ContentRepository
             return 0;
         }
 
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
-        $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
+        $queryBuilder = $this->recordQueryBuilderFactory->create(self::TABLE_NAME);
 
         $uid = $queryBuilder
             ->select('uid')
@@ -192,8 +187,7 @@ readonly class ContentRepository
      */
     public function findByUid(int $uid): ?array
     {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
-        $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
+        $queryBuilder = $this->recordQueryBuilderFactory->create(self::TABLE_NAME);
 
         $contentElement = $queryBuilder
             ->select('*')

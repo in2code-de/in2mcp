@@ -8,7 +8,6 @@ use Doctrine\DBAL\Exception;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
-use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 
 /**
  * Reads files of the file abstraction layer and the references that point at them. A client cannot upload
@@ -25,8 +24,10 @@ readonly class FileRepository
     private const DEFAULT_LIMIT = 25;
     private const MAXIMUM_LIMIT = 200;
 
-    public function __construct(private ConnectionPool $connectionPool)
-    {
+    public function __construct(
+        private ConnectionPool $connectionPool,
+        private RecordQueryBuilderFactory $recordQueryBuilderFactory,
+    ) {
     }
 
     /**
@@ -172,8 +173,7 @@ readonly class FileRepository
      */
     public function findReferenceUids(string $table, int $uid, string $fieldName): array
     {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::REFERENCE_TABLE_NAME);
-        $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
+        $queryBuilder = $this->recordQueryBuilderFactory->create(self::REFERENCE_TABLE_NAME);
 
         $references = $queryBuilder
             ->select('uid')
@@ -258,8 +258,7 @@ readonly class FileRepository
      */
     private function findUsageOfFileReference(int $referenceUid): ?array
     {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::REFERENCE_TABLE_NAME);
-        $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
+        $queryBuilder = $this->recordQueryBuilderFactory->create(self::REFERENCE_TABLE_NAME);
 
         $reference = $queryBuilder
             ->select('tablenames', 'uid_foreign', 'fieldname')
@@ -286,8 +285,7 @@ readonly class FileRepository
      */
     private function isRecordExisting(string $table, int $uid): bool
     {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
-        $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
+        $queryBuilder = $this->recordQueryBuilderFactory->create($table);
 
         return $queryBuilder
             ->count('uid')

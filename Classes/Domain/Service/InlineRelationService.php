@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Service;
 
 use Doctrine\DBAL\Exception;
+use In2code\In2mcp\Domain\Repository\RecordQueryBuilderFactory;
 use In2code\In2mcp\Exception\ToolExecutionException;
 use TYPO3\CMS\Core\Database\Connection;
-use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 
 /**
  * Translates between the two faces of an inline relation.
@@ -21,7 +20,7 @@ use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 class InlineRelationService
 {
     public function __construct(
-        private readonly ConnectionPool $connectionPool,
+        private readonly RecordQueryBuilderFactory $recordQueryBuilderFactory,
         private readonly TcaService $tcaService,
     ) {
     }
@@ -60,8 +59,7 @@ class InlineRelationService
      */
     public function findChildUids(array $relation, string $parentTable, int $parentUid): array
     {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($relation['foreignTable']);
-        $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
+        $queryBuilder = $this->recordQueryBuilderFactory->create($relation['foreignTable']);
 
         $queryBuilder
             ->select('uid')
@@ -143,8 +141,7 @@ class InlineRelationService
      */
     private function findChild(array $relation, int $childUid): ?array
     {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($relation['foreignTable']);
-        $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
+        $queryBuilder = $this->recordQueryBuilderFactory->create($relation['foreignTable']);
 
         $child = $queryBuilder
             ->select($relation['foreignField'], ...array_keys($this->getParentMatchValues($relation, '')))
