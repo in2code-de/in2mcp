@@ -19,6 +19,8 @@ final class ConfigurationServiceTest extends UnitTestCase
         'fileImportMaximumSize' => '10485760',
         'fileImportAllowedHosts' => '',
         'fileUpload' => '0',
+        'oauth' => '0',
+        'apiKeyAuthentication' => '1',
         'mcpServerAllowedIps' => '*',
     ];
 
@@ -124,6 +126,26 @@ final class ConfigurationServiceTest extends UnitTestCase
         $this->configure(['mcpServerPath' => 'ai/mcp']);
 
         self::assertSame('/typo3/ai/mcp/upload', $this->subject->getFileUploadPath());
+    }
+
+    #[Test]
+    public function isOAuthActivatedReadsSwitch(): void
+    {
+        $this->configure(['oauth' => '0']);
+        self::assertFalse($this->subject->isOAuthActivated());
+
+        $this->configure(['oauth' => '1']);
+        self::assertTrue($this->subject->isOAuthActivated());
+    }
+
+    #[Test]
+    public function isApiKeyAuthenticationActivatedReadsSwitch(): void
+    {
+        $this->configure(['apiKeyAuthentication' => '0']);
+        self::assertFalse($this->subject->isApiKeyAuthenticationActivated());
+
+        $this->configure(['apiKeyAuthentication' => '1']);
+        self::assertTrue($this->subject->isApiKeyAuthenticationActivated());
     }
 
     #[Test]

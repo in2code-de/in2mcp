@@ -5,14 +5,16 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Mcp\Authentication;
 
 use In2code\In2mcp\Domain\Repository\BackendUserRepository;
+use In2code\In2mcp\Domain\Service\OAuthTokenService;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * Carries the api key of a MCP request through the authentication and records the backend user it belongs to.
+ * Carries the credential of a MCP request - an api key or an OAuth access token - through the authentication and
+ * records the backend user it belongs to.
  *
  * The context is the marker of a MCP request: it is put on the request by the McpServer middleware alone, so an
  * authentication service never answers for any other request, and the recorded user lets the authenticator
- * verify that the backend user it ends up with is exactly the one the api key belongs to.
+ * verify that the backend user it ends up with is exactly the one the credential belongs to.
  */
 class AuthenticationContext
 {
@@ -29,9 +31,10 @@ class AuthenticationContext
     protected const AUTHORIZATION_SCHEME = 'Bearer';
 
     protected ?int $authenticatedUserIdentifier = null;
+    protected bool $readOnly = false;
 
     public function __construct(
-        protected readonly string $apiKey,
+        protected readonly string $credential,
         protected readonly ?int $uploadUserIdentifier = null
     ) {
     }
@@ -50,7 +53,7 @@ class AuthenticationContext
     }
 
     /**
-     * Reads the api key from an "Authorization: Bearer <key>", a "X-Api-Key: <key>" or an "Api-Key: <key>" header
+     * Reads the credential from an "Authorization: Bearer <key>", a "X-Api-Key: <key>" or an "Api-Key: <key>" header
      */
     public static function fromRequest(ServerRequestInterface $request): self
     {
@@ -75,14 +78,24 @@ class AuthenticationContext
         return $context instanceof self ? $context : null;
     }
 
-    public function getApiKey(): string
+    public function getCredential(): string
     {
-        return $this->apiKey;
+        return $this->credential;
     }
 
-    public function hasApiKey(): bool
+    public function hasCredential(): bool
     {
-        return $this->apiKey !== '';
+        return $this->credential !== '';
+    }
+
+    public function isAccessToken(): bool
+    {
+        return OAuthTokenService::isAccessToken($this->credential);
+    }
+
+    public function hasWellFormedAccessToken(): bool
+    {
+        return OAuthTokenService::isWellFormedAccessToken($this->credential);
     }
 
     /**
@@ -97,7 +110,7 @@ class AuthenticationContext
             BackendUserRepository::API_KEY_MINIMUM_LENGTH,
             BackendUserRepository::API_KEY_MAXIMUM_LENGTH
         );
-        return preg_match($pattern, $this->apiKey) === 1;
+        return preg_match($pattern, $this->credential) === 1;
     }
 
     public function setAuthenticatedUserIdentifier(int $authenticatedUserIdentifier): void
@@ -108,6 +121,17 @@ class AuthenticationContext
     public function getAuthenticatedUserIdentifier(): ?int
     {
         return $this->authenticatedUserIdentifier;
+    }
+
+    // Recorded for a token whose user consented to read access only, the server then offers read-only tools alone
+    public function setReadOnly(bool $readOnly): void
+    {
+        $this->readOnly = $readOnly;
+    }
+
+    public function isReadOnly(): bool
+    {
+        return $this->readOnly;
     }
 
     public function isAuthenticatedUser(int $userIdentifier): bool

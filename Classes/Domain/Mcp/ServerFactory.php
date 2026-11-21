@@ -36,7 +36,8 @@ class ServerFactory
     ) {
     }
 
-    public function get(): Server|LegacyServer
+    // A tool that is not registered can not be called, so read access is enforced by leaving the others out
+    public function get(bool $isReadOnly = false): Server|LegacyServer
     {
         $builder = SdkCompatibility::getServerBuilder()
             ->setServerInfo(
@@ -48,6 +49,9 @@ class ServerFactory
             ->setSession(new FileSessionStore($this->getSessionDirectory(), self::SESSION_TIME_TO_LIVE));
 
         foreach ($this->toolRegistry->getTools() as $tool) {
+            if ($isReadOnly && $tool->isReadOnly() === false) {
+                continue;
+            }
             $builder->add($this->toolSchemaConverter->convert($tool), new ToolExecuter($tool, $this->logger));
         }
 

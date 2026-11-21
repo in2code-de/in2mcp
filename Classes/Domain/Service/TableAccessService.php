@@ -34,6 +34,8 @@ class TableAccessService
         'sys_registry',
         'sys_file_processedfile',
         'sys_lockedrecords',
+        'tx_in2mcp_oauth_client',
+        'tx_in2mcp_oauth_grant',
         // A task "Execute console commands" runs any command of the installation with full rights
         'tx_scheduler_task',
         'tx_scheduler_task_group',

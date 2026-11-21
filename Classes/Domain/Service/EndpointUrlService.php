@@ -17,13 +17,19 @@ class EndpointUrlService
 
     public function getFileUploadUrl(): string
     {
-        return $this->getRequestHost() . $this->configurationService->getFileUploadPath();
+        // A tool has no request of its own: this is the MCP request, set by BackendUserAuthenticator::prepareRequest()
+        return $this->getRequestHost($GLOBALS['TYPO3_REQUEST'] ?? null)
+            . $this->configurationService->getFileUploadPath();
     }
 
-    private function getRequestHost(): string
+    // The resource an OAuth token is bound to
+    public function getMcpServerUrl(ServerRequestInterface $request): string
     {
-        // A tool has no request of its own: this is the MCP request, set by BackendUserAuthenticator::prepareRequest()
-        $request = $GLOBALS['TYPO3_REQUEST'] ?? null;
+        return $this->getRequestHost($request) . $this->configurationService->getMcpServerPath();
+    }
+
+    private function getRequestHost(mixed $request): string
+    {
         $normalizedParams = $request instanceof ServerRequestInterface
             ? $request->getAttribute(self::NORMALIZED_PARAMS_ATTRIBUTE)
             : null;

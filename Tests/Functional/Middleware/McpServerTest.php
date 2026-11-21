@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Tests\Functional\Middleware;
 
+use In2code\In2mcp\Domain\Model\AccessScope;
+use In2code\In2mcp\Domain\Repository\OAuthGrantRepository;
 use In2code\In2mcp\Domain\Service\ApiKeyService;
+use In2code\In2mcp\Domain\Service\OAuthTokenService;
 use In2code\In2mcp\Middleware\McpServer;
 use Mcp\Schema\RequestMeta;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Cache\CacheManager;
+use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Http\StreamFactory;
 
 final class McpServerTest extends AbstractMiddlewareTestCase
@@ -214,6 +218,156 @@ final class McpServerTest extends AbstractMiddlewareTestCase
         $response = $this->process($this->createRequest($this->createApiKey('admin'), 'initialize'));
 
         self::assertSame(self::NOT_HANDLED_STATUS, $response->getStatusCode());
+    }
+
+    #[Test]
+    public function accessTokenRunsAToolAsTheUserOfItsGrant(): void
+    {
+        $this->enableOAuth();
+
+        $response = $this->process($this->createStatelessRequest(
+            $this->issueAccessToken(self::EDITOR, AccessScope::Write),
+            'tools/call',
+            ['name' => 'get_backend_user', 'arguments' => (object)[]]
+        ));
+
+        self::assertSame(200, $response->getStatusCode(), (string)$response->getBody());
+        self::assertSame('editor', $this->decode($response)['result']['structuredContent']['username']);
+    }
+
+    #[Test]
+    public function accessTokenWithWriteAccessListsEveryTool(): void
+    {
+        $this->enableOAuth();
+
+        $response = $this->listTools($this->issueAccessToken(self::ADMIN, AccessScope::Write));
+
+        self::assertCount(self::REGISTERED_TOOLS, $this->decode($response)['result']['tools']);
+    }
+
+    #[Test]
+    public function accessTokenWithReadAccessListsReadOnlyToolsOnly(): void
+    {
+        $this->enableOAuth();
+
+        $response = $this->listTools($this->issueAccessToken(self::ADMIN, AccessScope::Read));
+
+        $tools = $this->decode($response)['result']['tools'];
+        self::assertNotSame([], $tools);
+        self::assertLessThan(self::REGISTERED_TOOLS, count($tools));
+        foreach ($tools as $tool) {
+            self::assertTrue($tool['annotations']['readOnlyHint'], $tool['name'] . ' is not read only');
+        }
+    }
+
+    #[Test]
+    public function accessTokenWithReadAccessCanNotCallAWritingTool(): void
+    {
+        $this->enableOAuth();
+
+        $response = $this->process($this->createStatelessRequest(
+            $this->issueAccessToken(self::ADMIN, AccessScope::Read),
+            'tools/call',
+            ['name' => 'clear_cache', 'arguments' => (object)[]]
+        ));
+
+        $result = $this->decode($response);
+        self::assertTrue(isset($result['error']) || ($result['result']['isError'] ?? false));
+    }
+
+    #[Test]
+    public function accessTokenIsRefusedWhileOAuthIsSwitchedOff(): void
+    {
+        $accessToken = $this->issueAccessToken(self::ADMIN, AccessScope::Write);
+
+        self::assertSame(401, $this->listTools($accessToken)->getStatusCode());
+    }
+
+    #[Test]
+    public function accessTokenOfAnotherEndpointIsRefused(): void
+    {
+        $this->enableOAuth();
+        $accessToken = $this->get(OAuthTokenService::class)->issue(
+            self::ADMIN,
+            'client',
+            AccessScope::Write->value,
+            'https://other.example.org/typo3/mcp'
+        )->getAccessToken();
+
+        self::assertSame(401, $this->listTools($accessToken)->getStatusCode());
+    }
+
+    #[Test]
+    public function expiredAccessTokenIsRefused(): void
+    {
+        $this->enableOAuth();
+        $accessToken = $this->issueAccessToken(self::ADMIN, AccessScope::Write);
+        $this->get(ConnectionPool::class)
+            ->getConnectionForTable(OAuthGrantRepository::TABLE_NAME)
+            ->update(
+                OAuthGrantRepository::TABLE_NAME,
+                ['access_token_expires' => time() - 1],
+                ['be_user' => self::ADMIN]
+            );
+
+        self::assertSame(401, $this->listTools($accessToken)->getStatusCode());
+    }
+
+    #[Test]
+    public function unknownAccessTokenIsRefused(): void
+    {
+        $this->enableOAuth();
+        $accessToken = OAuthTokenService::ACCESS_TOKEN_PREFIX . str_repeat('a', 64);
+
+        self::assertSame(401, $this->listTools($accessToken)->getStatusCode());
+    }
+
+    #[Test]
+    public function accessTokenOfEditorWithoutMcpAccessIsRefused(): void
+    {
+        $this->enableOAuth();
+        $accessToken = $this->issueAccessToken(self::EDITOR_WITHOUT_MCP, AccessScope::Write);
+
+        self::assertSame(401, $this->listTools($accessToken)->getStatusCode());
+    }
+
+    #[Test]
+    public function apiKeyIsRefusedWhileApiKeysAreSwitchedOff(): void
+    {
+        $apiKey = $this->createApiKey('admin');
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['apiKeyAuthentication'] = '0';
+
+        self::assertSame(401, $this->listTools($apiKey)->getStatusCode());
+    }
+
+    #[Test]
+    public function accessTokenIsAcceptedWhileApiKeysAreSwitchedOff(): void
+    {
+        $this->enableOAuth();
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['apiKeyAuthentication'] = '0';
+        $accessToken = $this->issueAccessToken(self::ADMIN, AccessScope::Write);
+
+        self::assertSame(200, $this->listTools($accessToken)->getStatusCode());
+    }
+
+    private function listTools(string $credential): ResponseInterface
+    {
+        return $this->process($this->createStatelessRequest($credential, 'tools/list'));
+    }
+
+    private function enableOAuth(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['oauth'] = '1';
+    }
+
+    private function issueAccessToken(int $userUid, AccessScope $scope): string
+    {
+        return $this->get(OAuthTokenService::class)->issue(
+            $userUid,
+            'client',
+            AccessScope::toScopeString(AccessScope::fromScopeString($scope->value)),
+            self::ENDPOINT_URL
+        )->getAccessToken();
     }
 
     // The counter lives in a cache of the test instance, which outlasts a single test and even a test run

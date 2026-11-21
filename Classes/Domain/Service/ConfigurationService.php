@@ -120,6 +120,17 @@ readonly class ConfigurationService
         return (bool)$this->get('fileImport');
     }
 
+    public function isOAuthActivated(): bool
+    {
+        return (bool)$this->get('oauth');
+    }
+
+    // On by default, so an installation that never saved the setting keeps working with its api keys
+    public function isApiKeyAuthenticationActivated(): bool
+    {
+        return (bool)($this->get('apiKeyAuthentication') ?? true);
+    }
+
     public function isFileUploadActivated(): bool
     {
         return (bool)$this->get('fileUpload');

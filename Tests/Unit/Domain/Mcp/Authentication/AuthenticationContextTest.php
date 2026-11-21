@@ -44,8 +44,8 @@ final class AuthenticationContextTest extends UnitTestCase
 
         $context = AuthenticationContext::fromRequest($request);
 
-        self::assertSame($expectedApiKey, $context->getApiKey());
-        self::assertSame($expectedApiKey !== '', $context->hasApiKey());
+        self::assertSame($expectedApiKey, $context->getCredential());
+        self::assertSame($expectedApiKey !== '', $context->hasCredential());
     }
 
     #[Test]
@@ -114,13 +114,47 @@ final class AuthenticationContextTest extends UnitTestCase
         self::assertSame($expected, (new AuthenticationContext($apiKey))->hasWellFormedApiKey());
     }
 
+    public static function accessTokenDataProvider(): array
+    {
+        $secret = str_repeat('0a', 32);
+        return [
+            'access token' => ['mcpat.' . $secret, true, true],
+            'refresh token is no access token' => ['mcprt.' . $secret, false, false],
+            'secret too short' => ['mcpat.' . substr($secret, 1), true, false],
+            'secret too long' => ['mcpat.' . $secret . 'a', true, false],
+            'uppercase secret' => ['mcpat.' . strtoupper($secret), true, false],
+            'api key' => ['4.' . str_repeat('a', 128), false, false],
+            'empty' => ['', false, false],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('accessTokenDataProvider')]
+    public function accessTokenIsToldApartFromAnApiKey(string $credential, bool $isAccessToken, bool $isWellFormed): void
+    {
+        $subject = new AuthenticationContext($credential);
+
+        self::assertSame($isAccessToken, $subject->isAccessToken());
+        self::assertSame($isWellFormed, $subject->hasWellFormedAccessToken());
+    }
+
+    #[Test]
+    public function contextIsNotReadOnlyUntilItIsRecorded(): void
+    {
+        $subject = new AuthenticationContext('1.secret');
+        self::assertFalse($subject->isReadOnly());
+
+        $subject->setReadOnly(true);
+        self::assertTrue($subject->isReadOnly());
+    }
+
     #[Test]
     public function uploadContextCarriesTheUserAndNoApiKey(): void
     {
         $subject = AuthenticationContext::forUploadUser(4);
 
         self::assertSame(4, $subject->getUploadUserIdentifier());
-        self::assertFalse($subject->hasApiKey());
+        self::assertFalse($subject->hasCredential());
     }
 
     #[Test]

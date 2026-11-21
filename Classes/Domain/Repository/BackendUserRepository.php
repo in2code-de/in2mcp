@@ -141,29 +141,35 @@ readonly class BackendUserRepository
      */
     public function findByUidWithApiKey(int $uid): ?array
     {
+        return $this->findByUidAndConstraint($uid, true);
+    }
+
+    // The user of an OAuth grant, which needs no api key - disabled and deleted users are not found
+    public function findByUid(int $uid): ?array
+    {
+        return $this->findByUidAndConstraint($uid, false);
+    }
+
+    private function findByUidAndConstraint(int $uid, bool $isApiKeyRequired): ?array
+    {
         if ($uid < 1) {
             return null;
         }
 
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
+        $queryBuilder
+            ->select('*')
+            ->from(self::TABLE_NAME)
+            ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, Connection::PARAM_INT)))
+            ->setMaxResults(1);
+        if ($isApiKeyRequired) {
+            $queryBuilder->andWhere(
+                $queryBuilder->expr()->neq(self::API_KEY_FIELD, $queryBuilder->createNamedParameter(''))
+            );
+        }
 
         try {
-            $backendUser = $queryBuilder
-                ->select('*')
-                ->from(self::TABLE_NAME)
-                ->where(
-                    $queryBuilder->expr()->eq(
-                        'uid',
-                        $queryBuilder->createNamedParameter($uid, Connection::PARAM_INT)
-                    ),
-                    $queryBuilder->expr()->neq(
-                        self::API_KEY_FIELD,
-                        $queryBuilder->createNamedParameter('')
-                    )
-                )
-                ->setMaxResults(1)
-                ->executeQuery()
-                ->fetchAssociative();
+            $backendUser = $queryBuilder->executeQuery()->fetchAssociative();
         } catch (Exception $exception) {
             $this->logger->error('MCP: Backend user could not be read: ' . $exception->getMessage());
             return null;

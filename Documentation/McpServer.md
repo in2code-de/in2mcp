@@ -656,7 +656,7 @@ not name the internal address a host resolved to.
 |--------------------------------|-------------------------------------------------------------------------------|
 | `Middleware\McpServer`         | Answers the configured endpoint with the MCP server instead of the backend     |
 | `Middleware\McpFileUpload`     | Receives a file for a one-time token below the endpoint (`/upload`)            |
-| `ApiKeyAuthenticationService`  | TYPO3 authentication service, finds the backend user of the api key            |
+| `McpAuthenticationService`     | TYPO3 authentication service, finds the backend user of the api key or token   |
 | `AuthenticationContext`        | Carries the api key through the authentication and records the user it belongs to |
 | `BackendUserAuthenticator`     | Initializes that user for the request and removes the session afterwards       |
 | `BackendUserRepository`        | Looks up the hashed api key of a backend user                                  |

@@ -40,6 +40,8 @@ abstract class AbstractFunctionalTestCase extends FunctionalTestCase
                 'fileImportMaximumSize' => '10485760',
                 'fileImportAllowedHosts' => '',
                 'fileUpload' => '0',
+                'oauth' => '0',
+                'apiKeyAuthentication' => '1',
             ],
         ],
     ];

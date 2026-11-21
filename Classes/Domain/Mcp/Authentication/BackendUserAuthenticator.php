@@ -45,7 +45,7 @@ class BackendUserAuthenticator
             throw new UserNotFoundException('MCP: Request does not provide an api key', 1756800304);
         }
         if ($authenticationContext->getUploadUserIdentifier() === null) {
-            $this->assertWellFormedApiKey($authenticationContext);
+            $this->assertWellFormedCredential($authenticationContext);
         }
 
         // Authentication services are only asked for a user if a login form was submitted or if this option is
@@ -56,16 +56,17 @@ class BackendUserAuthenticator
         try {
             $backendUserAuthentication->start($request);
         } catch (MfaRequiredException) {
-            // The api key itself is the credential of the client, so a multi factor authentication (which a
-            // client without a browser can not solve) is skipped - but only for a user the api key authenticated.
-            // Without that check a session that is still waiting for its second factor would be let through.
+            // The api key itself is the credential of the client, and an OAuth token is only issued after a backend
+            // login that included the second factor. So a multi factor authentication (which a client without a
+            // browser can not solve) is skipped - but only for a user the credential authenticated. Without that
+            // check a session that is still waiting for its second factor would be let through.
             if ($authenticationContext->getAuthenticatedUserIdentifier() === null) {
-                $this->logger->warning('MCP: Request without a valid api key needs a multi factor authentication');
+                $this->logger->warning('MCP: Request without a valid credential needs a multi factor authentication');
                 throw new UserNotFoundException('MCP: Request could not be authenticated', 1756800308);
             }
         }
 
-        $this->assertUserOfApiKey($backendUserAuthentication, $authenticationContext);
+        $this->assertUserOfCredential($backendUserAuthentication, $authenticationContext);
         $this->assertLoginAllowed($backendUserAuthentication);
 
         $GLOBALS['BE_USER'] = $backendUserAuthentication;
@@ -98,17 +99,22 @@ class BackendUserAuthenticator
     }
 
     /**
-     * The middleware has removed every cookie of the request, so a request without an api key can not be
+     * The middleware has removed every cookie of the request, so a request without a credential can not be
      * authenticated at all and never has to reach the authentication of the core.
      *
      * @throws UserNotFoundException
      */
-    protected function assertWellFormedApiKey(AuthenticationContext $authenticationContext): void
+    protected function assertWellFormedCredential(AuthenticationContext $authenticationContext): void
     {
-        if ($authenticationContext->hasApiKey() === false) {
+        if ($authenticationContext->hasCredential() === false) {
             throw new UserNotFoundException('MCP: Request does not provide an api key', 1756800304);
         }
-        if ($authenticationContext->hasWellFormedApiKey() === false) {
+        if ($authenticationContext->isAccessToken() && $authenticationContext->hasWellFormedAccessToken() === false) {
+            throw new UserNotFoundException('MCP: Request provides a malformed access token', 1763712000);
+        }
+        if ($authenticationContext->isAccessToken() === false
+            && $authenticationContext->hasWellFormedApiKey() === false
+        ) {
             throw new UserNotFoundException(
                 'MCP: Request provides an api key that is malformed or too short',
                 1756800320
@@ -117,12 +123,12 @@ class BackendUserAuthenticator
     }
 
     /**
-     * Whatever the authentication of the core ended up with, it has to be the user the api key belongs to. Only
-     * ApiKeyAuthenticationService records that user, so a user from any other source is refused here.
+     * Whatever the authentication of the core ended up with, it has to be the user the credential belongs to. Only
+     * McpAuthenticationService records that user, so a user from any other source is refused here.
      *
      * @throws UserNotFoundException
      */
-    protected function assertUserOfApiKey(
+    protected function assertUserOfCredential(
         BackendUserAuthentication $backendUserAuthentication,
         AuthenticationContext $authenticationContext
     ): void {
@@ -160,7 +166,7 @@ class BackendUserAuthenticator
             $userIdentifier = (int)($backendUserAuthentication->user['uid'] ?? 0);
             $this->removeSession($backendUserAuthentication);
             throw new UserNotFoundException(
-                'MCP: Backend user ' . $userIdentifier . ' has an api key, but none of its groups allows MCP'
+                'MCP: Backend user ' . $userIdentifier . ' has a credential, but none of its groups allows MCP'
                 . ' (custom option "' . $permission . '"), request was refused',
                 1756800316
             );

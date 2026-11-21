@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Tests\Functional\Middleware;
 
+use In2code\In2mcp\Domain\Model\AccessScope;
 use In2code\In2mcp\Domain\Service\ApiKeyService;
 use In2code\In2mcp\Domain\Service\FileUploadService;
+use In2code\In2mcp\Domain\Service\OAuthTokenService;
 use In2code\In2mcp\Domain\Service\UploadTokenService;
 use In2code\In2mcp\Middleware\McpFileUpload;
 use PHPUnit\Framework\Attributes\Test;
@@ -121,6 +123,49 @@ final class McpFileUploadTest extends AbstractMiddlewareTestCase
     }
 
     #[Test]
+    public function grantWithWriteAccessKeepsTheTokensOfAUserWithoutApiKey(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['oauth'] = '1';
+        $this->issueTokens(self::EDITOR, AccessScope::Write);
+        $token = $this->createToken(self::EDITOR, self::EDITOR_FOLDER, '');
+        $this->get(ApiKeyService::class)->revokeApiKey('editor');
+
+        $response = $this->upload($token, 'granted.txt');
+
+        self::assertSame(200, $response->getStatusCode(), (string)$response->getBody());
+    }
+
+    #[Test]
+    public function grantWithReadAccessOnlyDoesNotKeepTheTokens(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['oauth'] = '1';
+        $this->issueTokens(self::EDITOR, AccessScope::Read);
+        $token = $this->createToken(self::EDITOR, self::EDITOR_FOLDER, '');
+        $this->get(ApiKeyService::class)->revokeApiKey('editor');
+
+        self::assertSame(401, $this->upload($token, 'read-only.txt')->getStatusCode());
+    }
+
+    #[Test]
+    public function grantDoesNotKeepTheTokensWhileOAuthIsSwitchedOff(): void
+    {
+        $this->issueTokens(self::EDITOR, AccessScope::Write);
+        $token = $this->createToken(self::EDITOR, self::EDITOR_FOLDER, '');
+        $this->get(ApiKeyService::class)->revokeApiKey('editor');
+
+        self::assertSame(401, $this->upload($token, 'oauth-off.txt')->getStatusCode());
+    }
+
+    #[Test]
+    public function apiKeyDoesNotKeepTheTokensWhileApiKeysAreSwitchedOff(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['apiKeyAuthentication'] = '0';
+        $token = $this->createToken(self::EDITOR, self::EDITOR_FOLDER, '');
+
+        self::assertSame(401, $this->upload($token, 'api-keys-off.txt')->getStatusCode());
+    }
+
+    #[Test]
     public function userIsRefusedWhileTheBackendIsLockedToAdministrators(): void
     {
         $token = $this->createToken(self::EDITOR, self::EDITOR_FOLDER, '');
@@ -198,6 +243,16 @@ final class McpFileUploadTest extends AbstractMiddlewareTestCase
         $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['fileUpload'] = '0';
 
         self::assertSame(self::NOT_HANDLED_STATUS, $this->upload($token, 'switched-off.txt')->getStatusCode());
+    }
+
+    private function issueTokens(int $userUid, AccessScope $scope): void
+    {
+        $this->get(OAuthTokenService::class)->issue(
+            $userUid,
+            'client',
+            AccessScope::toScopeString(AccessScope::fromScopeString($scope->value)),
+            'https://typo3-testing.local/typo3/mcp'
+        );
     }
 
     private function createToken(int $userUid, string $folder, string $fileName): string

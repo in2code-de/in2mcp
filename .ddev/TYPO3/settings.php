@@ -48,6 +48,7 @@ return [
             'offlineMode' => '0',
         ],
         'in2mcp' => [
+            'apiKeyAuthentication' => '1',
             'fileImport' => '0',
             'fileImportAllowedHosts' => '',
             'fileImportMaximumSize' => '10485760',
@@ -55,6 +56,7 @@ return [
             'mcpServer' => '1',
             'mcpServerAllowedIps' => '*',
             'mcpServerPath' => 'mcp',
+            'oauth' => '0',
         ],
         'news' => [
             'advancedMediaPreview' => '1',

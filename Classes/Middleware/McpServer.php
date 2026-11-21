@@ -83,7 +83,8 @@ class McpServer implements MiddlewareInterface
                 $request,
                 'be_users:' . $backendUserAuthentication->getUserId()
             );
-            return $this->serverFactory->get()->run($this->getTransport($request));
+            $isReadOnly = AuthenticationContext::fromRequestAttribute($request)?->isReadOnly() ?? false;
+            return $this->serverFactory->get($isReadOnly)->run($this->getTransport($request));
         } catch (UserNotFoundException $exception) {
             $this->logger->warning($exception->getMessage());
             return $this->getErrorResponse(401, -32001, 'Unauthorized')
