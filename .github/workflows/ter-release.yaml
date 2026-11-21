@@ -1,0 +1,56 @@
+name: TER release
+
+on:
+  push:
+    tags:
+      - '*'
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: "Tests"
+    uses: ./.github/workflows/testing.yaml
+
+  ter-release:
+    name: "TER release"
+    runs-on: ubuntu-26.04
+    needs: tests
+    env:
+      VERSION: ${{ github.ref_name }}
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v6
+
+      - name: "Check tag"
+        run: |
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag \"$VERSION\" is no version in the format X.Y.Z, nothing is published"
+            exit 1
+          fi
+
+      - name: "Install PHP"
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: 8.4
+          extensions: intl, mbstring, zip, curl
+          coverage: none
+          tools: composer:v2
+
+      - name: "Install tailor"
+        run: |
+          composer global require typo3/tailor:2.1.0--prefer-dist --no-progress
+          composer global config bin-dir --absolute --quiet >> "$GITHUB_PATH"
+
+      # git archive applies the export-ignore rules of .gitattributes, tailor alone would not
+      - name: "Create artefact"
+        run: git archive --format=zip --prefix=in2mcp/ --output="$RUNNER_TEMP/in2mcp.zip" HEAD
+
+      - name: "Publish to TER"
+        env:
+          TYPO3_API_TOKEN: ${{ secrets.TYPO3_API_TOKEN }}
+        run: >
+          tailor ter:publish "$VERSION"
+          --artefact="$RUNNER_TEMP/in2mcp.zip"
+          --comment="Release $VERSION - connects TYPO3 with AI models and agents (like Claude, Chat GPT or Cursor) via Model Context Protocol (MCP). Enables AI assistants to read and create content directly in your TYPO3 instance. See https://github.com/in2code-de/in2mcp for changelog and breaking changes."
