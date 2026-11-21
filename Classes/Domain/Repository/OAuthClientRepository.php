@@ -24,7 +24,7 @@ readonly class OAuthClientRepository
         $this->connectionPool->getConnectionForTable(self::TABLE_NAME)->insert(self::TABLE_NAME, [
             'client_id' => $client->getClientIdentifier(),
             'client_name' => $client->getClientName(),
-            'redirect_uris' => $this->encodeRedirectUris($client),
+            'redirect_uris' => $client->getRedirectUrisAsText(),
             'registration_type' => $client->getRegistrationType(),
             'client_secret_hash' => $client->getSecretHash(),
             'crdate' => time(),
@@ -43,7 +43,7 @@ readonly class OAuthClientRepository
                 self::TABLE_NAME,
                 [
                     'client_name' => $client->getClientName(),
-                    'redirect_uris' => $this->encodeRedirectUris($client),
+                    'redirect_uris' => $client->getRedirectUrisAsText(),
                 ],
                 ['client_id' => $client->getClientIdentifier()]
             );
@@ -71,10 +71,5 @@ readonly class OAuthClientRepository
             ->fetchAssociative();
 
         return $row === false ? null : OAuthClient::fromRow($row);
-    }
-
-    private function encodeRedirectUris(OAuthClient $client): string
-    {
-        return json_encode($client->getRedirectUris(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
     }
 }

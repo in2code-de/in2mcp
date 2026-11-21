@@ -54,7 +54,8 @@ class McpToken extends AbstractOAuthEndpoint
         try {
             $tokens = $this->tokenRequestService->handle(
                 $this->getParameters($request),
-                $this->endpointUrlService->getMcpServerUrl($request)
+                $this->endpointUrlService->getMcpServerUrl($request),
+                $request->getHeaderLine('Authorization')
             );
             $rateLimiter->reset();
             return $this->withoutCaching(new JsonResponse($tokens->toResponse()));

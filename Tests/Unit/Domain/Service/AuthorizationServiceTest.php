@@ -33,9 +33,17 @@ final class AuthorizationServiceTest extends UnitTestCase
         parent::setUp();
         $clientService = $this->createMock(OAuthClientService::class);
         $clientService->method('findForAuthorization')->willReturnCallback(
-            static fn (string $identifier): ?OAuthClient => $identifier === 'client'
-                ? new OAuthClient('client', 'Claude', [self::REDIRECT_URI], OAuthClient::TYPE_DYNAMIC)
-                : null
+            static fn (string $identifier): ?OAuthClient => match ($identifier) {
+                'client' => new OAuthClient('client', 'Claude', [self::REDIRECT_URI], OAuthClient::TYPE_DYNAMIC),
+                'confidential' => new OAuthClient(
+                    'confidential',
+                    'Gemini',
+                    [self::REDIRECT_URI],
+                    OAuthClient::TYPE_MANUAL,
+                    '$argon2i$hash'
+                ),
+                default => null,
+            }
         );
         $this->subject = new AuthorizationService(
             new VariableFrontend('in2mcp_oauth_test', new TransientMemoryBackend()),
@@ -112,6 +120,25 @@ final class AuthorizationServiceTest extends UnitTestCase
             self::assertSame($expectedError, $exception->getError());
             self::assertSame(self::REDIRECT_URI, $exception->getRedirectUri());
         }
+    }
+
+    #[Test]
+    public function clientWithSecretMayLeavePkceOut(): void
+    {
+        $query = ['client_id' => 'confidential', 'code_challenge' => '', 'code_challenge_method' => ''];
+
+        $request = $this->subject->createRequest(array_replace($this->getQuery(), $query), self::RESOURCE);
+
+        self::assertSame('', $request->getCodeChallenge());
+    }
+
+    #[Test]
+    public function publicClientMustNotLeavePkceOut(): void
+    {
+        $query = ['code_challenge' => '', 'code_challenge_method' => ''];
+
+        $this->expectException(OAuthRedirectException::class);
+        $this->subject->createRequest(array_replace($this->getQuery(), $query), self::RESOURCE);
     }
 
     #[Test]

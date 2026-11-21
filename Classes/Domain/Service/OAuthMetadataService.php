@@ -36,7 +36,7 @@ readonly class OAuthMetadataService
     }
 
     /**
-     * RFC 8414 - public clients with PKCE only, a client has no secret
+     * RFC 8414 - public clients with PKCE, and clients with a secret that an administrator created
      *
      * @return array<string, mixed>
      */
@@ -51,7 +51,7 @@ readonly class OAuthMetadataService
             'response_types_supported' => ['code'],
             'response_modes_supported' => ['query'],
             'grant_types_supported' => ['authorization_code', 'refresh_token'],
-            'token_endpoint_auth_methods_supported' => ['none'],
+            'token_endpoint_auth_methods_supported' => ['none', 'client_secret_basic', 'client_secret_post'],
             'code_challenge_methods_supported' => ['S256'],
             'client_id_metadata_document_supported' => $this->configurationService->isClientMetadataDocumentActivated(),
         ];

@@ -32,10 +32,35 @@ $columns = [
     ],
 ];
 
+// Revoking a connection is deleting its grant, the tokens stop working with the next request
+$columns['in2mcp_oauth_grants'] = [
+    'label' => $llPrefix . 'be_users.in2mcp_oauth_grants',
+    'description' => $llPrefix . 'be_users.in2mcp_oauth_grants.description',
+    'config' => [
+        'type' => 'inline',
+        'foreign_table' => 'tx_in2mcp_oauth_grant',
+        'foreign_field' => 'be_user',
+        'appearance' => [
+            'collapseAll' => true,
+            'enabledControls' => [
+                'info' => true,
+                'new' => false,
+                'dragdrop' => false,
+                'sort' => false,
+                'hide' => false,
+                'delete' => true,
+                'localize' => false,
+            ],
+            'showNewRecordLink' => false,
+            'showAllLocalizationLink' => false,
+        ],
+    ],
+];
+
 ExtensionManagementUtility::addTCAcolumns('be_users', $columns);
 ExtensionManagementUtility::addToAllTCAtypes(
     'be_users',
-    $field,
+    $field . ', in2mcp_oauth_grants',
     '',
     'after:--div--;core.form.tabs:extended'
 );

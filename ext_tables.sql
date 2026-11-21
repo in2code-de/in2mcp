@@ -15,6 +15,7 @@ CREATE TABLE tx_in2mcp_oauth_grant (
     uid int(11) unsigned NOT NULL auto_increment,
     be_user int(11) unsigned DEFAULT '0' NOT NULL,
     client_id varchar(255) DEFAULT '' NOT NULL,
+    client_name varchar(255) DEFAULT '' NOT NULL,
     scope varchar(255) DEFAULT '' NOT NULL,
     resource varchar(255) DEFAULT '' NOT NULL,
     access_token_hash char(64) DEFAULT '' NOT NULL,

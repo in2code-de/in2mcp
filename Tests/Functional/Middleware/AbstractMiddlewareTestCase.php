@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Tests\Functional\Middleware;
 
+use In2code\In2mcp\Domain\Model\OAuthClient;
+use In2code\In2mcp\Domain\Repository\OAuthClientRepository;
 use In2code\In2mcp\Tests\Functional\AbstractFunctionalTestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -43,6 +45,16 @@ abstract class AbstractMiddlewareTestCase extends AbstractFunctionalTestCase
         return $request
             ->withAttribute('applicationType', SystemEnvironmentBuilder::REQUESTTYPE_BE)
             ->withAttribute('normalizedParams', NormalizedParams::createFromRequest($request));
+    }
+
+    protected function createOAuthClient(string $clientIdentifier): void
+    {
+        $this->get(OAuthClientRepository::class)->save(new OAuthClient(
+            $clientIdentifier,
+            'Client',
+            ['https://client.example.org/callback'],
+            OAuthClient::TYPE_DYNAMIC
+        ));
     }
 
     // The backend behind the middleware answers with a status no middleware uses, so passing on is visible

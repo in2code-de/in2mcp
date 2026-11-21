@@ -1,0 +1,2 @@
+# A connection only comes into existence on the consent page, creating one by hand would be a grant without tokens
+mod.web_list.deniedNewTables := addToList(tx_in2mcp_oauth_grant)

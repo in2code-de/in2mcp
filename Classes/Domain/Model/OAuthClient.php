@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Domain\Model;
 
-use JsonException;
-
 readonly class OAuthClient
 {
     public const TYPE_DYNAMIC = 'dcr';
@@ -33,19 +31,27 @@ readonly class OAuthClient
      */
     public static function fromRow(array $row): self
     {
-        try {
-            $redirectUris = json_decode((string)($row['redirect_uris'] ?? '[]'), true, 4, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            $redirectUris = [];
-        }
-
         return new self(
             (string)($row['client_id'] ?? ''),
             (string)($row['client_name'] ?? ''),
-            array_values(array_filter(is_array($redirectUris) ? $redirectUris : [], 'is_string')),
+            self::splitRedirectUris((string)($row['redirect_uris'] ?? '')),
             (string)($row['registration_type'] ?? ''),
             (string)($row['client_secret_hash'] ?? '')
         );
+    }
+
+    // One per line, so an administrator can maintain them in the backend form
+    public function getRedirectUrisAsText(): string
+    {
+        return implode(PHP_EOL, $this->redirectUris);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function splitRedirectUris(string $redirectUris): array
+    {
+        return array_values(array_filter(array_map('trim', preg_split('~\R~', $redirectUris) ?: [])));
     }
 
     // The name is chosen by the client and shown on the consent page, so it is cut and cleaned of control characters

@@ -7,6 +7,7 @@ namespace In2code\In2mcp\Domain\Service;
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Model\OAuthGrant;
 use In2code\In2mcp\Domain\Model\OAuthTokens;
+use In2code\In2mcp\Domain\Repository\OAuthClientRepository;
 use In2code\In2mcp\Domain\Repository\OAuthGrantRepository;
 use In2code\In2mcp\Exception\OAuthException;
 use TYPO3\CMS\Core\Crypto\Random;
@@ -25,6 +26,7 @@ readonly class OAuthTokenService
 
     public function __construct(
         private OAuthGrantRepository $grantRepository,
+        private OAuthClientRepository $clientRepository,
         private Random $random,
     ) {
     }
@@ -36,7 +38,8 @@ readonly class OAuthTokenService
         int $backendUserIdentifier,
         string $clientIdentifier,
         string $scope,
-        string $resource
+        string $resource,
+        string $clientName = ''
     ): OAuthTokens {
         $now = time();
         $accessToken = $this->createToken(self::ACCESS_TOKEN_PREFIX);
@@ -45,6 +48,7 @@ readonly class OAuthTokenService
         $this->grantRepository->insert([
             'be_user' => $backendUserIdentifier,
             'client_id' => $clientIdentifier,
+            'client_name' => $clientName,
             'scope' => $scope,
             'resource' => $resource,
             'access_token_hash' => $this->hash($accessToken),
@@ -100,7 +104,8 @@ readonly class OAuthTokenService
     }
 
     /**
-     * A token is bound to the endpoint it was issued for, so it is worthless on another installation or path
+     * A token is bound to the endpoint it was issued for, so it is worthless on another installation or path. And
+     * it ends with its client: an administrator who deletes a client cuts off every connection of it at once.
      *
      * @throws Exception
      */
@@ -110,7 +115,10 @@ readonly class OAuthTokenService
         if (self::isWellFormedAccessToken($accessToken)) {
             $grant = $this->grantRepository->findByValidAccessTokenHash($this->hash($accessToken), time());
         }
-        return $grant !== null && hash_equals($grant->getResource(), $resource) ? $grant : null;
+        $isValid = $grant !== null
+            && hash_equals($grant->getResource(), $resource)
+            && $this->clientRepository->findByClientIdentifier($grant->getClientIdentifier()) !== null;
+        return $isValid ? $grant : null;
     }
 
     public static function isAccessToken(string $credential): bool

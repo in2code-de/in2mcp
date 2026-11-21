@@ -247,6 +247,7 @@ final class McpFileUploadTest extends AbstractMiddlewareTestCase
 
     private function issueTokens(int $userUid, AccessScope $scope): void
     {
+        $this->createOAuthClient('client');
         $this->get(OAuthTokenService::class)->issue(
             $userUid,
             'client',

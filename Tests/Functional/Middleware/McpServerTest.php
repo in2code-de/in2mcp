@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Tests\Functional\Middleware;
 
 use In2code\In2mcp\Domain\Model\AccessScope;
+use In2code\In2mcp\Domain\Repository\OAuthClientRepository;
 use In2code\In2mcp\Domain\Repository\OAuthGrantRepository;
 use In2code\In2mcp\Domain\Service\ApiKeyService;
 use In2code\In2mcp\Domain\Service\OAuthTokenService;
@@ -287,6 +288,7 @@ final class McpServerTest extends AbstractMiddlewareTestCase
     public function accessTokenOfAnotherEndpointIsRefused(): void
     {
         $this->enableOAuth();
+        $this->createOAuthClient('client');
         $accessToken = $this->get(OAuthTokenService::class)->issue(
             self::ADMIN,
             'client',
@@ -309,6 +311,18 @@ final class McpServerTest extends AbstractMiddlewareTestCase
                 ['access_token_expires' => time() - 1],
                 ['be_user' => self::ADMIN]
             );
+
+        self::assertSame(401, $this->listTools($accessToken)->getStatusCode());
+    }
+
+    #[Test]
+    public function accessTokenOfADeletedClientIsRefused(): void
+    {
+        $this->enableOAuth();
+        $accessToken = $this->issueAccessToken(self::ADMIN, AccessScope::Write);
+        $this->get(ConnectionPool::class)
+            ->getConnectionForTable(OAuthClientRepository::TABLE_NAME)
+            ->delete(OAuthClientRepository::TABLE_NAME, ['client_id' => 'client']);
 
         self::assertSame(401, $this->listTools($accessToken)->getStatusCode());
     }
@@ -362,6 +376,7 @@ final class McpServerTest extends AbstractMiddlewareTestCase
 
     private function issueAccessToken(int $userUid, AccessScope $scope): string
     {
+        $this->createOAuthClient('client');
         return $this->get(OAuthTokenService::class)->issue(
             $userUid,
             'client',

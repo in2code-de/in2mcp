@@ -55,12 +55,16 @@ readonly class AuthorizationService
         $state = $this->getString($query, 'state');
         $codeChallenge = $this->getString($query, 'code_challenge');
 
+        $isValidCodeChallenge = $this->isValidCodeChallenge(
+            $client,
+            $codeChallenge,
+            $this->getString($query, 'code_challenge_method')
+        );
+
         $error = null;
         if ($this->getString($query, 'response_type') !== self::RESPONSE_TYPE) {
             $error = [OAuthException::UNSUPPORTED_RESPONSE_TYPE, 'Only response_type "code" is supported'];
-        } elseif ($this->getString($query, 'code_challenge_method') !== self::CODE_CHALLENGE_METHOD
-            || preg_match(self::CODE_CHALLENGE_PATTERN, $codeChallenge) !== 1
-        ) {
+        } elseif ($isValidCodeChallenge === false) {
             $error = [OAuthException::INVALID_REQUEST, 'PKCE with code_challenge_method "S256" is required'];
         } elseif (strlen($state) > self::MAXIMUM_STATE_LENGTH) {
             $error = [OAuthException::INVALID_REQUEST, 'The state is too long'];
@@ -194,6 +198,14 @@ readonly class AuthorizationService
             );
         }
         return $redirectUri;
+    }
+
+    // A client with a secret authenticates at the token endpoint and may leave PKCE out, a public client never
+    private function isValidCodeChallenge(OAuthClient $client, string $codeChallenge, string $method): bool
+    {
+        $isPkce = $method === self::CODE_CHALLENGE_METHOD
+            && preg_match(self::CODE_CHALLENGE_PATTERN, $codeChallenge) === 1;
+        return $isPkce || ($client->hasSecret() && $codeChallenge === '' && $method === '');
     }
 
     // RFC 8707 - a client that names no resource gets a token for this endpoint, which is the only resource here

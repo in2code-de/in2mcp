@@ -43,22 +43,26 @@ final class OAuthClientTest extends UnitTestCase
     }
 
     #[Test]
-    public function fromRowReadsTheRedirectUrisFromJson(): void
+    public function fromRowReadsOneRedirectUriPerLine(): void
     {
         $subject = OAuthClient::fromRow([
             'client_id' => 'abc',
-            'client_name' => 'Claude',
-            'redirect_uris' => '["https://claude.ai/cb",4]',
-            'registration_type' => 'dcr',
+            'client_name' => 'Gemini',
+            'redirect_uris' => "https://a.example/cb\r\n\n  https://b.example/cb  \n",
+            'registration_type' => OAuthClient::TYPE_MANUAL,
+            'client_secret_hash' => '$argon2i$hash',
         ]);
 
-        self::assertSame(['https://claude.ai/cb'], $subject->getRedirectUris());
-        self::assertFalse($subject->hasSecret());
+        self::assertSame(['https://a.example/cb', 'https://b.example/cb'], $subject->getRedirectUris());
+        self::assertSame('https://a.example/cb' . PHP_EOL . 'https://b.example/cb', $subject->getRedirectUrisAsText());
+        self::assertTrue($subject->hasSecret());
     }
 
     #[Test]
-    public function fromRowSurvivesBrokenJson(): void
+    public function cleanNameRemovesControlCharactersAndCutsTheName(): void
     {
-        self::assertSame([], OAuthClient::fromRow(['redirect_uris' => '{broken'])->getRedirectUris());
+        self::assertSame('Claude Code', OAuthClient::cleanName("Claude\u{0000}Code"));
+        self::assertSame(100, mb_strlen(OAuthClient::cleanName(str_repeat('ä', 150))));
+        self::assertSame('', OAuthClient::cleanName(['no string']));
     }
 }

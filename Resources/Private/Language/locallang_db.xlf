@@ -16,10 +16,73 @@
                 <source>MCP server (in2mcp)</source>
             </trans-unit>
             <trans-unit id="custom_options.access">
-                <source>Use MCP clients with an api key</source>
+                <source>Use MCP clients</source>
             </trans-unit>
             <trans-unit id="custom_options.access.description">
-                <source>Members of this group may connect MCP clients like Claude or ChatGPT with their api key and work within their permissions. Without this option an api key is refused. Administrators always may.</source>
+                <source>Members of this group may connect MCP clients like Claude or ChatGPT with their api key or by OAuth and work within their permissions. Without this option every api key and every OAuth connection is refused. Administrators always may.</source>
+            </trans-unit>
+            <trans-unit id="be_users.in2mcp_oauth_grants">
+                <source>MCP connections (OAuth)</source>
+            </trans-unit>
+            <trans-unit id="be_users.in2mcp_oauth_grants.description">
+                <source>Applications this user allowed to access TYPO3 on the consent page. A connection that is deleted here is revoked as soon as the record is saved, the application has to ask for consent again.</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_client">
+                <source>MCP OAuth client</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_client.client_name">
+                <source>Name</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_client.client_id">
+                <source>Client ID</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_client.client_id.description">
+                <source>Enter it in the application together with the secret. Clients that registered themselves or use a metadata document got their id automatically.</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_client.client_secret_hash">
+                <source>Client secret</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_client.client_secret_hash.description">
+                <source>Only for clients created here, for example Gemini Enterprise. Create one with the button and copy it right away - only its hash is stored. Without a secret the client has to use PKCE.</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_client.redirect_uris">
+                <source>Redirect URIs</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_client.redirect_uris.description">
+                <source>One per line, exactly as the application names them. Only these addresses receive an authorization code.</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_client.registration_type">
+                <source>Registration</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_client.registration_type.manual">
+                <source>Created in the backend</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_client.registration_type.dcr">
+                <source>Registered itself (dynamic client registration)</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_client.registration_type.cimd">
+                <source>Client ID metadata document</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_grant">
+                <source>MCP connection</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_grant.be_user">
+                <source>Backend user</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_grant.client_name">
+                <source>Application</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_grant.scope">
+                <source>Access</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_grant.crdate">
+                <source>Connected on</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_grant.tstamp">
+                <source>Tokens last renewed</source>
+            </trans-unit>
+            <trans-unit id="tx_in2mcp_oauth_grant.refresh_token_expires">
+                <source>Valid until (without renewal)</source>
             </trans-unit>
         </body>
     </file>

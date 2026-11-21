@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Tests\Functional\Middleware;
 
 use In2code\In2mcp\Domain\Model\AuthorizationRequest;
+use In2code\In2mcp\Domain\Model\OAuthClient;
+use In2code\In2mcp\Domain\Repository\OAuthClientRepository;
 use In2code\In2mcp\Domain\Service\AuthorizationService;
 use In2code\In2mcp\Domain\Service\ClientRegistrationService;
 use In2code\In2mcp\Domain\Service\OAuthTokenService;
 use In2code\In2mcp\Middleware\McpToken;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
+use TYPO3\CMS\Core\Crypto\PasswordHashing\PasswordHashFactory;
 
 final class McpTokenTest extends AbstractMiddlewareTestCase
 {
@@ -19,6 +22,9 @@ final class McpTokenTest extends AbstractMiddlewareTestCase
     private const REDIRECT_URI = 'http://localhost:33418/callback';
     private const CODE_VERIFIER = 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk';
     private const CODE_CHALLENGE = 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM';
+    private const CONFIDENTIAL_REDIRECT_URI = 'https://vertexaisearch.cloud.google.com/oauth-redirect';
+    // security-lint: ignore hardcoded-credential - a fixture of the test
+    private const CLIENT_SECRET = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
     private string $clientIdentifier = '';
 
@@ -163,6 +169,49 @@ final class McpTokenTest extends AbstractMiddlewareTestCase
     }
 
     #[Test]
+    public function clientWithSecretAuthenticatesWithBasicAuthenticationAndNeedsNoPkce(): void
+    {
+        $this->createConfidentialClient();
+        $parameters = $this->getConfidentialCodeParameters();
+
+        $response = $this->requestToken($parameters, 'Basic ' . base64_encode('gemini:' . self::CLIENT_SECRET));
+
+        self::assertSame(200, $response->getStatusCode(), (string)$response->getBody());
+        $tokens = $this->decode($response);
+        $grant = $this->get(OAuthTokenService::class)->findGrantByAccessToken($tokens['access_token'], self::RESOURCE);
+        self::assertSame('Gemini Enterprise', $grant?->getClientName());
+    }
+
+    #[Test]
+    public function clientWithSecretAuthenticatesWithTheSecretInTheForm(): void
+    {
+        $this->createConfidentialClient();
+        $parameters = ['client_secret' => self::CLIENT_SECRET] + $this->getConfidentialCodeParameters();
+
+        self::assertSame(200, $this->requestToken($parameters)->getStatusCode());
+    }
+
+    #[Test]
+    public function clientWithSecretIsRefusedWithAWrongSecret(): void
+    {
+        $this->createConfidentialClient();
+        $parameters = $this->getConfidentialCodeParameters();
+
+        $response = $this->requestToken($parameters, 'Basic ' . base64_encode('gemini:wrong'));
+
+        self::assertSame(401, $response->getStatusCode());
+        self::assertSame('invalid_client', $this->decode($response)['error']);
+    }
+
+    #[Test]
+    public function clientWithSecretIsRefusedWithoutSecret(): void
+    {
+        $this->createConfidentialClient();
+
+        self::assertSame(401, $this->requestToken($this->getConfidentialCodeParameters())->getStatusCode());
+    }
+
+    #[Test]
     public function tokenRequestIsLeftToTheBackendWhileOAuthIsSwitchedOff(): void
     {
         $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['oauth'] = '0';
@@ -170,6 +219,44 @@ final class McpTokenTest extends AbstractMiddlewareTestCase
         $response = $this->requestToken($this->getCodeParameters($this->createCode()));
 
         self::assertSame(self::NOT_HANDLED_STATUS, $response->getStatusCode());
+    }
+
+    private function createConfidentialClient(): void
+    {
+        $secretHash = $this->get(PasswordHashFactory::class)
+            ->getDefaultHashInstance('BE')
+            ->getHashedPassword(self::CLIENT_SECRET);
+        $this->get(OAuthClientRepository::class)->save(new OAuthClient(
+            'gemini',
+            'Gemini Enterprise',
+            [self::CONFIDENTIAL_REDIRECT_URI],
+            OAuthClient::TYPE_MANUAL,
+            $secretHash
+        ));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function getConfidentialCodeParameters(): array
+    {
+        $request = new AuthorizationRequest(
+            'gemini',
+            'Gemini Enterprise',
+            self::CONFIDENTIAL_REDIRECT_URI,
+            '',
+            'xyz',
+            'mcp:read mcp:write',
+            self::RESOURCE
+        );
+        $url = $this->get(AuthorizationService::class)->getApprovalUrl($request, self::EDITOR, false);
+        parse_str((string)parse_url($url, PHP_URL_QUERY), $query);
+        return [
+            'grant_type' => 'authorization_code',
+            'code' => $query['code'],
+            'redirect_uri' => self::CONFIDENTIAL_REDIRECT_URI,
+            'client_id' => 'gemini',
+        ];
     }
 
     private function registerClient(): string
@@ -226,14 +313,13 @@ final class McpTokenTest extends AbstractMiddlewareTestCase
     /**
      * @param array<string, string> $parameters
      */
-    private function requestToken(array $parameters): ResponseInterface
+    private function requestToken(array $parameters, string $authorization = ''): ResponseInterface
     {
-        $request = $this->createBackendRequest(
-            self::TOKEN_URL,
-            'POST',
-            null,
-            ['Content-Type' => 'application/x-www-form-urlencoded']
-        )->withParsedBody($parameters);
+        $headers = ['Content-Type' => 'application/x-www-form-urlencoded'];
+        if ($authorization !== '') {
+            $headers['Authorization'] = $authorization;
+        }
+        $request = $this->createBackendRequest(self::TOKEN_URL, 'POST', null, $headers)->withParsedBody($parameters);
         return $this->processWith($this->get(McpToken::class), $request);
     }
 

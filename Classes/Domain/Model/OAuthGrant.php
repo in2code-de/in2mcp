@@ -10,6 +10,7 @@ readonly class OAuthGrant
         private int $uid,
         private int $backendUserIdentifier,
         private string $clientIdentifier,
+        private string $clientName,
         private string $scope,
         private string $resource,
     ) {
@@ -24,6 +25,7 @@ readonly class OAuthGrant
             (int)($row['uid'] ?? 0),
             (int)($row['be_user'] ?? 0),
             (string)($row['client_id'] ?? ''),
+            (string)($row['client_name'] ?? ''),
             (string)($row['scope'] ?? ''),
             (string)($row['resource'] ?? '')
         );
@@ -42,6 +44,11 @@ readonly class OAuthGrant
     public function getClientIdentifier(): string
     {
         return $this->clientIdentifier;
+    }
+
+    public function getClientName(): string
+    {
+        return $this->clientName;
     }
 
     public function getScope(): string
