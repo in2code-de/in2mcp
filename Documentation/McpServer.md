@@ -1,8 +1,9 @@
 # MCP server of in2mcp
 
 in2mcp turns a TYPO3 installation into a **Model Context Protocol server**. An MCP client - Claude (web,
-desktop, code), ChatGPT, Gemini CLI, Antigravity - connects to the endpoint, authenticates with the api key of a
-TYPO3 backend user and then works on the CMS **with exactly the permissions of that user**.
+desktop, code), ChatGPT, Gemini, Antigravity - connects to the endpoint, authenticates as a TYPO3 backend user -
+by OAuth with a login in the backend, or with the api key of that user - and then works on the CMS **with exactly
+the permissions of that user**.
 
 ---
 
@@ -10,11 +11,14 @@ TYPO3 backend user and then works on the CMS **with exactly the permissions of t
 
 ### 1. Activate the server
 
-| Setting               | Description                                                  | Default |
-|-----------------------|--------------------------------------------------------------|---------|
-| `mcpServer`           | Answers MCP requests on the endpoint                         | `0`     |
-| `mcpServerPath`       | Path of the endpoint below the TYPO3 backend                 | `mcp`   |
-| `mcpServerAllowedIps` | Client addresses that may use the endpoint, `*` for every one | `*`     |
+| Setting                        | Description                                                         | Default |
+|--------------------------------|---------------------------------------------------------------------|---------|
+| `mcpServer`                    | Answers MCP requests on the endpoint                                | `0`     |
+| `mcpServerPath`                | Path of the endpoint below the TYPO3 backend                        | `mcp`   |
+| `mcpServerAllowedIps`          | Client addresses that may use the endpoint, `*` for every one        | `*`     |
+| `oauth`                        | Clients may connect with OAuth, see [Connect with OAuth](#3-connect-with-oauth) | `0`     |
+| `oauthClientMetadataDocuments` | Accept a https url as OAuth client id and fetch the client from there | `0`     |
+| `apiKeyAuthentication`         | Clients may authenticate with an api key; `0` allows OAuth only       | `1`     |
 
 The endpoint is `/typo3/mcp` by default and is configured with `mcpServerPath`, which is a path **below the
 TYPO3 backend**: `mcp` answers on `/typo3/mcp`, `intern/mcp-a7f3` answers on `/typo3/intern/mcp-a7f3`. A
@@ -60,7 +64,96 @@ allow them. Behind a proxy both lists only see the real client when `[SYS][rever
 It lives in the **backend** context, because the tools need a backend user and
 because a request to a path below `/typo3` must be answered before the backend routing rejects it.
 
-### 2. Create an api key
+### 2. Allow MCP for editors
+
+**An editor needs the permission of a backend group**, whichever way the client authenticates. An api key or an
+OAuth connection is refused unless one of the groups of the user has the option *Use MCP clients* under
+*Access Lists > Custom module options > MCP server (in2mcp)* (`custom_options` `in2mcp:access`). Administrators
+always may. This keeps MCP a decision of the integrator per group, not a side effect of somebody creating a key
+or clicking "Allow" on a consent page.
+
+### 3. Connect with OAuth
+
+OAuth is the way for people who work in a chat interface: claude.ai, ChatGPT, Gemini Enterprise, but also Claude
+Code and the Gemini CLI. Nobody copies a key anywhere - the client opens the TYPO3 backend in the browser, the
+user logs in like always (including multi factor authentication) and confirms the access on a consent page. The
+client then gets a token for exactly this user, which expires after an hour and is renewed in the background.
+
+OAuth is the only way for some clients and the right one for others:
+
+| Client                  | Api key in a header                         | OAuth                                       |
+|-------------------------|---------------------------------------------|---------------------------------------------|
+| claude.ai               | beta, and then shared by the organization   | yes (metadata document or registration)    |
+| ChatGPT                 | **no**                                      | yes (metadata document or registration)    |
+| Gemini Enterprise       | **no**                                      | yes, with a client created in the backend   |
+| Copilot Studio          | yes                                         | yes (registration)                          |
+| Claude Code, Gemini CLI | yes                                         | yes, automatically                          |
+
+**A connector shared in an organization needs OAuth.** A connector added on claude.ai is available to every
+member of a Team or Enterprise organization. With an api key in its headers every member works as the one backend
+user the key belongs to, and the log shows that user for all of them. With OAuth every member logs in for
+themselves and works with their own permissions.
+
+Switch on `oauth` (and `mcpServer`), then add the endpoint url to the client **without** any header:
+
+- **claude.ai**: *Settings > Connectors > Add custom connector*, url `https://your-domain.org/typo3/mcp`. Every
+  member clicks *Connect* once and logs into the backend.
+- **ChatGPT**: in developer mode add the url as a connector and choose OAuth.
+- **Claude Code**: `claude mcp add --transport http in2mcp https://your-domain.org/typo3/mcp`, the browser opens
+  at the first use. This also works from a `.mcp.json` in the repository of a project.
+- **Gemini CLI**: `gemini mcp add in2mcp https://your-domain.org/typo3/mcp --transport http`.
+- **Gemini Enterprise** cannot register itself. An administrator creates a client in the backend first: list
+  module on the root page (uid 0), *MCP OAuth client*, a name, a client id of choice, a secret from the generator
+  (copy it right away, only its hash is stored) and the redirect uri Gemini shows. Client id, secret, the
+  authorization url `https://your-domain.org/typo3/mcp/authorize` and the token url
+  `https://your-domain.org/typo3/mcp/token` go into the connector of Gemini.
+
+How a client finds its way, as the MCP specification describes it: a request without credential gets `401` with
+`WWW-Authenticate: Bearer resource_metadata="..."`, which points to the protected resource metadata below the
+endpoint. That names the endpoint itself as authorization server, whose metadata lies at
+`/.well-known/oauth-authorization-server/typo3/mcp` - the one url of in2mcp outside of `/typo3`, answered by a
+middleware in the frontend stack before the site is resolved. A webserver configuration that sends `/.well-known/`
+somewhere else (for example to a directory for certificates) has to pass this path on to TYPO3.
+
+| Path                                                 | Purpose                                                  |
+|------------------------------------------------------|----------------------------------------------------------|
+| `/typo3/mcp/.well-known/oauth-protected-resource`    | Protected resource metadata (RFC 9728)                    |
+| `/.well-known/oauth-authorization-server/typo3/mcp`  | Authorization server metadata (RFC 8414)                  |
+| `/typo3/mcp/register`                                | Dynamic client registration (RFC 7591)                    |
+| `/typo3/mcp/authorize`                               | Start of the authorization, leads to the consent page     |
+| `/typo3/in2mcp/authorize`                            | Consent page, a backend route that needs a backend login  |
+| `/typo3/mcp/token`                                   | Exchanges the code for tokens and renews them              |
+
+**Clients** reach the server in three ways. Claude, ChatGPT and Copilot Studio **register themselves** at
+`/register` before the first connection. Claude and ChatGPT prefer a **client id metadata document**: the client
+id is a https url, and TYPO3 fetches the name and the redirect uris of the client from there. That is an outgoing
+request, so it is off until `oauthClientMetadataDocuments` is switched on - the clients register themselves
+instead. A client created by an administrator in the backend is the third way, needed for Gemini Enterprise.
+
+**The consent page** names the client, the backend user and the host the browser is sent back to, and offers
+*read only* access when the client asks for more. A read only connection gets a server with the reading tools
+alone, so a writing tool cannot even be called. An editor without the group permission of step 2 can only deny.
+When the user is not logged in, TYPO3 shows its login first and the consent page afterwards inside the backend.
+
+**Connections** are listed in the backend user record (tab *Extended*, *MCP connections*) and on the root page in
+the list module. Deleting one revokes it when the record is saved - the client has to ask for consent again.
+Deleting a client cuts off every connection of it at once. Expired connections and clients that registered
+themselves but were never used are removed by `in2mcp:oauth:cleanup`, which should run once a day, for example
+with the scheduler task *Execute console commands*:
+
+```bash
+vendor/bin/typo3 in2mcp:oauth:cleanup
+```
+
+The token endpoint is called by the cloud of the client (claude.ai, ChatGPT) or by the computer of the user
+(Claude Code), so `mcpServerAllowedIps` and `[BE][IPmaskList]` have to allow it like the MCP endpoint itself. The
+consent page runs in the browser of the user and is subject to the backend restrictions only.
+
+### 4. Create an api key
+
+The api key is the way for programs without a browser: scripts, CI pipelines, `Tests/Manual/mcpclient.sh`, and
+clients that cannot do OAuth. It can be switched off for the whole installation with `apiKeyAuthentication = 0`;
+every key is refused then, without being deleted.
 
 Every backend user has its own api key in the field *MCP api key* of the backend user record, or via CLI:
 
@@ -74,16 +167,13 @@ be at least 64 characters long (password policy `in2mcp_apikey`, which an instal
 `$GLOBALS['TYPO3_CONF_VARS']['SYS']['passwordPolicies']`) - the generator of the field creates 128. Emptying the
 field or disabling the user revokes the access immediately.
 
-**An editor additionally needs the permission of a backend group.** A key alone is refused unless one of the
-groups of the user has the option *Use MCP clients with an api key* under *Access Lists > Custom module options >
-MCP server (in2mcp)* (`custom_options` `in2mcp:access`). Administrators always may. This keeps MCP a decision of
-the integrator per group, not a side effect of somebody creating a key.
+An editor additionally needs the permission of a backend group, see [step 2](#2-allow-mcp-for-editors).
 
 The generated key uses a url safe alphabet (`A-Z a-z 0-9 - _`), so it needs no quoting in a shell, a url or a
 json file. The CLI prints it on its own unwrapped line: a key copied from a wrapped terminal line carries the
 line break with it and is rejected by clients as an invalid header value.
 
-### 3. Connect a client
+### 5. Connect a client with the api key
 
 The server expects the key in one of these headers:
 
@@ -96,8 +186,10 @@ Api-Key: <key>
 `X-Api-Key` and `Api-Key` are fallbacks for clients that cannot set an authorization header and for webserver
 configurations that do not pass it to php (apache with `mod_proxy_fcgi` without `CGIPassAuth On`).
 
-**claude.ai / ChatGPT** (custom connector): set authentication to *None* and add the key under *Request headers*
-using the header name `api-key` or `authorization` (with the value `Bearer <key>`).
+**claude.ai** (custom connector, only where the organization sees the beta of request headers): set
+authentication to *None* and add the key under *Request headers* using the header name `api-key` or
+`authorization` (with the value `Bearer <key>`). Every member of the organization then works as the user of this
+key - use [OAuth](#3-connect-with-oauth) instead. **ChatGPT** cannot send a fixed header at all and needs OAuth.
 
 **Claude Code**
 
@@ -125,9 +217,8 @@ gemini mcp add in2mcp https://your-domain.org/typo3/mcp --transport http --heade
 }
 ```
 
-> **Gemini Enterprise** custom MCP connectors currently offer only *no authentication* or *OAuth 2.0* - they
-> cannot send a static header. Connecting the Gemini Enterprise browser connector therefore needs an OAuth 2.1
-> layer, which this extension does not implement yet.
+> **Gemini Enterprise** custom MCP connectors offer only *no authentication* or *OAuth 2.0* - they cannot send a
+> static header. Connect them with [OAuth](#3-connect-with-oauth) and a client created in the backend.
 
 A quick check on the command line:
 
@@ -452,7 +543,8 @@ The answer of the upload has the same form as the one of the tools and contains 
 - the token is valid **once** and for 15 minutes; it is removed as soon as it is presented, whether the upload
   succeeds or not, and only its hash is stored (cache `in2mcp_upload`)
 - it stands for the backend user who requested it, who is authenticated exactly like for a MCP request: a disabled
-  user, a revoked api key, a group without MCP access or `[BE][adminOnly]` end every open token
+  user, a revoked api key, a group without MCP access or `[BE][adminOnly]` end every open token; a user connected
+  by OAuth keeps the tokens as long as one of their connections has write access
 - the api key never leaves the configuration of the client, the model only sees the token
 - the allowed client addresses and the rate limiter apply; an unknown token counts as a failed authentication
 - the target folder is resolved and checked again when the file arrives, and the name - given to the tool or taken
@@ -466,7 +558,8 @@ Save the image and upload it from Claude Code, or put it somewhere public and us
 
 ## Security
 
-The endpoint is reachable without a session, so it is treated as hostile until the api key proves otherwise.
+The endpoint is reachable without a session, so it is treated as hostile until an api key or an OAuth access
+token proves otherwise.
 
 **The key names its user.** An api key has the form `<uid>.<secret>`; only the secret is stored, as a salted
 hash. Without the user part the server would have to verify an incoming key against the hash of every user that
@@ -514,18 +607,20 @@ decide what they run without asking. Recommendations:
 **A key is only as valid as its user.** Disabling, deleting or time-limiting the backend user revokes the access
 immediately, because the regular TYPO3 authentication chain runs afterwards.
 
-**The api key is the only credential.** The middleware removes every cookie from the request before anything
-looks at it, so a backend session can never authenticate a MCP request. Without that, the core would win before
-the api key is ever asked for: it takes the user of an existing session as authenticated and only asks an
-authentication service when there is no session. A backend user without an api key would otherwise reach every
-tool from a browser that is logged into the backend. The backend user the authentication ends up with is
-verified to be the user of the key as well, so nothing but the key decides who a request runs as.
+**The api key or the access token is the only credential.** The middleware removes every cookie from the request before
+anything looks at it, so a backend session can never authenticate a MCP request. Without that, the core would win before
+the api key is ever asked for: it takes the user of an existing session as authenticated and only asks an authentication
+service when there is no session. A backend user without an api key would otherwise reach every tool from a browser that
+is logged into the backend. The backend user the authentication ends up with is verified to be the user of the key as
+well, so nothing but the key decides who a request runs as.
 
 **Multi factor authentication is skipped** for MCP requests - a client without a browser cannot solve it, and
-the key itself is the credential. This applies to a user the api key authenticated and to nobody else: a
-session that is still waiting for its second factor is refused, so a stolen password of an MFA protected
-account does not become MCP access. An installation that enforces MFA should still know that an api key is a
-way past it, and should hand keys out accordingly.
+the key itself is the credential. This applies to a user the api key or the access token authenticated and to
+nobody else: a session that is still waiting for its second factor is refused, so a stolen password of an MFA
+protected account does not become MCP access. An installation that enforces MFA should still know that an api key
+is a way past it, and should hand keys out accordingly - or switch them off with `apiKeyAuthentication = 0`. With
+OAuth the second factor is part of the backend login before the consent page, so every OAuth connection is
+protected by it.
 
 **A locked backend is locked for MCP as well.** While `[BE][adminOnly]` restricts the backend to administrators,
 every other api key is answered with `401 Unauthorized`, exactly as the backend login refuses that user.
@@ -540,16 +635,43 @@ refused by TYPO3 - which also means that raw HTML stays raw for a user who may u
 and gets sanitized for everybody else. in2mcp adds no sanitizing of its own; doing so would silently break the
 content elements that are meant to carry markup.
 
-**The one outgoing request** the extension can make is `add_file_from_url`, which is off by default. See
-[Files](#files) for what it refuses. The upload of a file of the client (`fileUpload`, off by default as well)
-makes no request; its endpoint accepts only one-time tokens that a MCP request handed out.
+**Outgoing requests** are made by `add_file_from_url` and by fetching an OAuth client id metadata document, both off by
+default. Both go through the same guard (`UrlValidationService`, `GuardedRequestService`): public addresses only, the
+connection goes to exactly the address that was validated, no redirect is followed without validating it again, and the
+size is limited. See [Files](#files) for what it refuses. The upload of a file of the client (`fileUpload`, off by
+default as well) makes no request; its endpoint accepts only one-time tokens that a MCP request handed out.
+
+### OAuth
+
+- **Authorization code flow with PKCE** (`S256` only) as OAuth 2.1 and the MCP specification require it. Only a
+  client that an administrator created with a secret may leave PKCE out; it has to authenticate at the token
+  endpoint with that secret (`client_secret_basic` or `client_secret_post`).
+- **Tokens are random and stored as sha256 hash only** - an access token `mcpat.<hex>` and a refresh token
+  `mcprt.<hex>` of 256 bits each, told apart from an api key `<uid>.<secret>` by the prefix. Nothing in the
+  database is enough to use a connection.
+- **A token is bound to the url of the endpoint** it was issued for (RFC 8707), so it is worthless on another
+  installation or another path, and to its client: deleting the client ends it.
+- **The access token lives an hour**, the refresh token 30 days from its last use. Every refresh replaces both; a
+  refresh token that was already replaced revokes the whole connection, because it shows that the token got into
+  other hands. Of two requests with the same refresh token exactly one gets new tokens.
+- **Redirect uris** have to be https, or plain http to `localhost`, `127.0.0.1` or `[::1]`, whose port may change
+  (RFC 8252). An unknown client or redirect uri is shown to the user and never redirected to. Every answer to the
+  client carries `state` and `iss` (RFC 9207).
+- **The consent page** is a backend route without url token, because the authorization endpoint has no session
+  to create one - the backend login is still required. The decision itself is protected by a form token and only
+  the identifier of the waiting request travels through the browser. It names the host the browser goes back to,
+  as a registration is open to everybody and a client can choose any name.
+- **Registration and token endpoint** count against the rate limit of the address; a registration always, a token
+  request only when it fails. Clients that registered themselves and were never used are removed by
+  `in2mcp:oauth:cleanup`.
+- **The tables of clients and connections** are refused to every tool, like `be_users`.
 
 ---
 
 ## Permissions
 
-There is no permission concept of its own. The api key identifies a backend user, that user is initialized like
-in a regular backend request, and every read and write runs through the regular TYPO3 checks:
+There is no permission concept of its own. The api key or the access token identifies a backend user, that user is
+initialized like in a regular backend request, and every read and write runs through the regular TYPO3 checks:
 
 - **Reading** applies `getPagePermsClause()` **and** the page mounts of the user. Both are needed: a page can be
   readable by permission (`perms_everybody`) and still lie outside the tree of that user, exactly as in the
@@ -596,15 +718,15 @@ in a regular backend request, and every read and write runs through the regular 
   nothing there - any uid clears any page - so in2mcp answers that question. Flushing the whole page cache or
   every cache follows `options.clearCache.pages` and `options.clearCache.all` of the user TSconfig, and a
   refusal is reported instead of silently doing nothing.
-- Tables that hold authentication data, internal bookkeeping or scheduled commands are refused for **every**
-  user, administrators included: `be_users`, `be_groups`, `be_sessions`, `fe_users`, `fe_groups`, `fe_sessions`,
+- Tables that hold authentication data, internal bookkeeping or scheduled commands are refused for **every** user,
+  administrators included: `be_users`, `be_groups`, `be_sessions`, `fe_users`, `fe_groups`, `fe_sessions`,
   `sys_history`, `sys_log`, `sys_refindex`, `sys_registry`, `sys_file_processedfile`, `sys_lockedrecords`,
-  `tx_scheduler_task` and `tx_scheduler_task_group`. Tables that decide what users may do or where files go are
-  **read only** for every user: `sys_file_storage`, `sys_filemounts`, `sys_workspace`, `sys_workspace_stage` and
-  `sys_template`, next to `sys_file`. This is the one deliberate deviation from "the client may do what the user
-  may do": an api key lives in plain text in the configuration of a client, and one that leaked must not be able to
-  create a backend user, widen the permissions of others, change where files are written or schedule a command.
-  The lists are `TableAccessService::DENIED_TABLES` and `READ_ONLY_TABLES`.
+  `tx_in2mcp_oauth_client`, `tx_in2mcp_oauth_grant`, `tx_scheduler_task` and `tx_scheduler_task_group`. Tables that
+  decide what users may do or where files go are **read only** for every user: `sys_file_storage`, `sys_filemounts`,
+  `sys_workspace`, `sys_workspace_stage` and `sys_template`, next to `sys_file`. This is the one deliberate deviation
+  from "the client may do what the user may do": an api key lives in plain text in the configuration of a client, and
+  one that leaked must not be able to create a backend user, widen the permissions of others, change where files are
+  written or schedule a command. The lists are `TableAccessService::DENIED_TABLES` and `READ_ONLY_TABLES`.
 - `get_backend_users` and `get_recent_changes` are the only tools that read `be_users` and `sys_history`, and
   they answer **administrators only**. They return a fixed set of fields - username, real name, admin and
   disabled flag, last login, the names of the active MFA providers, and for a change its table, record, action and
@@ -621,11 +743,13 @@ in a regular backend request, and every read and write runs through the regular 
 Everything else follows `tables_modify` of the backend user, so `get_schema` reports the writable tables of
 exactly this connection.
 
-Revoking access means emptying the api key field or disabling the backend user.
+Revoking access means emptying the api key field, deleting the OAuth connection or disabling the backend user.
+A connection with read only access gets the reading tools alone.
 
 ### Rate limiting
 
-Failing authentications are limited per remote address, 20 in 15 minutes by default. A successful
+Failing authentications and failing token requests are limited per remote address, 20 in 15 minutes by default,
+and every client registration counts as well. A successful
 authentication resets the counter, so only failing requests count. Configurable with
 `$GLOBALS['TYPO3_CONF_VARS']['SYS']['rateLimiter']['in2mcp']` (keys `limit` and `interval`).
 
@@ -633,13 +757,19 @@ authentication resets the counter, so only failing requests count. Configurable 
 
 | Status | Meaning                                                        |
 |--------|----------------------------------------------------------------|
-| `401`  | No or an invalid api key was sent                               |
+| `401`  | No or an invalid api key or access token was sent; with OAuth the header `WWW-Authenticate` points to the metadata |
 | `429`  | Too many failed authentications from this ip address            |
 | `405`  | Request method not supported (only `POST`, `DELETE`, `OPTIONS`) |
 
 The upload endpoint answers with json (`{"imported": false, "error": "..."}`) and these statuses: `400` for a
 refused file with the reason, `401` for an unknown, used or expired token, `403` for a refused client address,
 `405` for anything but `POST`, `429` for too many failed authentications.
+
+The OAuth endpoints answer as RFC 6749 describes it, with json `{"error": "...", "error_description": "..."}`:
+`400` for a refused request (`invalid_grant`, `invalid_request`, `unsupported_grant_type`, ...), `401` for an
+unknown client or a wrong secret, `403` for a refused client address, `405` for a wrong method, `429` for too
+many requests. `/authorize` redirects an error back to the client, except for an unknown client or redirect uri,
+which it shows as plain text.
 
 A tool that fails answers with a tool result marked as error, not with an http status. Its text tells the client
 what went wrong and what to call instead - but only for the errors in2mcp raises itself. Any other error, like a
@@ -657,7 +787,7 @@ not name the internal address a host resolved to.
 | `Middleware\McpServer`         | Answers the configured endpoint with the MCP server instead of the backend     |
 | `Middleware\McpFileUpload`     | Receives a file for a one-time token below the endpoint (`/upload`)            |
 | `McpAuthenticationService`     | TYPO3 authentication service, finds the backend user of the api key or token   |
-| `AuthenticationContext`        | Carries the api key through the authentication and records the user it belongs to |
+| `AuthenticationContext`        | Carries the api key or token through the authentication and records the user and its scope |
 | `BackendUserAuthenticator`     | Initializes that user for the request and removes the session afterwards       |
 | `BackendUserRepository`        | Looks up the hashed api key of a backend user                                  |
 | `RateLimiter\RateLimiterFactory`| Sliding window limiter for failing authentications                            |
@@ -683,6 +813,20 @@ not name the internal address a host resolved to.
 | `Service\UploadTokenService`   | One-time tokens of the upload endpoint, stored as hash                          |
 | `Service\UrlValidationService` | The only guard on the one outgoing request this extension makes                 |
 | `Service\InlineRelationService`| Translates between the child counter and the list of child uids                 |
+| `Middleware\McpProtectedResourceMetadata` | Protected resource metadata below the endpoint                      |
+| `Middleware\McpAuthorizationServerMetadata` | Authorization server metadata, the one middleware in the frontend stack |
+| `Middleware\McpClientRegistration` | Dynamic client registration                                              |
+| `Middleware\McpAuthorization` | Checks an authorization request and hands it over to the consent page          |
+| `Controller\AuthorizationController` | The consent page, a backend route                                        |
+| `Middleware\McpToken`         | Token endpoint                                                                  |
+| `Service\AuthorizationService`| Waiting authorization requests and one-time codes, cache `in2mcp_oauth`         |
+| `Service\TokenRequestService` | Checks a token request: client, secret, code, PKCE, resource                    |
+| `Service\OAuthTokenService`   | Issues, finds and renews tokens, stored as hash in `tx_in2mcp_oauth_grant`      |
+| `Service\OAuthClientService`  | Finds a client, fetches it when its id is a metadata document url               |
+| `Service\ClientRegistrationService` | Registers a client and decides which redirect uris are allowed            |
+| `Service\ClientMetadataDocumentService` | Fetches and checks a client id metadata document                      |
+| `Service\GuardedRequestService` | The outgoing request, always to a validated address                           |
+| `Service\OAuthCleanupService` | Removes expired connections and unused clients                                  |
 
 The [official MCP PHP SDK](https://github.com/modelcontextprotocol/php-sdk) (`mcp/sdk`) handles the protocol.
 Sessions are stored in the filesystem (`var/in2mcp/mcp`), because a client sends its session id in every request.

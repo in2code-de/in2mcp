@@ -38,16 +38,21 @@ exposes `tools`, `resources` and `prompts`, the LLM decides when to call them.
 # 1. activate the server in the extension configuration (setting "mcpServer")
 #    the endpoint is /typo3/mcp and can be renamed with the setting "mcpServerPath"
 #    "mcpServerAllowedIps" restricts the client addresses, [BE][IPmaskList] applies as well
-# 2. create an api key for a backend user - an editor also needs a group with the custom
-#    module option "Use MCP clients with an api key", administrators always may
+# 2. an editor needs a group with the custom module option "Use MCP clients",
+#    administrators always may
+# 3a. OAuth: switch on the setting "oauth" and add the url to the client without any header,
+#     the user logs into the backend in the browser and confirms the access
+claude mcp add --transport http in2mcp https://your-domain.org/typo3/mcp
+# 3b. or an api key, for scripts and clients without a browser
 vendor/bin/typo3 in2mcp:apikey <uid|username>
-# 3. connect a client
 claude mcp add --transport http in2mcp https://your-domain.org/typo3/mcp --header "Api-Key: <key>"
 ```
 
-For claude.ai and ChatGPT: add a custom connector with the URL, set authentication to *None* and put the key
-into a request header named `api-key`. See [Documentation/McpServer.md](Documentation/McpServer.md) for every
-client, the OAuth situation of Gemini Enterprise and the full reference.
+For claude.ai, ChatGPT and Gemini Enterprise use OAuth: add a custom connector with the URL, every user connects
+with their own backend login. ChatGPT and Gemini Enterprise cannot send an api key at all, and a connector shared
+in a claude.ai organization would otherwise run every member as the user of one key. Gemini Enterprise needs a
+client that an administrator creates in the backend. See [Documentation/McpServer.md](Documentation/McpServer.md)
+for every client and the full reference.
 
 ## Tools
 
@@ -72,11 +77,13 @@ file through the file storage, but only one that no record uses anymore.
 
 ## Permissions
 
-in2mcp has no permission concept of its own. The api key identifies a TYPO3 backend user, that user is
-initialized like in a regular backend request, and everything afterwards runs through the regular TYPO3 checks:
+in2mcp has no permission concept of its own. The OAuth token or the api key identifies a TYPO3 backend user, that
+user is initialized like in a regular backend request, and everything afterwards runs through the regular TYPO3
+checks:
 page permissions and page mounts when reading, the **DataHandler** when writing. So an MCP client can do exactly
-what that backend user can do in the backend - and nothing beyond it. Emptying the api key or disabling the user
-revokes the access immediately.
+what that backend user can do in the backend - and nothing beyond it, or less: an OAuth connection can be limited
+to reading on the consent page. Emptying the api key, deleting the OAuth connection in the backend user record or
+disabling the user revokes the access immediately.
 
 Concretely: page mounts and page permissions when reading pages and records, the **DataHandler** when writing,
 the **file mounts** when searching or attaching files, and the page mounts again when clearing the cache of a
@@ -89,9 +96,11 @@ administrators included, and storages, file mounts, workspaces and TypoScript ar
 leaked cannot create a backend user, widen permissions or schedule a command. See
 `TableAccessService::DENIED_TABLES` and `READ_ONLY_TABLES`.
 
-An api key has the form `<uid>.<secret>` and only the secret is stored, hashed. Failing authentications are rate
-limited per ip address. Multi factor authentication is skipped for MCP requests, so an installation that
-enforces MFA should hand out api keys accordingly. See [Documentation/McpServer.md](Documentation/McpServer.md)
+An api key has the form `<uid>.<secret>` and only the secret is stored, hashed. OAuth uses the authorization code
+flow with PKCE, the login on the consent page includes multi factor authentication, and tokens are stored as hash
+only. Failing authentications are rate limited per ip address. Multi factor authentication is skipped for an api
+key, so an installation that enforces MFA should hand out api keys accordingly or allow OAuth only
+(`apiKeyAuthentication = 0`). See [Documentation/McpServer.md](Documentation/McpServer.md)
 for the full picture.
 
 ## Requirements
