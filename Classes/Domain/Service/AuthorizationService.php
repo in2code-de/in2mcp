@@ -9,7 +9,6 @@ use In2code\In2mcp\Domain\Model\AccessScope;
 use In2code\In2mcp\Domain\Model\AuthorizationCode;
 use In2code\In2mcp\Domain\Model\AuthorizationRequest;
 use In2code\In2mcp\Domain\Model\OAuthClient;
-use In2code\In2mcp\Domain\Repository\OAuthClientRepository;
 use In2code\In2mcp\Exception\OAuthException;
 use In2code\In2mcp\Exception\OAuthRedirectException;
 use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
@@ -37,7 +36,7 @@ readonly class AuthorizationService
 
     public function __construct(
         private FrontendInterface $oAuthCache,
-        private OAuthClientRepository $clientRepository,
+        private OAuthClientService $clientService,
         private Random $random,
     ) {
     }
@@ -50,7 +49,7 @@ readonly class AuthorizationService
      */
     public function createRequest(array $query, string $resource): AuthorizationRequest
     {
-        $client = $this->clientRepository->findByClientIdentifier($this->getString($query, 'client_id'))
+        $client = $this->clientService->findForAuthorization($this->getString($query, 'client_id'))
             ?? throw new OAuthException(OAuthException::INVALID_CLIENT, 'The client is not registered', 1763750001);
         $redirectUri = $this->getRedirectUri($client, $this->getString($query, 'redirect_uri'));
         $state = $this->getString($query, 'state');

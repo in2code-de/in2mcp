@@ -6,8 +6,8 @@ namespace In2code\In2mcp\Tests\Unit\Domain\Service;
 
 use In2code\In2mcp\Domain\Model\AuthorizationRequest;
 use In2code\In2mcp\Domain\Model\OAuthClient;
-use In2code\In2mcp\Domain\Repository\OAuthClientRepository;
 use In2code\In2mcp\Domain\Service\AuthorizationService;
+use In2code\In2mcp\Domain\Service\OAuthClientService;
 use In2code\In2mcp\Exception\OAuthException;
 use In2code\In2mcp\Exception\OAuthRedirectException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -31,15 +31,15 @@ final class AuthorizationServiceTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $clientRepository = $this->createMock(OAuthClientRepository::class);
-        $clientRepository->method('findByClientIdentifier')->willReturnCallback(
+        $clientService = $this->createMock(OAuthClientService::class);
+        $clientService->method('findForAuthorization')->willReturnCallback(
             static fn (string $identifier): ?OAuthClient => $identifier === 'client'
                 ? new OAuthClient('client', 'Claude', [self::REDIRECT_URI], OAuthClient::TYPE_DYNAMIC)
                 : null
         );
         $this->subject = new AuthorizationService(
             new VariableFrontend('in2mcp_oauth_test', new TransientMemoryBackend()),
-            $clientRepository,
+            $clientService,
             new Random()
         );
     }

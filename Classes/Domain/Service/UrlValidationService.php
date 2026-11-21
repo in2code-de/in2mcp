@@ -61,6 +61,24 @@ class UrlValidationService
      */
     public function assertImportable(string $url): ValidatedUrl
     {
+        return $this->assertPublicUrl($url, true);
+    }
+
+    /**
+     * Without the hosts of the file import: an OAuth client names its own host in the url of its metadata document
+     *
+     * @throws FileImportException
+     */
+    public function assertClientMetadataUrl(string $url): ValidatedUrl
+    {
+        return $this->assertPublicUrl($url, false);
+    }
+
+    /**
+     * @throws FileImportException
+     */
+    private function assertPublicUrl(string $url, bool $isHostListApplied): ValidatedUrl
+    {
         $parts = parse_url($url);
         if ($parts === false || isset($parts['host']) === false) {
             throw new FileImportException('"' . $url . '" is not a valid url', 1756801100);
@@ -83,7 +101,9 @@ class UrlValidationService
         }
 
         $host = trim((string)$parts['host'], '[]');
-        $this->assertAllowedHost($host);
+        if ($isHostListApplied) {
+            $this->assertAllowedHost($host);
+        }
         return new ValidatedUrl($url, $host, $port, $this->getPublicAddress($host));
     }
 

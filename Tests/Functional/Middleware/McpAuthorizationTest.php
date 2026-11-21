@@ -76,6 +76,26 @@ final class McpAuthorizationTest extends AbstractMiddlewareTestCase
     }
 
     #[Test]
+    public function urlAsClientIdIsNotFetchedWhileClientMetadataDocumentsAreSwitchedOff(): void
+    {
+        $response = $this->authorize(['client_id' => 'https://127.0.0.1/client.json']);
+
+        self::assertSame(400, $response->getStatusCode());
+        self::assertStringContainsString('not registered', (string)$response->getBody());
+    }
+
+    #[Test]
+    public function localUrlAsClientIdIsRefusedWhileClientMetadataDocumentsAreSwitchedOn(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['oauthClientMetadataDocuments'] = '1';
+
+        $response = $this->authorize(['client_id' => 'https://127.0.0.1/client.json']);
+
+        self::assertSame(400, $response->getStatusCode());
+        self::assertStringContainsString('metadata document is not valid', (string)$response->getBody());
+    }
+
+    #[Test]
     public function authorizationIsLeftToTheBackendWhileOAuthIsSwitchedOff(): void
     {
         $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['oauth'] = '0';

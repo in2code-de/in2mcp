@@ -41,6 +41,7 @@ abstract class AbstractFunctionalTestCase extends FunctionalTestCase
                 'fileImportAllowedHosts' => '',
                 'fileUpload' => '0',
                 'oauth' => '0',
+                'oauthClientMetadataDocuments' => '0',
                 'apiKeyAuthentication' => '1',
             ],
         ],

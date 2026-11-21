@@ -10,6 +10,9 @@ mcpServerAllowedIps = *
 # cat=basic/enable/0040; type=boolean; label= OAuth: Let MCP clients connect with OAuth. The user logs into the TYPO3 backend in the browser (including multi factor authentication) and confirms the access, the client then gets a short-lived token for this user. Needed for ChatGPT and Gemini, and the way to go for a connector that is shared in an organization on claude.ai, because every member connects as themselves.
 oauth = 0
 
+# cat=basic/enable/0045; type=boolean; label= OAuth client metadata documents: Accept a https url as client id and fetch the metadata of the client from there (Client ID Metadata Documents), which Claude and ChatGPT prefer. Without it they register themselves instead (dynamic client registration). Fetching is an outgoing request; local and private addresses are refused in any case.
+oauthClientMetadataDocuments = 0
+
 # cat=basic/enable/0050; type=boolean; label= Api keys: Let MCP clients authenticate with the api key of a backend user. Switch it off for an installation that only allows OAuth - every api key is refused then, without being deleted.
 apiKeyAuthentication = 1
 

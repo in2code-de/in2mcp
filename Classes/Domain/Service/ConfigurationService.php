@@ -157,6 +157,12 @@ readonly class ConfigurationService
         return (bool)$this->get('oauth');
     }
 
+    // Fetching the document of a client is an outgoing request, so it is off unless switched on deliberately
+    public function isClientMetadataDocumentActivated(): bool
+    {
+        return (bool)$this->get('oauthClientMetadataDocuments');
+    }
+
     // On by default, so an installation that never saved the setting keeps working with its api keys
     public function isApiKeyAuthenticationActivated(): bool
     {

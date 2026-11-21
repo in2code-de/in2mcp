@@ -57,6 +57,20 @@ final class McpOAuthMetadataTest extends AbstractMiddlewareTestCase
         self::assertSame(self::ENDPOINT_URL . '/token', $metadata['token_endpoint']);
         self::assertSame(self::ENDPOINT_URL . '/register', $metadata['registration_endpoint']);
         self::assertSame(['S256'], $metadata['code_challenge_methods_supported']);
+        self::assertFalse($metadata['client_id_metadata_document_supported']);
+    }
+
+    #[Test]
+    public function authorizationServerMetadataAnnouncesClientMetadataDocumentsWhileSwitchedOn(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['oauthClientMetadataDocuments'] = '1';
+
+        $response = $this->processWith(
+            $this->get(McpAuthorizationServerMetadata::class),
+            $this->createBackendRequest(self::AUTHORIZATION_SERVER_METADATA_URL, 'GET', null, [])
+        );
+
+        self::assertTrue($this->decode($response)['client_id_metadata_document_supported']);
     }
 
     #[Test]

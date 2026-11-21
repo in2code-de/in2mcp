@@ -14,6 +14,8 @@ readonly class OAuthClient
 
     public const LOOPBACK_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
 
+    private const MAXIMUM_NAME_LENGTH = 100;
+
     /**
      * @param list<string> $redirectUris
      */
@@ -44,6 +46,13 @@ readonly class OAuthClient
             (string)($row['registration_type'] ?? ''),
             (string)($row['client_secret_hash'] ?? '')
         );
+    }
+
+    // The name is chosen by the client and shown on the consent page, so it is cut and cleaned of control characters
+    public static function cleanName(mixed $name): string
+    {
+        $name = is_string($name) ? $name : '';
+        return mb_substr(trim((string)preg_replace('~[\p{C}]+~u', ' ', $name)), 0, self::MAXIMUM_NAME_LENGTH);
     }
 
     public function getClientIdentifier(): string

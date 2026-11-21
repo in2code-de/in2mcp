@@ -19,7 +19,6 @@ readonly class ClientRegistrationService
     private const CLIENT_IDENTIFIER_LENGTH = 32;
     private const MAXIMUM_REDIRECT_URIS = 10;
     private const MAXIMUM_URI_LENGTH = 2000;
-    private const MAXIMUM_NAME_LENGTH = 100;
     private const AUTHENTICATION_METHOD = 'none';
     private const GRANT_TYPES = ['authorization_code', 'refresh_token'];
     private const RESPONSE_TYPES = ['code'];
@@ -41,7 +40,7 @@ readonly class ClientRegistrationService
         $this->assertPublicClient($metadata);
         $client = new OAuthClient(
             $this->random->generateRandomHexString(self::CLIENT_IDENTIFIER_LENGTH),
-            $this->getClientName($metadata),
+            OAuthClient::cleanName($metadata['client_name'] ?? ''),
             $this->getRedirectUris($metadata),
             OAuthClient::TYPE_DYNAMIC
         );
@@ -130,17 +129,5 @@ readonly class ClientRegistrationService
             }
         }
         return array_values(array_unique($redirectUris));
-    }
-
-    /**
-     * The name is chosen by the client and shown on the consent page, so it is cut and cleaned of control characters
-     *
-     * @param array<string, mixed> $metadata
-     */
-    private function getClientName(array $metadata): string
-    {
-        $name = is_string($metadata['client_name'] ?? null) ? $metadata['client_name'] : '';
-        $name = trim((string)preg_replace('~[\p{C}]+~u', ' ', $name));
-        return mb_substr($name, 0, self::MAXIMUM_NAME_LENGTH);
     }
 }

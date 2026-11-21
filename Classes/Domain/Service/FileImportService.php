@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Domain\Service;
 
-use GuzzleHttp\Handler\CurlHandler;
-use GuzzleHttp\HandlerStack;
 use In2code\In2mcp\Domain\Model\ValidatedUrl;
 use In2code\In2mcp\Exception\FileImportException;
+use In2code\In2mcp\Exception\ResponseTooLargeException;
 use Psr\Http\Message\ResponseInterface;
 use Throwable;
-use TYPO3\CMS\Core\Http\RequestFactory;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\Folder;
 use TYPO3\CMS\Core\SysLog\Error as SystemLogErrorClassification;
@@ -28,11 +26,9 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 class FileImportService
 {
     private const MAXIMUM_REDIRECTS = 3;
-    private const CONNECT_TIMEOUT = 5;
-    private const TIMEOUT = 30;
 
     public function __construct(
-        private readonly RequestFactory $requestFactory,
+        private readonly GuardedRequestService $guardedRequestService,
         private readonly UrlValidationService $urlValidationService,
         private readonly ConfigurationService $configurationService,
         private readonly FileStorageService $fileStorageService,
@@ -123,50 +119,21 @@ class FileImportService
     }
 
     /**
-     * The handler is curl on purpose: only curl connects to a given address (CURLOPT_RESOLVE), the stream handler
-     * of Guzzle would resolve the host again and silently ignore every curl option.
-     *
      * @throws FileImportException
      */
     private function request(ValidatedUrl $target, string $temporaryFile): ResponseInterface
     {
         $maximumSize = $this->configurationService->getFileImportMaximumSize();
-        $isTooLarge = false;
-        $curlOptions = [
-            CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-            CURLOPT_NOPROGRESS => false,
-            // Covers the announced size as well as a body without Content-Length that just does not end
-            CURLOPT_XFERINFOFUNCTION => static function (
-                mixed $handle,
-                int $announcedBytes,
-                int $receivedBytes
-            ) use ($maximumSize, &$isTooLarge): int {
-                $isTooLarge = $announcedBytes > $maximumSize || $receivedBytes > $maximumSize;
-                return $isTooLarge ? 1 : 0;
-            },
-        ];
-        if ($target->getCurlResolveEntry() !== null) {
-            $curlOptions[CURLOPT_RESOLVE] = [$target->getCurlResolveEntry()];
-        }
-
         try {
-            return $this->requestFactory->request($target->getUrl(), 'GET', [
-                'handler' => HandlerStack::create(new CurlHandler()),
-                'allow_redirects' => false,
-                'http_errors' => false,
-                'sink' => $temporaryFile,
-                'connect_timeout' => self::CONNECT_TIMEOUT,
-                'timeout' => self::TIMEOUT,
-                'curl' => $curlOptions,
-            ]);
+            return $this->guardedRequestService->request($target, $maximumSize, ['sink' => $temporaryFile]);
+        } catch (ResponseTooLargeException) {
+            throw new FileImportException('The file is larger than the allowed ' . $maximumSize . ' bytes', 1756801238);
         } catch (Throwable $exception) {
-            throw $isTooLarge
-                ? new FileImportException('The file is larger than the allowed ' . $maximumSize . ' bytes', 1756801238)
-                : new FileImportException(
-                    'The url could not be requested: ' . $exception->getMessage(),
-                    1756801216,
-                    $exception
-                );
+            throw new FileImportException(
+                'The url could not be requested: ' . $exception->getMessage(),
+                1756801216,
+                $exception
+            );
         }
     }
 

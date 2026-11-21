@@ -24,11 +24,30 @@ readonly class OAuthClientRepository
         $this->connectionPool->getConnectionForTable(self::TABLE_NAME)->insert(self::TABLE_NAME, [
             'client_id' => $client->getClientIdentifier(),
             'client_name' => $client->getClientName(),
-            'redirect_uris' => json_encode($client->getRedirectUris(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
+            'redirect_uris' => $this->encodeRedirectUris($client),
             'registration_type' => $client->getRegistrationType(),
             'client_secret_hash' => $client->getSecretHash(),
             'crdate' => time(),
         ]);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function save(OAuthClient $client): void
+    {
+        if ($this->findByClientIdentifier($client->getClientIdentifier()) === null) {
+            $this->insert($client);
+        } else {
+            $this->connectionPool->getConnectionForTable(self::TABLE_NAME)->update(
+                self::TABLE_NAME,
+                [
+                    'client_name' => $client->getClientName(),
+                    'redirect_uris' => $this->encodeRedirectUris($client),
+                ],
+                ['client_id' => $client->getClientIdentifier()]
+            );
+        }
     }
 
     /**
@@ -52,5 +71,10 @@ readonly class OAuthClientRepository
             ->fetchAssociative();
 
         return $row === false ? null : OAuthClient::fromRow($row);
+    }
+
+    private function encodeRedirectUris(OAuthClient $client): string
+    {
+        return json_encode($client->getRedirectUris(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
     }
 }
