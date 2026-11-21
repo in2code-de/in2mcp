@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Domain\Repository;
 
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Model\AccessScope;
 use In2code\In2mcp\Domain\Model\OAuthGrant;
@@ -84,6 +85,87 @@ readonly class OAuthGrantRepository
     public function delete(int $uid): void
     {
         $this->connectionPool->getConnectionForTable(self::TABLE_NAME)->delete(self::TABLE_NAME, ['uid' => $uid]);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function deleteExpired(int $now): int
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
+        return $queryBuilder
+            ->delete(self::TABLE_NAME)
+            ->where($queryBuilder->expr()->lte(
+                'refresh_token_expires',
+                $queryBuilder->createNamedParameter($now, Connection::PARAM_INT)
+            ))
+            ->executeStatement();
+    }
+
+    /**
+     * @return list<string>
+     * @throws Exception
+     */
+    public function findClientIdentifiers(): array
+    {
+        return array_map('strval', $this->findDistinct('client_id'));
+    }
+
+    /**
+     * @return list<int>
+     * @throws Exception
+     */
+    public function findBackendUserIdentifiers(): array
+    {
+        return array_map('intval', $this->findDistinct('be_user'));
+    }
+
+    /**
+     * @param list<string> $clientIdentifiers
+     * @throws Exception
+     */
+    public function deleteByClientIdentifiers(array $clientIdentifiers): int
+    {
+        return $this->deleteByValues('client_id', $clientIdentifiers, Connection::PARAM_STR_ARRAY);
+    }
+
+    /**
+     * @param list<int> $backendUserIdentifiers
+     * @throws Exception
+     */
+    public function deleteByBackendUserIdentifiers(array $backendUserIdentifiers): int
+    {
+        return $this->deleteByValues('be_user', $backendUserIdentifiers, Connection::PARAM_INT_ARRAY);
+    }
+
+    /**
+     * @return list<mixed>
+     * @throws Exception
+     */
+    private function findDistinct(string $field): array
+    {
+        return $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME)
+            ->selectLiteral('DISTINCT ' . $field)
+            ->from(self::TABLE_NAME)
+            ->executeQuery()
+            ->fetchFirstColumn();
+    }
+
+    /**
+     * @param list<int|string> $values
+     * @throws Exception
+     */
+    private function deleteByValues(string $field, array $values, ArrayParameterType $type): int
+    {
+        $deleted = 0;
+        if ($values !== []) {
+            $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
+            $deleted = $queryBuilder
+                ->delete(self::TABLE_NAME)
+                ->where($queryBuilder->expr()->in($field, $queryBuilder->createNamedParameter($values, $type)))
+                ->executeStatement();
+        }
+        return $deleted;
     }
 
     /**

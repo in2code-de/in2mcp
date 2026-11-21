@@ -13,6 +13,7 @@ use TYPO3\CMS\Core\Crypto\PasswordHashing\PasswordHashFactory;
 use TYPO3\CMS\Core\Crypto\Random;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Utility\MathUtility;
 
 /**
@@ -176,6 +177,32 @@ readonly class BackendUserRepository
         }
 
         return $backendUser === false ? null : $backendUser;
+    }
+
+    /**
+     * Disabled users count as existing, their connections are kept for the day they are enabled again
+     *
+     * @param list<int> $uids
+     * @return list<int>
+     * @throws Exception
+     */
+    public function findExistingUids(array $uids): array
+    {
+        $existingUids = [];
+        if ($uids !== []) {
+            $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
+            $queryBuilder->getRestrictions()->removeAll()->add(new DeletedRestriction());
+            $existingUids = array_map('intval', $queryBuilder
+                ->select('uid')
+                ->from(self::TABLE_NAME)
+                ->where($queryBuilder->expr()->in(
+                    'uid',
+                    $queryBuilder->createNamedParameter($uids, Connection::PARAM_INT_ARRAY)
+                ))
+                ->executeQuery()
+                ->fetchFirstColumn());
+        }
+        return $existingUids;
     }
 
     /**
