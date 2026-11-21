@@ -1,0 +1,109 @@
+<?php
+
+declare(strict_types=1);
+
+namespace In2code\In2mcp\Domain\Model;
+
+use JsonException;
+
+readonly class OAuthClient
+{
+    public const TYPE_DYNAMIC = 'dcr';
+    public const TYPE_METADATA_DOCUMENT = 'cimd';
+    public const TYPE_MANUAL = 'manual';
+
+    public const LOOPBACK_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
+
+    /**
+     * @param list<string> $redirectUris
+     */
+    public function __construct(
+        private string $clientIdentifier,
+        private string $clientName,
+        private array $redirectUris,
+        private string $registrationType,
+        private string $secretHash = '',
+    ) {
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    public static function fromRow(array $row): self
+    {
+        try {
+            $redirectUris = json_decode((string)($row['redirect_uris'] ?? '[]'), true, 4, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            $redirectUris = [];
+        }
+
+        return new self(
+            (string)($row['client_id'] ?? ''),
+            (string)($row['client_name'] ?? ''),
+            array_values(array_filter(is_array($redirectUris) ? $redirectUris : [], 'is_string')),
+            (string)($row['registration_type'] ?? ''),
+            (string)($row['client_secret_hash'] ?? '')
+        );
+    }
+
+    public function getClientIdentifier(): string
+    {
+        return $this->clientIdentifier;
+    }
+
+    public function getClientName(): string
+    {
+        return $this->clientName;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getRedirectUris(): array
+    {
+        return $this->redirectUris;
+    }
+
+    public function getRegistrationType(): string
+    {
+        return $this->registrationType;
+    }
+
+    public function getSecretHash(): string
+    {
+        return $this->secretHash;
+    }
+
+    public function hasSecret(): bool
+    {
+        return $this->secretHash !== '';
+    }
+
+    /**
+     * Exact match, except for the port of a loopback address: a native client listens on a port it gets from the
+     * system at the time of the login (RFC 8252 section 7.3)
+     */
+    public function isRedirectUriAllowed(string $redirectUri): bool
+    {
+        $allowed = in_array($redirectUri, $this->redirectUris, true);
+        if ($allowed === false && $this->isLoopbackUri($redirectUri)) {
+            $withoutPort = $this->removePort($redirectUri);
+            foreach ($this->redirectUris as $registeredUri) {
+                $allowed = $allowed || ($this->isLoopbackUri($registeredUri)
+                    && $this->removePort($registeredUri) === $withoutPort);
+            }
+        }
+        return $allowed;
+    }
+
+    private function isLoopbackUri(string $uri): bool
+    {
+        return parse_url($uri, PHP_URL_SCHEME) === 'http'
+            && in_array(strtolower((string)parse_url($uri, PHP_URL_HOST)), self::LOOPBACK_HOSTS, true);
+    }
+
+    private function removePort(string $uri): string
+    {
+        return (string)preg_replace('~^(http://[^/:]+|http://\[[^]]+\]):[0-9]+~i', '$1', $uri);
+    }
+}
