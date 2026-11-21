@@ -29,6 +29,13 @@ readonly class ConfigurationService
     private const DEFAULT_BACKEND_ENTRY_POINT = '/typo3';
 
     private const FILE_UPLOAD_PATH_SEGMENT = 'upload';
+    private const AUTHORIZATION_PATH_SEGMENT = 'authorize';
+    private const TOKEN_PATH_SEGMENT = 'token';
+    private const REGISTRATION_PATH_SEGMENT = 'register';
+    private const PROTECTED_RESOURCE_METADATA_PATH_SEGMENT = '.well-known/oauth-protected-resource';
+
+    // RFC 8414 puts the metadata of an issuer with a path at the root of the host, in front of that path
+    private const AUTHORIZATION_SERVER_METADATA_PATH = '/.well-known/oauth-authorization-server';
 
     /**
      * Everything a path segment may consist of. A path is not a place for anything else, and this is the only
@@ -65,6 +72,31 @@ readonly class ConfigurationService
     public function getFileUploadPath(): string
     {
         return $this->getMcpServerPath() . '/' . self::FILE_UPLOAD_PATH_SEGMENT;
+    }
+
+    public function getAuthorizationPath(): string
+    {
+        return $this->getMcpServerPath() . '/' . self::AUTHORIZATION_PATH_SEGMENT;
+    }
+
+    public function getTokenPath(): string
+    {
+        return $this->getMcpServerPath() . '/' . self::TOKEN_PATH_SEGMENT;
+    }
+
+    public function getRegistrationPath(): string
+    {
+        return $this->getMcpServerPath() . '/' . self::REGISTRATION_PATH_SEGMENT;
+    }
+
+    public function getProtectedResourceMetadataPath(): string
+    {
+        return $this->getMcpServerPath() . '/' . self::PROTECTED_RESOURCE_METADATA_PATH_SEGMENT;
+    }
+
+    public function getAuthorizationServerMetadataPath(): string
+    {
+        return self::AUTHORIZATION_SERVER_METADATA_PATH . $this->getMcpServerPath();
     }
 
     /**

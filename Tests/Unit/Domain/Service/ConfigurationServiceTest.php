@@ -129,6 +129,24 @@ final class ConfigurationServiceTest extends UnitTestCase
     }
 
     #[Test]
+    public function oAuthPathsFollowTheMcpServerPath(): void
+    {
+        $this->configure(['mcpServerPath' => 'ai/mcp']);
+
+        self::assertSame('/typo3/ai/mcp/authorize', $this->subject->getAuthorizationPath());
+        self::assertSame('/typo3/ai/mcp/token', $this->subject->getTokenPath());
+        self::assertSame('/typo3/ai/mcp/register', $this->subject->getRegistrationPath());
+        self::assertSame(
+            '/typo3/ai/mcp/.well-known/oauth-protected-resource',
+            $this->subject->getProtectedResourceMetadataPath()
+        );
+        self::assertSame(
+            '/.well-known/oauth-authorization-server/typo3/ai/mcp',
+            $this->subject->getAuthorizationServerMetadataPath()
+        );
+    }
+
+    #[Test]
     public function isOAuthActivatedReadsSwitch(): void
     {
         $this->configure(['oauth' => '0']);

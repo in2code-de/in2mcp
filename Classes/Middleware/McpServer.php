@@ -11,6 +11,7 @@ use In2code\In2mcp\Domain\Mcp\RateLimiter\RateLimiterFactory;
 use In2code\In2mcp\Domain\Mcp\SdkCompatibility;
 use In2code\In2mcp\Domain\Mcp\ServerFactory;
 use In2code\In2mcp\Domain\Service\ConfigurationService;
+use In2code\In2mcp\Domain\Service\OAuthMetadataService;
 use In2code\In2mcp\Exception\UserNotFoundException;
 use Mcp\Server\Transport\Http\Middleware\CorsMiddleware;
 use Mcp\Server\Transport\StreamableHttpTransport;
@@ -35,8 +36,6 @@ use TYPO3\CMS\Core\Http\StreamFactory;
  */
 class McpServer implements MiddlewareInterface
 {
-    private const AUTHENTICATION_REALM = 'TYPO3 in2mcp';
-
     public function __construct(
         protected readonly ServerFactory $serverFactory,
         protected readonly BackendUserAuthenticator $backendUserAuthenticator,
@@ -45,6 +44,7 @@ class McpServer implements MiddlewareInterface
         protected readonly StreamFactory $streamFactory,
         protected readonly RateLimiterFactory $rateLimiterFactory,
         protected readonly ClientAddressService $clientAddressService,
+        protected readonly OAuthMetadataService $oAuthMetadataService,
         protected readonly LoggerInterface $logger
     ) {
     }
@@ -88,7 +88,7 @@ class McpServer implements MiddlewareInterface
         } catch (UserNotFoundException $exception) {
             $this->logger->warning($exception->getMessage());
             return $this->getErrorResponse(401, -32001, 'Unauthorized')
-                ->withHeader('WWW-Authenticate', 'Bearer realm="' . self::AUTHENTICATION_REALM . '"');
+                ->withHeader('WWW-Authenticate', $this->oAuthMetadataService->getAuthenticationChallenge($request));
         } catch (Throwable $exception) {
             $this->logger->error('MCP: ' . $exception->getMessage(), ['exception' => $exception]);
             return $this->getErrorResponse(500, -32603, 'Internal error');

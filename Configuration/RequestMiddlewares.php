@@ -1,6 +1,8 @@
 <?php
 
+use In2code\In2mcp\Middleware\McpAuthorizationServerMetadata;
 use In2code\In2mcp\Middleware\McpFileUpload;
+use In2code\In2mcp\Middleware\McpProtectedResourceMetadata;
 use In2code\In2mcp\Middleware\McpServer;
 
 return [
@@ -21,6 +23,27 @@ return [
             ],
             'before' => [
                 'typo3/cms-backend/backend-routing',
+            ],
+        ],
+        'in2mcp/protected-resource-metadata' => [
+            'target' => McpProtectedResourceMetadata::class,
+            'after' => [
+                'typo3/cms-core/normalized-params-attribute',
+            ],
+            'before' => [
+                'typo3/cms-backend/backend-routing',
+            ],
+        ],
+    ],
+    'frontend' => [
+        'in2mcp/authorization-server-metadata' => [
+            'target' => McpAuthorizationServerMetadata::class,
+            'after' => [
+                'typo3/cms-core/normalized-params-attribute',
+            ],
+            'before' => [
+                'typo3/cms-frontend/site',
+                'typo3/cms-frontend/eid',
             ],
         ],
     ],

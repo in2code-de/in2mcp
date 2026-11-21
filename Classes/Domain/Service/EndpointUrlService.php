@@ -22,10 +22,15 @@ class EndpointUrlService
             . $this->configurationService->getFileUploadPath();
     }
 
-    // The resource an OAuth token is bound to
+    // The resource an OAuth token is bound to, and the issuer of the tokens at the same time
     public function getMcpServerUrl(ServerRequestInterface $request): string
     {
-        return $this->getRequestHost($request) . $this->configurationService->getMcpServerPath();
+        return $this->getUrl($request, $this->configurationService->getMcpServerPath());
+    }
+
+    public function getUrl(ServerRequestInterface $request, string $path): string
+    {
+        return $this->getRequestHost($request) . $path;
     }
 
     private function getRequestHost(mixed $request): string
