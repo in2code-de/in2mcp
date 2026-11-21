@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.0">
+    <file source-language="en" target-language="de" datatype="plaintext" original="messages" date="2026-11-21T00:00:00Z" product-name="in2mcp">
+        <header/>
+        <body>
+            <trans-unit id="title">
+                <source>Connect %s with TYPO3</source>
+                <target>%s mit TYPO3 verbinden</target>
+            </trans-unit>
+            <trans-unit id="client.unnamed">
+                <source>An unnamed application</source>
+                <target>Eine Anwendung ohne Namen</target>
+            </trans-unit>
+            <trans-unit id="introduction">
+                <source>%1$s wants to access "%2$s" as the backend user "%3$s". It gets the same permissions you have in the backend - it can see what you can see and, unless you allow reading only, change what you can change. Every change is logged under your name.</source>
+                <target>%1$s möchte als Backend-Benutzer „%3$s“ auf „%2$s“ zugreifen. Die Anwendung bekommt dieselben Rechte, die Sie im Backend haben: Sie sieht, was Sie sehen können, und ändert, was Sie ändern können – es sei denn, Sie erlauben nur das Lesen. Jede Änderung wird unter Ihrem Namen protokolliert.</target>
+            </trans-unit>
+            <trans-unit id="redirect">
+                <source>After your decision you are sent back to %s. Only allow the access if you started the connection there yourself.</source>
+                <target>Nach Ihrer Entscheidung werden Sie zu %s zurückgeleitet. Erlauben Sie den Zugriff nur, wenn Sie die Verbindung dort selbst gestartet haben.</target>
+            </trans-unit>
+            <trans-unit id="access">
+                <source>Access</source>
+                <target>Zugriff</target>
+            </trans-unit>
+            <trans-unit id="access.write">
+                <source>Read and change content</source>
+                <target>Inhalte lesen und ändern</target>
+            </trans-unit>
+            <trans-unit id="access.read">
+                <source>Read only</source>
+                <target>Nur lesen</target>
+            </trans-unit>
+            <trans-unit id="access.readRequested">
+                <source>The application asks for read access only.</source>
+                <target>Die Anwendung möchte nur lesend zugreifen.</target>
+            </trans-unit>
+            <trans-unit id="allow">
+                <source>Allow access</source>
+                <target>Zugriff erlauben</target>
+            </trans-unit>
+            <trans-unit id="deny">
+                <source>Deny</source>
+                <target>Ablehnen</target>
+            </trans-unit>
+            <trans-unit id="noAccess.title">
+                <source>MCP is not available for you</source>
+                <target>MCP ist für Sie nicht freigeschaltet</target>
+            </trans-unit>
+            <trans-unit id="noAccess.message">
+                <source>None of the backend groups of "%s" allows MCP clients. An administrator can switch this on with the custom option "MCP server (in2mcp)" of a group.</source>
+                <target>Keine der Backend-Gruppen von „%s“ erlaubt MCP-Clients. Ein Administrator kann das über die Custom Option „MCP server (in2mcp)“ einer Gruppe freischalten.</target>
+            </trans-unit>
+            <trans-unit id="expired.title">
+                <source>This authorization is no longer valid</source>
+                <target>Diese Freigabe ist nicht mehr gültig</target>
+            </trans-unit>
+            <trans-unit id="expired.message">
+                <source>The request expired or was already answered. Start the connection in your application again.</source>
+                <target>Die Anfrage ist abgelaufen oder wurde bereits beantwortet. Starten Sie die Verbindung in Ihrer Anwendung neu.</target>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

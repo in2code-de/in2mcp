@@ -3,6 +3,7 @@
 use In2code\In2mcp\Domain\Mcp\Authentication\McpAuthenticationService;
 use In2code\In2mcp\Domain\Mcp\Authentication\BackendUserAuthenticator;
 use In2code\In2mcp\Domain\Repository\BackendUserRepository;
+use In2code\In2mcp\Domain\Service\AuthorizationService;
 use In2code\In2mcp\Domain\Service\UploadTokenService;
 use TYPO3\CMS\Core\Cache\Backend\FileBackend;
 use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;
@@ -73,5 +74,17 @@ $GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations'][UploadToken
     'backend' => FileBackend::class,
     'options' => [
         'defaultLifetime' => UploadTokenService::LIFETIME,
+    ],
+];
+
+/**
+ * Authorization requests that wait for the consent of the user, and the authorization codes that follow. Both live
+ * for minutes only, a flushed cache means the user starts the connection in the client again.
+ */
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations'][AuthorizationService::CACHE_IDENTIFIER] ??= [
+    'frontend' => VariableFrontend::class,
+    'backend' => FileBackend::class,
+    'options' => [
+        'defaultLifetime' => AuthorizationService::REQUEST_LIFETIME,
     ],
 ];

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.0">
+    <file source-language="en" datatype="plaintext" original="messages" date="2026-11-21T00:00:00Z" product-name="in2mcp">
+        <header/>
+        <body>
+            <trans-unit id="title">
+                <source>Connect %s with TYPO3</source>
+            </trans-unit>
+            <trans-unit id="client.unnamed">
+                <source>An unnamed application</source>
+            </trans-unit>
+            <trans-unit id="introduction">
+                <source>%1$s wants to access "%2$s" as the backend user "%3$s". It gets the same permissions you have in the backend - it can see what you can see and, unless you allow reading only, change what you can change. Every change is logged under your name.</source>
+            </trans-unit>
+            <trans-unit id="redirect">
+                <source>After your decision you are sent back to %s. Only allow the access if you started the connection there yourself.</source>
+            </trans-unit>
+            <trans-unit id="access">
+                <source>Access</source>
+            </trans-unit>
+            <trans-unit id="access.write">
+                <source>Read and change content</source>
+            </trans-unit>
+            <trans-unit id="access.read">
+                <source>Read only</source>
+            </trans-unit>
+            <trans-unit id="access.readRequested">
+                <source>The application asks for read access only.</source>
+            </trans-unit>
+            <trans-unit id="allow">
+                <source>Allow access</source>
+            </trans-unit>
+            <trans-unit id="deny">
+                <source>Deny</source>
+            </trans-unit>
+            <trans-unit id="noAccess.title">
+                <source>MCP is not available for you</source>
+            </trans-unit>
+            <trans-unit id="noAccess.message">
+                <source>None of the backend groups of "%s" allows MCP clients. An administrator can switch this on with the custom option "MCP server (in2mcp)" of a group.</source>
+            </trans-unit>
+            <trans-unit id="expired.title">
+                <source>This authorization is no longer valid</source>
+            </trans-unit>
+            <trans-unit id="expired.message">
+                <source>The request expired or was already answered. Start the connection in your application again.</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

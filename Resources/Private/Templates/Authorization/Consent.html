@@ -1,0 +1,72 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <f:variable name="ll" value="LLL:EXT:in2mcp/Resources/Private/Language/locallang_authorization.xlf:" />
+
+    <f:if condition="{authorizationRequest}">
+        <f:then>
+            <f:variable name="clientName" value="{authorizationRequest.clientName}" />
+            <f:if condition="!{clientName}">
+                <f:variable name="clientName" value="{f:translate(key: '{ll}client.unnamed')}" />
+            </f:if>
+            <h1><f:translate key="{ll}title" arguments="{0: clientName}" /></h1>
+
+            <f:if condition="{hasMcpAccess}">
+                <f:then>
+                    <p><f:translate key="{ll}introduction" arguments="{0: clientName, 1: siteName, 2: username}" /></p>
+                    <p><f:translate key="{ll}redirect" arguments="{0: authorizationRequest.redirectHost}" /></p>
+                </f:then>
+                <f:else>
+                    <f:be.infobox
+                        title="{f:translate(key: '{ll}noAccess.title')}"
+                        message="{f:translate(key: '{ll}noAccess.message', arguments: {0: username})}"
+                        state="{f:constant(name: 'TYPO3\CMS\Core\Type\ContextualFeedbackSeverity::WARNING')}"
+                    />
+                </f:else>
+            </f:if>
+
+            <form method="post" action="{actionUrl}" target="_top">
+                <input type="hidden" name="request" value="{requestIdentifier}" />
+                <input type="hidden" name="formToken" value="{formToken}" />
+
+                <f:if condition="{hasMcpAccess} && {authorizationRequest.writeAccessRequested}">
+                    <fieldset class="form-group">
+                        <legend class="form-label"><f:translate key="{ll}access" /></legend>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="access" value="write" id="in2mcp-access-write" checked="checked" />
+                            <label class="form-check-label" for="in2mcp-access-write"><f:translate key="{ll}access.write" /></label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="access" value="read" id="in2mcp-access-read" />
+                            <label class="form-check-label" for="in2mcp-access-read"><f:translate key="{ll}access.read" /></label>
+                        </div>
+                    </fieldset>
+                </f:if>
+                <f:if condition="{hasMcpAccess} && !{authorizationRequest.writeAccessRequested}">
+                    <p><f:translate key="{ll}access.readRequested" /></p>
+                </f:if>
+
+                <div class="form-group">
+                    <f:if condition="{hasMcpAccess}">
+                        <button type="submit" name="decision" value="allow" class="btn btn-primary"><f:translate key="{ll}allow" /></button>
+                    </f:if>
+                    <button type="submit" name="decision" value="deny" class="btn btn-default"><f:translate key="{ll}deny" /></button>
+                </div>
+            </form>
+        </f:then>
+        <f:else>
+            <h1><f:translate key="{ll}expired.title" /></h1>
+            <f:be.infobox
+                message="{f:translate(key: '{ll}expired.message')}"
+                state="{f:constant(name: 'TYPO3\CMS\Core\Type\ContextualFeedbackSeverity::WARNING')}"
+            />
+        </f:else>
+    </f:if>
+</f:section>
+
+</html>

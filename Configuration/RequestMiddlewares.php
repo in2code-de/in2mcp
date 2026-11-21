@@ -1,5 +1,6 @@
 <?php
 
+use In2code\In2mcp\Middleware\McpAuthorization;
 use In2code\In2mcp\Middleware\McpAuthorizationServerMetadata;
 use In2code\In2mcp\Middleware\McpClientRegistration;
 use In2code\In2mcp\Middleware\McpFileUpload;
@@ -37,6 +38,15 @@ return [
         ],
         'in2mcp/client-registration' => [
             'target' => McpClientRegistration::class,
+            'after' => [
+                'typo3/cms-core/normalized-params-attribute',
+            ],
+            'before' => [
+                'typo3/cms-backend/backend-routing',
+            ],
+        ],
+        'in2mcp/authorization' => [
+            'target' => McpAuthorization::class,
             'after' => [
                 'typo3/cms-core/normalized-params-attribute',
             ],

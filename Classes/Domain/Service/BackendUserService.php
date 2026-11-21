@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Domain\Service;
 
+use In2code\In2mcp\Domain\Mcp\Authentication\BackendUserAuthenticator;
 use In2code\In2mcp\Domain\Repository\PageRepository;
 use In2code\In2mcp\Exception\UserNotFoundException;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
@@ -43,6 +44,19 @@ class BackendUserService
     public function isAdmin(): bool
     {
         return $this->getBackendUser()->isAdmin();
+    }
+
+    /**
+     * Administrators always, editors by the custom option of one of their groups
+     *
+     * @throws UserNotFoundException
+     */
+    public function hasMcpAccess(): bool
+    {
+        return $this->getBackendUser()->check(
+            'custom_options',
+            BackendUserAuthenticator::PERMISSION_OPTIONS . ':' . BackendUserAuthenticator::PERMISSION_ACCESS
+        );
     }
 
     /**
