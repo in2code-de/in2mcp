@@ -8,6 +8,7 @@ use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Model\OAuthGrant;
 use In2code\In2mcp\Domain\Model\OAuthTokens;
 use In2code\In2mcp\Domain\Repository\OAuthGrantRepository;
+use In2code\In2mcp\Exception\OAuthException;
 use TYPO3\CMS\Core\Crypto\Random;
 
 readonly class OAuthTokenService
@@ -58,6 +59,47 @@ readonly class OAuthTokenService
     }
 
     /**
+     * Every refresh token is valid once (OAuth 2.1 section 4.3.1). A refresh token that was already replaced shows
+     * that it got into other hands - the whole grant is revoked then, so neither of the two can use it any longer.
+     *
+     * @throws OAuthException
+     * @throws Exception
+     */
+    public function refresh(string $refreshToken, string $clientIdentifier): OAuthTokens
+    {
+        $now = time();
+        $refreshTokenHash = $this->hash($refreshToken);
+        $grant = $this->grantRepository->findByValidRefreshTokenHash($refreshTokenHash, $now);
+        if ($grant === null) {
+            $this->revokeReplayedGrant($refreshTokenHash);
+            throw new OAuthException(OAuthException::INVALID_GRANT, 'The refresh token is not valid', 1763760001);
+        }
+        if (hash_equals($grant->getClientIdentifier(), $clientIdentifier) === false) {
+            throw new OAuthException(
+                OAuthException::INVALID_GRANT,
+                'The refresh token was issued to another client',
+                1763760002
+            );
+        }
+
+        $accessToken = $this->createToken(self::ACCESS_TOKEN_PREFIX);
+        $newRefreshToken = $this->createToken(self::REFRESH_TOKEN_PREFIX);
+        $isReplaced = $this->grantRepository->replaceTokens($grant->getUid(), $refreshTokenHash, [
+            'access_token_hash' => $this->hash($accessToken),
+            'access_token_expires' => $now + self::ACCESS_TOKEN_LIFETIME,
+            'refresh_token_hash' => $this->hash($newRefreshToken),
+            'previous_refresh_token_hash' => $refreshTokenHash,
+            'refresh_token_expires' => $now + self::REFRESH_TOKEN_LIFETIME,
+            'tstamp' => $now,
+        ]);
+        if ($isReplaced === false) {
+            throw new OAuthException(OAuthException::INVALID_GRANT, 'The refresh token is not valid', 1763760003);
+        }
+
+        return new OAuthTokens($accessToken, $newRefreshToken, self::ACCESS_TOKEN_LIFETIME, $grant->getScope());
+    }
+
+    /**
      * A token is bound to the endpoint it was issued for, so it is worthless on another installation or path
      *
      * @throws Exception
@@ -80,6 +122,17 @@ readonly class OAuthTokenService
     {
         $pattern = '~^' . preg_quote(self::ACCESS_TOKEN_PREFIX, '~') . '[0-9a-f]{' . self::SECRET_LENGTH . '}$~';
         return preg_match($pattern, $credential) === 1;
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function revokeReplayedGrant(string $refreshTokenHash): void
+    {
+        $replayedGrant = $this->grantRepository->findByPreviousRefreshTokenHash($refreshTokenHash);
+        if ($replayedGrant !== null) {
+            $this->grantRepository->delete($replayedGrant->getUid());
+        }
     }
 
     private function createToken(string $prefix): string

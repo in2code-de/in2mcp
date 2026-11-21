@@ -34,17 +34,71 @@ readonly class OAuthGrantRepository
      */
     public function findByValidAccessTokenHash(string $accessTokenHash, int $now): ?OAuthGrant
     {
+        return $this->findByHash('access_token_hash', $accessTokenHash, 'access_token_expires', $now);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function findByValidRefreshTokenHash(string $refreshTokenHash, int $now): ?OAuthGrant
+    {
+        return $this->findByHash('refresh_token_hash', $refreshTokenHash, 'refresh_token_expires', $now);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function findByPreviousRefreshTokenHash(string $refreshTokenHash): ?OAuthGrant
+    {
+        return $this->findByHash('previous_refresh_token_hash', $refreshTokenHash, 'refresh_token_expires', 0);
+    }
+
+    /**
+     * Only replaces the tokens while the refresh token is still the one that was presented, so of two requests with
+     * the same refresh token exactly one gets new tokens
+     *
+     * @param array<string, int|string> $values
+     * @throws Exception
+     */
+    public function replaceTokens(int $uid, string $presentedRefreshTokenHash, array $values): bool
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
+        $queryBuilder
+            ->update(self::TABLE_NAME)
+            ->where(
+                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, Connection::PARAM_INT)),
+                $queryBuilder->expr()->eq(
+                    'refresh_token_hash',
+                    $queryBuilder->createNamedParameter($presentedRefreshTokenHash)
+                )
+            );
+        foreach ($values as $field => $value) {
+            $queryBuilder->set($field, $value);
+        }
+        return $queryBuilder->executeStatement() === 1;
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function delete(int $uid): void
+    {
+        $this->connectionPool->getConnectionForTable(self::TABLE_NAME)->delete(self::TABLE_NAME, ['uid' => $uid]);
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function findByHash(string $hashField, string $hash, string $expiryField, int $now): ?OAuthGrant
+    {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE_NAME);
         $row = $queryBuilder
             ->select('*')
             ->from(self::TABLE_NAME)
             ->where(
-                $queryBuilder->expr()->eq(
-                    'access_token_hash',
-                    $queryBuilder->createNamedParameter($accessTokenHash)
-                ),
+                $queryBuilder->expr()->eq($hashField, $queryBuilder->createNamedParameter($hash)),
                 $queryBuilder->expr()->gt(
-                    'access_token_expires',
+                    $expiryField,
                     $queryBuilder->createNamedParameter($now, Connection::PARAM_INT)
                 )
             )

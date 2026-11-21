@@ -6,6 +6,7 @@ use In2code\In2mcp\Middleware\McpClientRegistration;
 use In2code\In2mcp\Middleware\McpFileUpload;
 use In2code\In2mcp\Middleware\McpProtectedResourceMetadata;
 use In2code\In2mcp\Middleware\McpServer;
+use In2code\In2mcp\Middleware\McpToken;
 
 return [
     'backend' => [
@@ -47,6 +48,15 @@ return [
         ],
         'in2mcp/authorization' => [
             'target' => McpAuthorization::class,
+            'after' => [
+                'typo3/cms-core/normalized-params-attribute',
+            ],
+            'before' => [
+                'typo3/cms-backend/backend-routing',
+            ],
+        ],
+        'in2mcp/token' => [
+            'target' => McpToken::class,
             'after' => [
                 'typo3/cms-core/normalized-params-attribute',
             ],
