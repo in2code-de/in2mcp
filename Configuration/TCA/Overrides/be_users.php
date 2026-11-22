@@ -1,6 +1,7 @@
 <?php
 
 use In2code\In2mcp\Domain\Repository\BackendUserRepository;
+use In2code\In2mcp\Form\NoOAuthGrantsInformation;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
 defined('TYPO3') || die();
@@ -53,6 +54,9 @@ $columns['in2mcp_oauth_grants'] = [
             ],
             'showNewRecordLink' => false,
             'showAllLocalizationLink' => false,
+        ],
+        'customControls' => [
+            ['userFunc' => NoOAuthGrantsInformation::class . '->render'],
         ],
     ],
 ];

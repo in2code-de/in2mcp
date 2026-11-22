@@ -27,6 +27,9 @@
             <trans-unit id="be_users.in2mcp_oauth_grants.description">
                 <source>Applications this user allowed to access TYPO3 on the consent page. A connection that is deleted here is revoked as soon as the record is saved, the application has to ask for consent again.</source>
             </trans-unit>
+            <trans-unit id="be_users.in2mcp_oauth_grants.none">
+                <source>No connections yet</source>
+            </trans-unit>
             <trans-unit id="tx_in2mcp_oauth_client">
                 <source>MCP OAuth client</source>
             </trans-unit>
