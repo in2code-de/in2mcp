@@ -56,7 +56,8 @@ return [
             'mcpServer' => '1',
             'mcpServerAllowedIps' => '*',
             'mcpServerPath' => 'mcp',
-            'oauth' => '0',
+            'oauth' => '1',
+            'oauthClientMetadataDocuments' => '0',
         ],
         'news' => [
             'advancedMediaPreview' => '1',
