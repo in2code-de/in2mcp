@@ -11,6 +11,9 @@ the permissions of that user**.
 
 ### 1. Activate the server
 
+The settings are in the extension configuration of in2mcp: the server on the tab "Basic", OAuth and api keys on
+"Connections", file import and upload on "File".
+
 | Setting                        | Description                                                         | Default |
 |--------------------------------|---------------------------------------------------------------------|---------|
 | `mcpServer`                    | Answers MCP requests on the endpoint                                | `0`     |
@@ -18,7 +21,7 @@ the permissions of that user**.
 | `mcpServerAllowedIps`          | Client addresses that may use the endpoint, `*` for every one        | `*`     |
 | `oauth`                        | Clients may connect with OAuth, see [Connect with OAuth](#3-connect-with-oauth) | `0`     |
 | `oauthClientMetadataDocuments` | Accept a https url as OAuth client id and fetch the client from there | `0`     |
-| `apiKeyAuthentication`         | Clients may authenticate with an api key; `0` allows OAuth only       | `1`     |
+| `apiKeyAuthentication`         | Clients may authenticate with an api key; `0` allows OAuth only       | `0`     |
 
 The endpoint is `/typo3/mcp` by default and is configured with `mcpServerPath`, which is a path **below the
 TYPO3 backend**: `mcp` answers on `/typo3/mcp`, `intern/mcp-a7f3` answers on `/typo3/intern/mcp-a7f3`. A

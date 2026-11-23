@@ -1,4 +1,4 @@
-# cat=basic/enable/0010; type=boolean; label= Enable MCP server: Answer MCP requests on the endpoint below. Clients authenticate with the api key of a backend user, so every action is restricted to the permissions of that user.
+# cat=basic/enable/0010; type=boolean; label= Enable MCP server: Answer MCP requests on the endpoint below. Clients connect as a backend user, by OAuth or with its api key (tab "Connections"), so every action is restricted to the permissions of that user.
 mcpServer = 0
 
 # cat=basic/enable/0020; type=string; label= Endpoint: Path of the endpoint below the TYPO3 backend, without slashes. "mcp" answers on /typo3/mcp. The endpoint always stays below the backend, because that is what makes TYPO3 treat the request as a backend request and apply the page and file permissions of the user. An empty or invalid value falls back to "mcp".
@@ -7,23 +7,23 @@ mcpServerPath = mcp
 # cat=basic/enable/0030; type=string; label= Allowed client addresses: Comma separated list of IP addresses or ranges that may use the MCP server, as CIDR ("192.168.0.0/24", "2001:db8::/32") or with wildcards ("192.168.*.*"). Every other address is refused before its api key is looked at. "*" (default) or an empty value allow every address. Claude.ai connects from "160.79.104.0/21,153.61.208.0/20". [BE][IPmaskList] of TYPO3 applies to the MCP endpoint as well and has to contain these addresses, too. Behind a proxy, set [SYS][reverseProxyIP] so the address of the client is seen instead of the one of the proxy.
 mcpServerAllowedIps = *
 
-# cat=basic/enable/0040; type=boolean; label= OAuth: Let MCP clients connect with OAuth. The user logs into the TYPO3 backend in the browser (including multi factor authentication) and confirms the access, the client then gets a short-lived token for this user. Needed for ChatGPT and Gemini, and the way to go for a connector that is shared in an organization on claude.ai, because every member connects as themselves.
+# cat=Connections/enable/0100; type=boolean; label= OAuth: Let MCP clients connect with OAuth. The user logs into the TYPO3 backend in the browser (including multi factor authentication) and confirms the access, the client then gets a short-lived token for this user. Needed for ChatGPT and Gemini, and the way to go for a connector that is shared in an organization on claude.ai, because every member connects as themselves.
 oauth = 0
 
-# cat=basic/enable/0045; type=boolean; label= OAuth client metadata documents: Accept a https url as client id and fetch the metadata of the client from there (Client ID Metadata Documents), which Claude and ChatGPT prefer. Without it they register themselves instead (dynamic client registration). Fetching is an outgoing request; local and private addresses are refused in any case.
+# cat=Connections/enable/0110; type=boolean; label= OAuth client metadata documents: Accept a https url as client id and fetch the metadata of the client from there (Client ID Metadata Documents), which Claude and ChatGPT prefer. Without it they register themselves instead (dynamic client registration). Fetching is an outgoing request, local and private addresses are refused in any case.
 oauthClientMetadataDocuments = 0
 
-# cat=basic/enable/0050; type=boolean; label= Api keys: Let MCP clients authenticate with the api key of a backend user. Switch it off for an installation that only allows OAuth - every api key is refused then, without being deleted.
-apiKeyAuthentication = 1
+# cat=Connections/enable/0120; type=boolean; label= Api keys: Let MCP clients authenticate with the api key of a backend user. Switch it off for an installation that only allows OAuth - every api key is refused then, without being deleted.
+apiKeyAuthentication = 0
 
-# cat=file import/enable/0100; type=boolean; label= Import files by url: Allow MCP clients to import a file from a http(s) url into the file storage. The server performs the outgoing request, so only switch this on if that is intended. Local and private addresses are refused in any case.
+# cat=File/file/0200; type=boolean; label= Upload files from the client: Allow MCP clients to send the content of a file, which is stored in the file storage. No outgoing request is made, the file mounts and file permissions of the backend user apply like for an upload in the backend. The maximum file size below applies.
+fileUpload = 0
+
+# cat=File/file/0210; type=boolean; label= Import files by url: Allow MCP clients to import a file from a http(s) url into the file storage. The server performs the outgoing request, so only switch this on if that is intended. Local and private addresses are refused in any case.
 fileImport = 0
 
-# cat=file import/basic/0110; type=int+; label= Maximum file size in bytes: Applies to every way a file comes in - downloads larger than this are aborted, larger uploads refused. Default is 10 MB.
+# cat=File/file/0220; type=int+; label= Maximum file size in bytes: Applies to every way a file comes in - downloads larger than this are aborted, larger uploads refused. Default is 10 MB.
 fileImportMaximumSize = 10485760
 
-# cat=file import/basic/0120; type=string; label= Allowed hosts: Comma separated list of hosts a file may be imported from, for example "images.example.org,cdn.example.org". Empty allows every public host.
+# cat=File/file/0230; type=string; label= Allowed hosts: Comma separated list of hosts a file may be imported from, for example "images.example.org,cdn.example.org". Empty allows every public host.
 fileImportAllowedHosts =
-
-# cat=file upload/enable/0200; type=boolean; label= Upload files from the client: Allow MCP clients to send the content of a file, which is stored in the file storage. No outgoing request is made, the file mounts and file permissions of the backend user apply like for an upload in the backend. The maximum file size above applies.
-fileUpload = 0
