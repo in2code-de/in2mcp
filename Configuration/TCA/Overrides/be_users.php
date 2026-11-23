@@ -64,7 +64,7 @@ $columns['in2mcp_oauth_grants'] = [
 ExtensionManagementUtility::addTCAcolumns('be_users', $columns);
 ExtensionManagementUtility::addToAllTCAtypes(
     'be_users',
-    $field . ', in2mcp_oauth_grants',
+    'in2mcp_oauth_grants, ' . $field,
     '',
     'after:--div--;core.form.tabs:extended'
 );
