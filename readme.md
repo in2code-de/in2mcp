@@ -163,7 +163,8 @@ ddev composer test:functional               # run the functional tests (all four
 
 | Version | Date       | Description                                                                                                                        |
 |---------|------------|------------------------------------------------------------------------------------------------------------------------------------|
-| 5.0.0   | 2026-11-18 | New tools get_workspaces, switch_workspace, add_file_from_content and create_file_upload with an upload endpoint, find records with empty fields and files with empty metadata, restrict the client addresses (mcpServerAllowedIps), MCP for editors per backend group, tool annotations (read only, destructive, open world), functional tests and PHP CS Fixer. Fixes: accept clients of the MCP revision 2026-07-28, refuse content types the backend groups do not allow, refuse files the file field does not accept, store children of a page on the page itself, refuse fields of a translation TYPO3 would not write, no warning for the navigation title in get_recently_changed_pages. Security Hardening |
+| 6.0.0 !!! | 2026-11-23 | OAuth 2.1 as second way to connect besides the api key: consent page with backend login and MFA, dynamic client registration, client id metadata documents, clients with secret for Gemini Enterprise, read only or read and write access, connections listed and revocable in the backend user record, rate limited OAuth endpoints, cleanup command in2mcp:oauth:cleanup. Extension configuration grouped in the tabs Connections and File. Breaking: api keys are off by default (setting apiKeyAuthentication) |
+| 5.0.0 !!! | 2026-11-18 | New tools get_workspaces, switch_workspace, add_file_from_content and create_file_upload with an upload endpoint, find records with empty fields and files with empty metadata, restrict the client addresses (mcpServerAllowedIps), MCP for editors per backend group, tool annotations (read only, destructive, open world), functional tests and PHP CS Fixer. Fixes: accept clients of the MCP revision 2026-07-28, refuse content types the backend groups do not allow, refuse files the file field does not accept, store children of a page on the page itself, refuse fields of a translation TYPO3 would not write, no warning for the navigation title in get_recently_changed_pages. Security Hardening |
 | 4.1.0   | 2026-11-12 | get_recently_changed_pages and get_recently_changed_content name the last editor (changedBy) for administrators |
 | 4.0.0   | 2026-11-12 | New tools get_recently_changed_pages and get_recently_changed_content, new administrator tools get_backend_users and get_recent_changes |
 | 3.0.1   | 2026-11-11 | Allow mcp/sdk 0.9 again, so the extension can be installed on TYPO3 13 (remove SdkCompatibility with TYPO3 13 support)             |
@@ -178,7 +179,7 @@ ddev composer test:functional               # run the functional tests (all four
 
 ## Breaking Changes
 
-### 6.0.0 (not released yet)
+### 6.0.0
 
 - **Api keys are off by default.** The new setting `apiKeyAuthentication` (tab "Connections" of the extension
   configuration) is `0` by default, and TYPO3 writes this default into the configuration with the update. Every
