@@ -354,6 +354,16 @@ final class McpServerTest extends AbstractMiddlewareTestCase
         self::assertSame(401, $this->listTools($apiKey)->getStatusCode());
     }
 
+    // TYPO3 fills a missing setting from ext_conf_template.txt like an update from 5.x does - api keys are off then
+    #[Test]
+    public function apiKeyIsRefusedWhileTheSettingWasNeverSaved(): void
+    {
+        $apiKey = $this->createApiKey('admin');
+        unset($GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['apiKeyAuthentication']);
+
+        self::assertSame(401, $this->listTools($apiKey)->getStatusCode());
+    }
+
     #[Test]
     public function accessTokenIsAcceptedWhileApiKeysAreSwitchedOff(): void
     {
