@@ -9,6 +9,7 @@ use In2code\In2mcp\Domain\Service\ClientRegistrationService;
 use In2code\In2mcp\Middleware\McpAuthorization;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
+use TYPO3\CMS\Core\Cache\CacheManager;
 
 final class McpAuthorizationTest extends AbstractMiddlewareTestCase
 {
@@ -16,6 +17,7 @@ final class McpAuthorizationTest extends AbstractMiddlewareTestCase
     private const RESOURCE = 'https://typo3-testing.local/typo3/mcp';
     private const REDIRECT_URI = 'https://claude.ai/api/mcp/auth_callback';
     private const CODE_CHALLENGE = 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM';
+    private const RATE_LIMITED_ADDRESS = '203.0.113.31';
 
     private string $clientIdentifier = '';
 
@@ -93,6 +95,21 @@ final class McpAuthorizationTest extends AbstractMiddlewareTestCase
 
         self::assertSame(400, $response->getStatusCode());
         self::assertStringContainsString('metadata document is not valid', (string)$response->getBody());
+    }
+
+    #[Test]
+    public function authorizationRequestsAreLimitedPerAddress(): void
+    {
+        $this->get(CacheManager::class)->getCache('ratelimiter')->flush();
+        $this->clientAddress = self::RATE_LIMITED_ADDRESS;
+        $GLOBALS['TYPO3_CONF_VARS']['SYS']['rateLimiter']['in2mcp'] = ['limit' => 2];
+        $this->authorize([]);
+        $this->authorize(['client_id' => 'unknown']);
+
+        $response = $this->authorize([]);
+
+        self::assertSame(429, $response->getStatusCode());
+        self::assertSame('', $response->getHeaderLine('Location'));
     }
 
     #[Test]

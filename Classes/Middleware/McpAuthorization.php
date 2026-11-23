@@ -6,6 +6,7 @@ namespace In2code\In2mcp\Middleware;
 
 use In2code\In2mcp\Controller\AuthorizationController;
 use In2code\In2mcp\Domain\Mcp\Authentication\ClientAddressService;
+use In2code\In2mcp\Domain\Mcp\RateLimiter\RateLimiterFactory;
 use In2code\In2mcp\Domain\Service\AuthorizationService;
 use In2code\In2mcp\Domain\Service\ConfigurationService;
 use In2code\In2mcp\Domain\Service\EndpointUrlService;
@@ -32,6 +33,7 @@ class McpAuthorization extends AbstractOAuthEndpoint
         private readonly AuthorizationService $authorizationService,
         private readonly EndpointUrlService $endpointUrlService,
         private readonly UriBuilder $uriBuilder,
+        private readonly RateLimiterFactory $rateLimiterFactory,
     ) {
         parent::__construct($configurationService, $clientAddressService, $logger);
     }
@@ -46,8 +48,14 @@ class McpAuthorization extends AbstractOAuthEndpoint
         return ['GET'];
     }
 
+    // Every request is counted, also a valid one: it stores a request and may fetch a client id metadata document
     protected function handle(ServerRequestInterface $request): ResponseInterface
     {
+        if ($this->rateLimiterFactory->create($request)->consume()->isAccepted() === false) {
+            $this->logger->warning('MCP: Too many authorization requests, request was rejected');
+            return $this->getErrorPage('Too many requests, please try again later', 429);
+        }
+
         try {
             $authorizationRequest = $this->authorizationService->createRequest(
                 $request->getQueryParams(),

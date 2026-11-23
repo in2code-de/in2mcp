@@ -665,8 +665,9 @@ default as well) makes no request; its endpoint accepts only one-time tokens tha
   to create one - the backend login is still required. The decision itself is protected by a form token and only
   the identifier of the waiting request travels through the browser. It names the host the browser goes back to,
   as a registration is open to everybody and a client can choose any name.
-- **Registration and token endpoint** count against the rate limit of the address; a registration always, a token
-  request only when it fails. Clients that registered themselves and were never used are removed by
+- **Registration, authorization and token endpoint** count against the rate limit of the address; a registration
+  and an authorization request always (the latter is counted for the browser of the user, a successful token
+  request of the same address resets it), a token request only when it fails. Clients that registered themselves and were never used are removed by
   `in2mcp:oauth:cleanup`.
 - **The tables of clients and connections** are refused to every tool, like `be_users`.
 
@@ -753,7 +754,7 @@ A connection with read only access gets the reading tools alone.
 ### Rate limiting
 
 Failing authentications and failing token requests are limited per remote address, 20 in 15 minutes by default,
-and every client registration counts as well. A successful
+and every client registration and authorization request counts as well. A successful
 authentication resets the counter, so only failing requests count. Configurable with
 `$GLOBALS['TYPO3_CONF_VARS']['SYS']['rateLimiter']['in2mcp']` (keys `limit` and `interval`).
 
