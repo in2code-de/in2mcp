@@ -40,7 +40,7 @@ jobs:
 
       - name: "Install tailor"
         run: |
-          composer global require typo3/tailor:2.1.0--prefer-dist --no-progress
+          composer global require typo3/tailor:2.1.0 --prefer-dist --no-progress
           composer global config bin-dir --absolute --quiet >> "$GITHUB_PATH"
 
       # git archive applies the export-ignore rules of .gitattributes, tailor alone would not
