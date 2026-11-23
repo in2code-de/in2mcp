@@ -75,6 +75,14 @@ final class McpClientRegistrationTest extends AbstractMiddlewareTestCase
     }
 
     #[Test]
+    public function registrationIsRefusedForAClientAddressOutsideOfTheAllowedAddresses(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['mcpServerAllowedIps'] = '198.51.100.0/24';
+
+        self::assertSame(403, $this->register(['redirect_uris' => [self::REDIRECT_URI]])->getStatusCode());
+    }
+
+    #[Test]
     public function registrationsAreLimitedPerAddress(): void
     {
         $this->get(CacheManager::class)->getCache('ratelimiter')->flush();

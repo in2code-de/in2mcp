@@ -50,8 +50,10 @@ Which addresses a client connects from depends on where it runs:
   `153.61.208.0/20`, IPv4 only. Anthropic announces changes there.
 - **Clients on a computer**, like Claude Code, connect from the address of that computer or of its network, for
   example the office or the VPN.
+- **The browser of the user** opens `/typo3/mcp/authorize` when an OAuth client connects, from claude.ai as well.
+  With OAuth the list therefore needs the addresses of the users, too - a user outside of them can not connect.
 
-Example for claude.ai plus the office network:
+Example for claude.ai plus the office network (the clients on computers and the browsers of the users):
 
 ```php
 $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['mcpServerAllowedIps']
@@ -148,9 +150,11 @@ with the scheduler task *Execute console commands*:
 vendor/bin/typo3 in2mcp:oauth:cleanup
 ```
 
-The token endpoint is called by the cloud of the client (claude.ai, ChatGPT) or by the computer of the user
-(Claude Code), so `mcpServerAllowedIps` and `[BE][IPmaskList]` have to allow it like the MCP endpoint itself. The
-consent page runs in the browser of the user and is subject to the backend restrictions only.
+Every OAuth endpoint answers only the addresses of `mcpServerAllowedIps`, like the MCP endpoint itself. Registration
+and token endpoint are called by the cloud of the client (claude.ai, ChatGPT) or by the computer of the user (Claude
+Code). The authorization endpoint `/typo3/mcp/authorize` and the consent page are opened in the **browser of the
+user** - so a restricted list has to contain the addresses of the users as well (office, VPN), otherwise they get
+`403` instead of the backend login. The consent page is subject to `[BE][IPmaskList]` and the backend login.
 
 ### 4. Create an api key
 

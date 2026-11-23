@@ -112,6 +112,18 @@ final class McpAuthorizationTest extends AbstractMiddlewareTestCase
         self::assertSame('', $response->getHeaderLine('Location'));
     }
 
+    // The browser of the user opens the endpoint, so the addresses of the users belong into the list as well
+    #[Test]
+    public function browserOutsideTheAllowedClientAddressesIsRefused(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['mcpServerAllowedIps'] = '198.51.100.0/24';
+
+        $response = $this->authorize([]);
+
+        self::assertSame(403, $response->getStatusCode());
+        self::assertSame('', $response->getHeaderLine('Location'));
+    }
+
     #[Test]
     public function authorizationIsLeftToTheBackendWhileOAuthIsSwitchedOff(): void
     {
