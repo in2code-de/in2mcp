@@ -56,6 +56,10 @@ class McpClientRegistration extends AbstractOAuthEndpoint
             $this->logger->info('MCP: OAuth client "' . $registration['client_id'] . '" registered');
             return $this->withoutCaching(new JsonResponse($registration, 201));
         } catch (OAuthException $exception) {
+            $this->logger->warning(
+                'MCP: OAuth client registration was refused: ' . $exception->getError() . ' - '
+                . $exception->getMessage()
+            );
             return $this->getErrorResponse($exception);
         } catch (Throwable $exception) {
             $this->logger->error('MCP: Client registration failed: ' . $exception->getMessage());
