@@ -8,24 +8,29 @@ use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Model\OAuthClient;
 use In2code\In2mcp\Domain\Repository\OAuthClientRepository;
 use In2code\In2mcp\Exception\OAuthException;
+use TYPO3\CMS\Core\Crypto\PasswordHashing\InvalidPasswordHashException;
+use TYPO3\CMS\Core\Crypto\PasswordHashing\PasswordHashFactory;
 use TYPO3\CMS\Core\Crypto\Random;
 
 /**
- * Dynamic client registration (RFC 7591) for public clients: a client gets an identifier for its redirect uris
- * and nothing else - no secret, no rights. What it may do is decided by the user on the consent page.
+ * Dynamic client registration (RFC 7591): a client gets an identifier for its redirect uris and nothing else - no
+ * rights. What it may do is decided by the user on the consent page. A client that asks for a secret, as the
+ * metadata allows, gets one - but has to use PKCE all the same.
  */
 readonly class ClientRegistrationService
 {
     private const CLIENT_IDENTIFIER_LENGTH = 32;
     private const MAXIMUM_REDIRECT_URIS = 10;
     private const MAXIMUM_URI_LENGTH = 2000;
-    private const AUTHENTICATION_METHOD = 'none';
+    private const CLIENT_SECRET_LENGTH = 64;
+    private const HASH_MODE = 'BE';
     private const GRANT_TYPES = ['authorization_code', 'refresh_token'];
     private const RESPONSE_TYPES = ['code'];
 
     public function __construct(
         private OAuthClientRepository $clientRepository,
         private Random $random,
+        private PasswordHashFactory $passwordHashFactory,
     ) {
     }
 
@@ -34,27 +39,39 @@ readonly class ClientRegistrationService
      * @return array<string, mixed> The registration response
      * @throws OAuthException
      * @throws Exception
+     * @throws InvalidPasswordHashException
      */
     public function register(array $metadata): array
     {
-        $this->assertPublicClient($metadata);
+        $authenticationMethod = $this->getAuthenticationMethod($metadata);
+        $this->assertGrantTypes($metadata);
+        $secret = $authenticationMethod === OAuthClient::AUTHENTICATION_METHOD_NONE
+            ? ''
+            : $this->random->generateRandomHexString(self::CLIENT_SECRET_LENGTH);
         $client = new OAuthClient(
             $this->random->generateRandomHexString(self::CLIENT_IDENTIFIER_LENGTH),
             OAuthClient::cleanName($metadata['client_name'] ?? ''),
             $this->getRedirectUris($metadata),
-            OAuthClient::TYPE_DYNAMIC
+            OAuthClient::TYPE_DYNAMIC,
+            $this->hashSecret($secret)
         );
         $this->clientRepository->insert($client);
 
-        return [
+        $registration = [
             'client_id' => $client->getClientIdentifier(),
             'client_id_issued_at' => time(),
             'client_name' => $client->getClientName(),
             'redirect_uris' => $client->getRedirectUris(),
             'grant_types' => self::GRANT_TYPES,
             'response_types' => self::RESPONSE_TYPES,
-            'token_endpoint_auth_method' => self::AUTHENTICATION_METHOD,
+            'token_endpoint_auth_method' => $authenticationMethod,
         ];
+        if ($secret !== '') {
+            // The plain secret is answered once and only its hash is stored. 0 means it does not expire (RFC 7591)
+            $registration['client_secret'] = $secret;
+            $registration['client_secret_expires_at'] = 0;
+        }
+        return $registration;
     }
 
     /**
@@ -76,20 +93,41 @@ readonly class ClientRegistrationService
     }
 
     /**
+     * @throws InvalidPasswordHashException
+     */
+    private function hashSecret(string $secret): string
+    {
+        return $secret === ''
+            ? ''
+            : $this->passwordHashFactory->getDefaultHashInstance(self::HASH_MODE)->getHashedPassword($secret);
+    }
+
+    /**
+     * The methods the authorization server metadata announces - a client may pick any of them
+     *
      * @param array<string, mixed> $metadata
      * @throws OAuthException
      */
-    private function assertPublicClient(array $metadata): void
+    private function getAuthenticationMethod(array $metadata): string
     {
-        $method = $metadata['token_endpoint_auth_method'] ?? self::AUTHENTICATION_METHOD;
-        if ($method !== self::AUTHENTICATION_METHOD) {
+        $method = $metadata['token_endpoint_auth_method'] ?? OAuthClient::AUTHENTICATION_METHOD_NONE;
+        if (in_array($method, OAuthClient::AUTHENTICATION_METHODS, true) === false) {
             throw new OAuthException(
                 OAuthException::INVALID_CLIENT_METADATA,
-                'Only public clients with PKCE are supported, token_endpoint_auth_method has to be "none"',
+                'Supported values of token_endpoint_auth_method are "'
+                . implode('", "', OAuthClient::AUTHENTICATION_METHODS) . '"',
                 1763740001
             );
         }
+        return $method;
+    }
 
+    /**
+     * @param array<string, mixed> $metadata
+     * @throws OAuthException
+     */
+    private function assertGrantTypes(array $metadata): void
+    {
         $grantTypes = $metadata['grant_types'] ?? self::GRANT_TYPES;
         if (is_array($grantTypes) === false || array_diff($grantTypes, self::GRANT_TYPES) !== []) {
             throw new OAuthException(

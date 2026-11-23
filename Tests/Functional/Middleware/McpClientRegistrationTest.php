@@ -38,6 +38,22 @@ final class McpClientRegistrationTest extends AbstractMiddlewareTestCase
     }
 
     #[Test]
+    public function clientThatAsksForASecretGetsOneAndOnlyItsHashIsStored(): void
+    {
+        $response = $this->register([
+            'redirect_uris' => [self::REDIRECT_URI],
+            'token_endpoint_auth_method' => 'client_secret_basic',
+        ]);
+
+        self::assertSame(201, $response->getStatusCode(), (string)$response->getBody());
+        $registration = $this->decode($response);
+        self::assertSame('client_secret_basic', $registration['token_endpoint_auth_method']);
+        $client = $this->get(OAuthClientRepository::class)->findByClientIdentifier($registration['client_id']);
+        self::assertTrue($client?->hasSecret());
+        self::assertNotSame($registration['client_secret'], $client->getSecretHash());
+    }
+
+    #[Test]
     public function clientWithAnUnsafeRedirectUriIsRefused(): void
     {
         $response = $this->register(['redirect_uris' => ['http://attacker.example.org/callback']]);

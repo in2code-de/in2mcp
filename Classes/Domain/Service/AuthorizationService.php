@@ -200,12 +200,12 @@ readonly class AuthorizationService
         return $redirectUri;
     }
 
-    // A client with a secret authenticates at the token endpoint and may leave PKCE out, a public client never
+    // A client an administrator created with a secret may leave PKCE out, every other client never
     private function isValidCodeChallenge(OAuthClient $client, string $codeChallenge, string $method): bool
     {
         $isPkce = $method === self::CODE_CHALLENGE_METHOD
             && preg_match(self::CODE_CHALLENGE_PATTERN, $codeChallenge) === 1;
-        return $isPkce || ($client->hasSecret() && $codeChallenge === '' && $method === '');
+        return $isPkce || ($client->isPkceOptional() && $codeChallenge === '' && $method === '');
     }
 
     // RFC 8707 - a client that names no resource gets a token for this endpoint, which is the only resource here

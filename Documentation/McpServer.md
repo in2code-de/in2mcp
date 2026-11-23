@@ -130,7 +130,9 @@ somewhere else (for example to a directory for certificates) has to pass this pa
 | `/typo3/mcp/token`                                   | Exchanges the code for tokens and renews them              |
 
 **Clients** reach the server in three ways. Claude, ChatGPT and Copilot Studio **register themselves** at
-`/register` before the first connection. Claude and ChatGPT prefer a **client id metadata document**: the client
+`/register` before the first connection. A client may ask for a secret there (`client_secret_basic` or
+`client_secret_post`, as the metadata offers): it gets one in the answer, only its hash is stored, and it has to use
+PKCE all the same. Claude and ChatGPT prefer a **client id metadata document**: the client
 id is a https url, and TYPO3 fetches the name and the redirect uris of the client from there. That is an outgoing
 request, so it is off until `oauthClientMetadataDocuments` is switched on - the clients register themselves
 instead. A client created by an administrator in the backend is the third way, needed for Gemini Enterprise.

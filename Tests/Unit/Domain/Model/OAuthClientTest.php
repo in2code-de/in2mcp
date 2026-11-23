@@ -58,6 +58,28 @@ final class OAuthClientTest extends UnitTestCase
         self::assertTrue($subject->hasSecret());
     }
 
+    public static function pkceOptionalDataProvider(): array
+    {
+        return [
+            'manual client with secret' => [OAuthClient::TYPE_MANUAL, 'hash', true],
+            'manual client without secret' => [OAuthClient::TYPE_MANUAL, '', false],
+            'registered client with secret' => [OAuthClient::TYPE_DYNAMIC, 'hash', false],
+            'metadata document client' => [OAuthClient::TYPE_METADATA_DOCUMENT, '', false],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('pkceOptionalDataProvider')]
+    public function isPkceOptionalOnlyForAManualClientWithSecret(
+        string $registrationType,
+        string $secretHash,
+        bool $expected
+    ): void {
+        $subject = new OAuthClient('abc', 'Client', ['https://a.example/cb'], $registrationType, $secretHash);
+
+        self::assertSame($expected, $subject->isPkceOptional());
+    }
+
     #[Test]
     public function cleanNameRemovesControlCharactersAndCutsTheName(): void
     {

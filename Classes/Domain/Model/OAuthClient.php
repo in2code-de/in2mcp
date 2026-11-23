@@ -12,6 +12,13 @@ readonly class OAuthClient
 
     public const LOOPBACK_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
 
+    public const AUTHENTICATION_METHOD_NONE = 'none';
+    public const AUTHENTICATION_METHODS = [
+        self::AUTHENTICATION_METHOD_NONE,
+        'client_secret_basic',
+        'client_secret_post',
+    ];
+
     private const MAXIMUM_NAME_LENGTH = 100;
 
     /**
@@ -92,6 +99,12 @@ readonly class OAuthClient
     public function hasSecret(): bool
     {
         return $this->secretHash !== '';
+    }
+
+    // Only a client an administrator created with a secret may leave PKCE out - one that registered itself never
+    public function isPkceOptional(): bool
+    {
+        return $this->hasSecret() && $this->registrationType === self::TYPE_MANUAL;
     }
 
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Service;
 
 use In2code\In2mcp\Domain\Model\AccessScope;
+use In2code\In2mcp\Domain\Model\OAuthClient;
 use Psr\Http\Message\ServerRequestInterface;
 
 readonly class OAuthMetadataService
@@ -51,7 +52,7 @@ readonly class OAuthMetadataService
             'response_types_supported' => ['code'],
             'response_modes_supported' => ['query'],
             'grant_types_supported' => ['authorization_code', 'refresh_token'],
-            'token_endpoint_auth_methods_supported' => ['none', 'client_secret_basic', 'client_secret_post'],
+            'token_endpoint_auth_methods_supported' => OAuthClient::AUTHENTICATION_METHODS,
             'code_challenge_methods_supported' => ['S256'],
             'client_id_metadata_document_supported' => $this->configurationService->isClientMetadataDocumentActivated(),
         ];

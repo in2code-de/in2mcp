@@ -11,6 +11,8 @@ use In2code\In2mcp\Exception\OAuthException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
+use TYPO3\CMS\Core\Crypto\PasswordHashing\PasswordHashFactory;
+use TYPO3\CMS\Core\Crypto\PasswordHashing\PasswordHashInterface;
 use TYPO3\CMS\Core\Crypto\Random;
 use TYPO3\TestingFramework\Core\Unit\UnitTestCase;
 
@@ -23,7 +25,13 @@ final class ClientRegistrationServiceTest extends UnitTestCase
     {
         parent::setUp();
         $this->clientRepository = $this->createMock(OAuthClientRepository::class);
-        $this->subject = new ClientRegistrationService($this->clientRepository, new Random());
+        $passwordHash = $this->createMock(PasswordHashInterface::class);
+        $passwordHash->method('getHashedPassword')->willReturnCallback(
+            static fn (string $secret): string => 'hashed:' . $secret
+        );
+        $passwordHashFactory = $this->createMock(PasswordHashFactory::class);
+        $passwordHashFactory->method('getDefaultHashInstance')->willReturn($passwordHash);
+        $this->subject = new ClientRegistrationService($this->clientRepository, new Random(), $passwordHashFactory);
     }
 
     public static function redirectUriDataProvider(): array
@@ -69,6 +77,39 @@ final class ClientRegistrationServiceTest extends UnitTestCase
 
         self::assertMatchesRegularExpression('~^[0-9a-f]{32}$~', $registration['client_id']);
         self::assertSame('none', $registration['token_endpoint_auth_method']);
+        self::assertArrayNotHasKey('client_secret', $registration);
+    }
+
+    public static function secretAuthenticationMethodDataProvider(): array
+    {
+        return [
+            'basic' => ['client_secret_basic'],
+            'post' => ['client_secret_post'],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('secretAuthenticationMethodDataProvider')]
+    public function registerIssuesASecretToAClientThatAsksForOne(string $method): void
+    {
+        $storedClient = null;
+        $this->clientRepository->expects(self::once())->method('insert')->willReturnCallback(
+            static function (OAuthClient $client) use (&$storedClient): void {
+                $storedClient = $client;
+            }
+        );
+
+        $registration = $this->subject->register([
+            'redirect_uris' => ['https://claude.ai/api/mcp/auth_callback'],
+            'token_endpoint_auth_method' => $method,
+        ]);
+
+        self::assertSame($method, $registration['token_endpoint_auth_method']);
+        self::assertMatchesRegularExpression('~^[0-9a-f]{64}$~', $registration['client_secret']);
+        self::assertSame(0, $registration['client_secret_expires_at']);
+        self::assertInstanceOf(OAuthClient::class, $storedClient);
+        self::assertSame('hashed:' . $registration['client_secret'], $storedClient->getSecretHash());
+        self::assertFalse($storedClient->isPkceOptional());
     }
 
     public static function invalidMetadataDataProvider(): array
@@ -78,8 +119,8 @@ final class ClientRegistrationServiceTest extends UnitTestCase
             'empty redirect uris' => [['redirect_uris' => []], OAuthException::INVALID_REDIRECT_URI],
             'redirect uris no list' => [['redirect_uris' => 'https://a.b/c'], OAuthException::INVALID_REDIRECT_URI],
             'disallowed redirect uri' => [['redirect_uris' => ['http://a.b/c']], OAuthException::INVALID_REDIRECT_URI],
-            'confidential client' => [
-                ['redirect_uris' => ['https://a.b/c'], 'token_endpoint_auth_method' => 'client_secret_basic'],
+            'unsupported authentication method' => [
+                ['redirect_uris' => ['https://a.b/c'], 'token_endpoint_auth_method' => 'private_key_jwt'],
                 OAuthException::INVALID_CLIENT_METADATA,
             ],
             'unsupported grant type' => [

@@ -163,7 +163,7 @@ readonly class TokenRequestService
             && hash_equals($code->getCodeChallenge(), $challenge);
 
         return $code->getCodeChallenge() === ''
-            ? $client->hasSecret() && $codeVerifier === ''
+            ? $client->isPkceOptional() && $codeVerifier === ''
             : $isMatchingVerifier;
     }
 

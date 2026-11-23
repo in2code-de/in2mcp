@@ -212,6 +212,32 @@ final class McpTokenTest extends AbstractMiddlewareTestCase
     }
 
     #[Test]
+    public function registeredClientWithSecretAuthenticatesWithItsSecret(): void
+    {
+        $secret = $this->registerClientWithSecret();
+
+        $withoutSecret = $this->requestToken($this->getCodeParameters($this->createCode()));
+        $withSecret = $this->requestToken(
+            ['client_secret' => $secret] + $this->getCodeParameters($this->createCode())
+        );
+
+        self::assertSame(401, $withoutSecret->getStatusCode());
+        self::assertSame(200, $withSecret->getStatusCode(), (string)$withSecret->getBody());
+    }
+
+    #[Test]
+    public function registeredClientWithSecretStillNeedsPkce(): void
+    {
+        $secret = $this->registerClientWithSecret();
+        $parameters = ['client_secret' => $secret, 'code_verifier' => '']
+            + $this->getCodeParameters($this->createCode(''));
+
+        $response = $this->requestToken($parameters);
+
+        self::assertSame('invalid_grant', $this->decode($response)['error']);
+    }
+
+    #[Test]
     public function tokenRequestIsLeftToTheBackendWhileOAuthIsSwitchedOff(): void
     {
         $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['oauth'] = '0';
@@ -265,6 +291,18 @@ final class McpTokenTest extends AbstractMiddlewareTestCase
             'client_name' => 'Claude Code',
             'redirect_uris' => [self::REDIRECT_URI],
         ])['client_id'];
+    }
+
+    // Registers like claude.ai with client_secret_post and makes it the client of the following requests
+    private function registerClientWithSecret(): string
+    {
+        $registration = $this->get(ClientRegistrationService::class)->register([
+            'client_name' => 'Claude',
+            'redirect_uris' => [self::REDIRECT_URI],
+            'token_endpoint_auth_method' => 'client_secret_post',
+        ]);
+        $this->clientIdentifier = $registration['client_id'];
+        return $registration['client_secret'];
     }
 
     private function createCode(string $codeChallenge = self::CODE_CHALLENGE): string

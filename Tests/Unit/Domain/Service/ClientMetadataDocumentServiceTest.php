@@ -17,6 +17,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
+use TYPO3\CMS\Core\Crypto\PasswordHashing\PasswordHashFactory;
 use TYPO3\CMS\Core\Crypto\Random;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use TYPO3\CMS\Core\Http\Response;
@@ -38,7 +39,11 @@ final class ClientMetadataDocumentServiceTest extends UnitTestCase
         $this->subject = new ClientMetadataDocumentService(
             new UrlValidationService(new ConfigurationService(new ExtensionConfiguration())),
             $this->guardedRequestService,
-            new ClientRegistrationService($this->createMock(OAuthClientRepository::class), new Random())
+            new ClientRegistrationService(
+                $this->createMock(OAuthClientRepository::class),
+                new Random(),
+                $this->createMock(PasswordHashFactory::class)
+            )
         );
     }
 
