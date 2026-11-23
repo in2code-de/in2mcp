@@ -42,7 +42,7 @@ class BackendUserAuthenticator
     {
         $authenticationContext = AuthenticationContext::fromRequestAttribute($request);
         if ($authenticationContext === null) {
-            throw new UserNotFoundException('MCP: Request does not provide an api key', 1756800304);
+            throw new UserNotFoundException('MCP: Request does not provide an api key or access token', 1756800304);
         }
         if ($authenticationContext->getUploadUserIdentifier() === null) {
             $this->assertWellFormedCredential($authenticationContext);
@@ -107,7 +107,7 @@ class BackendUserAuthenticator
     protected function assertWellFormedCredential(AuthenticationContext $authenticationContext): void
     {
         if ($authenticationContext->hasCredential() === false) {
-            throw new UserNotFoundException('MCP: Request does not provide an api key', 1756800304);
+            throw new UserNotFoundException('MCP: Request does not provide an api key or access token', 1756800304);
         }
         if ($authenticationContext->isAccessToken() && $authenticationContext->hasWellFormedAccessToken() === false) {
             throw new UserNotFoundException('MCP: Request provides a malformed access token', 1763712000);
