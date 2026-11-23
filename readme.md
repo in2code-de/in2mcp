@@ -43,7 +43,7 @@ exposes `tools`, `resources` and `prompts`, the LLM decides when to call them.
 # 3a. OAuth: switch on the setting "oauth" and add the url to the client without any header,
 #     the user logs into the backend in the browser and confirms the access
 claude mcp add --transport http in2mcp https://your-domain.org/typo3/mcp
-# 3b. or an api key, for scripts and clients without a browser
+# 3b. or an api key, for scripts and clients without a browser - switch on the setting "apiKeyAuthentication" first
 vendor/bin/typo3 in2mcp:apikey <uid|username>
 claude mcp add --transport http in2mcp https://your-domain.org/typo3/mcp --header "Api-Key: <key>"
 ```
@@ -177,6 +177,13 @@ ddev composer test:functional               # run the functional tests (all four
 | 1.0.0   | 2026-09-02 | Initial extension release                                                                                                          |
 
 ## Breaking Changes
+
+### 6.0.0 (not released yet)
+
+- **Api keys are off by default.** The new setting `apiKeyAuthentication` (tab "Connections" of the extension
+  configuration) is `0` by default, and TYPO3 writes this default into the configuration with the update. Every
+  api key is refused afterwards, without being deleted. An installation that keeps connecting with api keys has to
+  switch the setting on after the update; one that moves to OAuth switches on `oauth` instead.
 
 ### 5.0.0
 

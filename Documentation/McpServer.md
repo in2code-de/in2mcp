@@ -155,8 +155,9 @@ consent page runs in the browser of the user and is subject to the backend restr
 ### 4. Create an api key
 
 The api key is the way for programs without a browser: scripts, CI pipelines, `Tests/Manual/mcpclient.sh`, and
-clients that cannot do OAuth. It can be switched off for the whole installation with `apiKeyAuthentication = 0`;
-every key is refused then, without being deleted.
+clients that cannot do OAuth. Api keys are **off by default** and have to be allowed with
+`apiKeyAuthentication = 1` - also after an update from 5.x, which used them without this setting. While it is off,
+every key is refused, without being deleted.
 
 Every backend user has its own api key in the field *MCP api key* of the backend user record, or via CLI:
 

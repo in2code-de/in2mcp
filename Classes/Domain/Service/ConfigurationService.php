@@ -163,10 +163,9 @@ readonly class ConfigurationService
         return (bool)$this->get('oauthClientMetadataDocuments');
     }
 
-    // On by default, so an installation that never saved the setting keeps working with its api keys
     public function isApiKeyAuthenticationActivated(): bool
     {
-        return (bool)($this->get('apiKeyAuthentication') ?? true);
+        return (bool)$this->get('apiKeyAuthentication');
     }
 
     public function isFileUploadActivated(): bool
