@@ -14,7 +14,8 @@ use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
  * The permissions of the backend user stay the authority. This service only adds a hard denial on top of them
  * for tables that hold authentication data or internal bookkeeping: an administrator may edit backend users in
  * the backend, but an api key that leaked must never be able to create one, and a client has no reason to write
- * the log or the reference index.
+ * the log or the reference index. An installation adds its own tables to that denial with the setting
+ * "deniedTables", for example tables with personal data.
  */
 class TableAccessService
 {
@@ -41,6 +42,9 @@ class TableAccessService
         'tx_scheduler_task_group',
     ];
 
+    // Ends an entry of "deniedTables" that stands for every table starting with it
+    public const WILDCARD = '*';
+
     /**
      * Readable for a client that wants to understand the installation, but never written through MCP, for
      * administrators neither: a leaked api key must not be able to widen what a user may do or where files go.
@@ -56,7 +60,8 @@ class TableAccessService
 
     public function __construct(
         private readonly BackendUserService $backendUserService,
-        private readonly TcaSchemaFactory $tcaSchemaFactory
+        private readonly TcaSchemaFactory $tcaSchemaFactory,
+        private readonly ConfigurationService $configurationService
     ) {
     }
 
@@ -105,7 +110,7 @@ class TableAccessService
     {
         $tables = [];
         foreach ($this->tcaSchemaFactory->all()->getNames() as $table) {
-            if (in_array($table, [...self::DENIED_TABLES, ...array_keys(self::READ_ONLY_TABLES)], true)) {
+            if ($this->isDenied($table) || array_key_exists($table, self::READ_ONLY_TABLES)) {
                 continue;
             }
             if ($this->backendUserService->isTableModifyAllowed($table)) {
@@ -114,6 +119,55 @@ class TableAccessService
         }
         sort($tables);
         return $tables;
+    }
+
+    /**
+     * Every denied table, for a query that has to leave them out - an entry ending with WILDCARD stands for every
+     * table starting with it
+     *
+     * @return list<string>
+     */
+    public function getDeniedTables(): array
+    {
+        return [...self::DENIED_TABLES, ...$this->configurationService->getDeniedTables()];
+    }
+
+    public function isDenied(string $table): bool
+    {
+        return in_array($table, self::DENIED_TABLES, true) || $this->isDeniedByConfiguration($table);
+    }
+
+    /**
+     * @throws TableNotAccessibleException
+     */
+    public function assertNotDenied(string $table): void
+    {
+        if (in_array($table, self::DENIED_TABLES, true)) {
+            throw new TableNotAccessibleException(
+                'The table "' . $table . '" holds users, sessions, internal bookkeeping or scheduled commands and'
+                . ' is never accessible through MCP, independent of the permissions of the backend user',
+                1756801012
+            );
+        }
+        if ($this->isDeniedByConfiguration($table)) {
+            throw new TableNotAccessibleException(
+                'The table "' . $table . '" is denied for MCP by this installation, for example because it holds'
+                . ' personal data. It is not accessible through MCP for any user - do not try to reach its records'
+                . ' in another way.',
+                1795509483
+            );
+        }
+    }
+
+    private function isDeniedByConfiguration(string $table): bool
+    {
+        $matchingEntries = array_filter(
+            $this->configurationService->getDeniedTables(),
+            static fn (string $entry): bool => str_ends_with($entry, self::WILDCARD)
+                ? str_starts_with($table, substr($entry, 0, -strlen(self::WILDCARD)))
+                : $table === $entry
+        );
+        return $matchingEntries !== [];
     }
 
     /**
@@ -132,20 +186,6 @@ class TableAccessService
                 'There is no table "' . $table . '" in this installation.'
                 . ' Call "get_schema" to see the tables that exist here.',
                 1756801008
-            );
-        }
-    }
-
-    /**
-     * @throws TableNotAccessibleException
-     */
-    private function assertNotDenied(string $table): void
-    {
-        if (in_array($table, self::DENIED_TABLES, true)) {
-            throw new TableNotAccessibleException(
-                'The table "' . $table . '" holds users, sessions, internal bookkeeping or scheduled commands and'
-                . ' is never accessible through MCP, independent of the permissions of the backend user',
-                1756801012
             );
         }
     }

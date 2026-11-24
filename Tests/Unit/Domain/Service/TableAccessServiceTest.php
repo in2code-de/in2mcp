@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Tests\Unit\Domain\Service;
 
 use In2code\In2mcp\Domain\Service\BackendUserService;
+use In2code\In2mcp\Domain\Service\ConfigurationService;
 use In2code\In2mcp\Domain\Service\TableAccessService;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -29,7 +30,11 @@ final class TableAccessServiceTest extends UnitTestCase
         'be_users',
         'fe_users',
         'tx_news',
+        'tx_powermail_domain_model_mail',
+        'tx_powermail_domain_model_answer',
     ];
+
+    private const CONFIGURED_DENIED_TABLES = ['tx_news', 'tx_powermail_domain_model_*'];
 
     public static function deniedTableDataProvider(): array
     {
@@ -160,35 +165,96 @@ final class TableAccessServiceTest extends UnitTestCase
         $this->createSubjectWithPermission(true)->assertWritable($table);
     }
 
+    public static function configuredDeniedTableDataProvider(): array
+    {
+        return [
+            'table name' => ['tx_news'],
+            'wildcard' => ['tx_powermail_domain_model_answer'],
+            'wildcard matching the prefix of another table' => ['tx_powermail_domain_model_mail'],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('configuredDeniedTableDataProvider')]
+    public function assertReadableRefusesConfiguredDeniedTable(string $table): void
+    {
+        $this->expectException(TableNotAccessibleException::class);
+        $this->expectExceptionCode(1795509483);
+        $this->createSubjectWithPermission(true, self::CONFIGURED_DENIED_TABLES)->assertReadable($table);
+    }
+
+    #[Test]
+    #[DataProvider('configuredDeniedTableDataProvider')]
+    public function assertWritableRefusesConfiguredDeniedTable(string $table): void
+    {
+        $this->expectException(TableNotAccessibleException::class);
+        $this->expectExceptionCode(1795509483);
+        $this->createSubjectWithPermission(true, self::CONFIGURED_DENIED_TABLES)->assertWritable($table);
+    }
+
+    #[Test]
+    #[DoesNotPerformAssertions]
+    public function assertReadableAcceptsTableThatOnlyStartsLikeAConfiguredTableWithoutWildcard(): void
+    {
+        $this->createSubjectWithPermission(true, ['tx_new'])->assertReadable('tx_news');
+    }
+
+    #[Test]
+    public function getDeniedTablesAddsConfiguredTablesToBuiltInTables(): void
+    {
+        $deniedTables = $this->createSubjectWithPermission(true, self::CONFIGURED_DENIED_TABLES)->getDeniedTables();
+
+        self::assertContains('be_users', $deniedTables);
+        self::assertContains('tx_powermail_domain_model_*', $deniedTables);
+    }
+
+    #[Test]
+    public function getWritableTablesLeavesOutConfiguredDeniedTables(): void
+    {
+        $writableTables = $this->createSubjectWithPermission(true, self::CONFIGURED_DENIED_TABLES)
+            ->getWritableTables();
+
+        self::assertSame(['pages', 'tt_content'], $writableTables);
+    }
+
     #[Test]
     public function getWritableTablesReturnsSortedAllowedTablesWithoutDeniedAndReadOnlyTables(): void
     {
         $backendUserService = self::createStub(BackendUserService::class);
         $backendUserService->method('isTableModifyAllowed')->willReturnCallback(
-            static fn (string $table): bool => $table !== 'tx_news'
+            static fn (string $table): bool => str_starts_with($table, 'tx_') === false
         );
 
         self::assertSame(['pages', 'tt_content'], $this->createSubject($backendUserService)->getWritableTables());
     }
 
-    private function createSubjectWithPermission(bool $isAllowed): TableAccessService
+    /**
+     * @param list<string> $deniedTables
+     */
+    private function createSubjectWithPermission(bool $isAllowed, array $deniedTables = []): TableAccessService
     {
         $backendUserService = self::createStub(BackendUserService::class);
         $backendUserService->method('isTableSelectAllowed')->willReturn($isAllowed);
         $backendUserService->method('isTableModifyAllowed')->willReturn($isAllowed);
 
-        return $this->createSubject($backendUserService);
+        return $this->createSubject($backendUserService, $deniedTables);
     }
 
-    private function createSubject(BackendUserService $backendUserService): TableAccessService
+    /**
+     * @param list<string> $deniedTables
+     */
+    private function createSubject(BackendUserService $backendUserService, array $deniedTables = []): TableAccessService
     {
+        $configurationService = self::createStub(ConfigurationService::class);
+        $configurationService->method('getDeniedTables')->willReturn($deniedTables);
+
         $tcaSchemaFactory = self::createStub(TcaSchemaFactory::class);
         $tcaSchemaFactory->method('has')->willReturnCallback(
             static fn (string $name): bool => in_array(explode('.', $name)[0], self::CONFIGURED_TABLES, true)
         );
         $tcaSchemaFactory->method('all')->willReturn($this->createSchemaCollection(self::CONFIGURED_TABLES));
 
-        return new TableAccessService($backendUserService, $tcaSchemaFactory);
+        return new TableAccessService($backendUserService, $tcaSchemaFactory, $configurationService);
     }
 
     /**

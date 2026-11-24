@@ -128,6 +128,10 @@ administrators included, and storages, file mounts, workspaces and TypoScript ar
 leaked cannot create a backend user, widen permissions or schedule a command. See
 `TableAccessService::DENIED_TABLES` and `READ_ONLY_TABLES`.
 
+Further tables - for example with personal data - are denied with the setting `deniedTables` (or the environment
+variable `IN2MCP_DENIED_TABLES` while the setting is empty), `tx_powermail_domain_model_*` denies every table that
+starts with it. The setting is empty by default.
+
 An api key has the form `<uid>.<secret>` and only the secret is stored, hashed. OAuth uses the authorization code
 flow with PKCE, the login on the consent page includes multi factor authentication, and tokens are stored as hash
 only. Failing authentications are rate limited per ip address. Multi factor authentication is skipped for an api

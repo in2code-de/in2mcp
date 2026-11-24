@@ -36,6 +36,7 @@ abstract class AbstractFunctionalTestCase extends FunctionalTestCase
                 'mcpServer' => '1',
                 'mcpServerPath' => 'mcp',
                 'mcpServerAllowedIps' => '*',
+                'deniedTables' => '',
                 'fileImport' => '0',
                 'fileImportMaximumSize' => '10485760',
                 'fileImportAllowedHosts' => '',

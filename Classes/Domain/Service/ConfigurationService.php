@@ -46,6 +46,12 @@ readonly class ConfigurationService
 
     private const REFUSED_PATH_SEGMENTS = ['.', '..'];
 
+    // Read when the setting "deniedTables" is empty, for installations that keep such values in the environment
+    public const DENIED_TABLES_ENVIRONMENT_VARIABLE = 'IN2MCP_DENIED_TABLES';
+
+    // A table name, optionally ending with "*" to deny every table that starts with it
+    private const DENIED_TABLE_PATTERN = '~^[A-Za-z0-9_]+\*?$~';
+
     /**
      * @throws ExtensionConfigurationExtensionNotConfiguredException
      * @throws ExtensionConfigurationPathDoesNotExistException
@@ -204,6 +210,26 @@ readonly class ConfigurationService
         ));
 
         return array_values($hosts);
+    }
+
+    /**
+     * Tables an installation refuses through MCP on top of the built-in list, for example for data protection.
+     * The setting wins, the environment variable is the fallback while the setting is empty. An entry that is no
+     * table name is ignored - a "*" alone would otherwise lock every table.
+     *
+     * @return list<string> table names, a name ending with "*" stands for every table starting with it
+     */
+    public function getDeniedTables(): array
+    {
+        $deniedTables = trim((string)$this->get('deniedTables'));
+        $deniedTables = $deniedTables !== ''
+            ? $deniedTables
+            : trim((string)getenv(self::DENIED_TABLES_ENVIRONMENT_VARIABLE));
+
+        return array_values(array_filter(
+            array_map(static fn (string $table): string => trim($table), explode(',', $deniedTables)),
+            static fn (string $table): bool => preg_match(self::DENIED_TABLE_PATTERN, $table) === 1
+        ));
     }
 
     /**

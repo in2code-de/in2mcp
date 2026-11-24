@@ -7,6 +7,9 @@ mcpServerPath = mcp
 # cat=basic/enable/0030; type=string; label= Allowed client addresses: Comma separated list of IP addresses or ranges that may use the MCP server, as CIDR ("192.168.0.0/24", "2001:db8::/32") or with wildcards ("192.168.*.*"). Every other address is refused before its api key is looked at. "*" (default) or an empty value allow every address. Claude.ai connects from "160.79.104.0/21,153.61.208.0/20". With OAuth the browser of the user opens the authorization endpoint, so the addresses of the users (office, VPN) belong into the list as well. [BE][IPmaskList] of TYPO3 applies to the MCP endpoint as well and has to contain these addresses, too. Behind a proxy, set [SYS][reverseProxyIP] so the address of the client is seen instead of the one of the proxy.
 mcpServerAllowedIps = *
 
+# cat=basic/enable/0040; type=string; label= Denied tables: Comma separated list of tables that are never read or written through MCP, for every user including administrators - for example tables with personal data. A name ending with "*" denies every table that starts with it ("tx_powermail_domain_model_*"). Deleting a page still deletes such records on it, as in the backend. Users, sessions and internal tables are always denied. While this field is empty, the environment variable IN2MCP_DENIED_TABLES is read instead.
+deniedTables =
+
 # cat=Connections/enable/0100; type=boolean; label= OAuth: Let MCP clients connect with OAuth. The user logs into the TYPO3 backend in the browser (including multi factor authentication) and confirms the access, the client then gets a short-lived token for this user. Needed for ChatGPT and Gemini, and the way to go for a connector that is shared in an organization on claude.ai, because every member connects as themselves.
 oauth = 0
 

@@ -22,6 +22,7 @@ The settings are in the extension configuration of in2mcp: the server on the tab
 | `oauth`                        | Clients may connect with OAuth, see [Connect with OAuth](#3-connect-with-oauth) | `0`     |
 | `oauthClientMetadataDocuments` | Accept a https url as OAuth client id and fetch the client from there | `0`     |
 | `apiKeyAuthentication`         | Clients may authenticate with an api key; `0` allows OAuth only       | `0`     |
+| `deniedTables`                 | Tables never read or written through MCP, see [Denied tables](#denied-tables) | empty   |
 
 The endpoint is `/typo3/mcp` by default and is configured with `mcpServerPath`, which is a path **below the
 TYPO3 backend**: `mcp` answers on `/typo3/mcp`, `intern/mcp-a7f3` answers on `/typo3/intern/mcp-a7f3`. A
@@ -738,6 +739,7 @@ initialized like in a regular backend request, and every read and write runs thr
   from "the client may do what the user may do": an api key lives in plain text in the configuration of a client, and
   one that leaked must not be able to create a backend user, widen the permissions of others, change where files are
   written or schedule a command. The lists are `TableAccessService::DENIED_TABLES` and `READ_ONLY_TABLES`.
+- An installation **denies further tables** with the setting `deniedTables`, see [Denied tables](#denied-tables).
 - `get_backend_users` and `get_recent_changes` are the only tools that read `be_users` and `sys_history`, and
   they answer **administrators only**. They return a fixed set of fields - username, real name, admin and
   disabled flag, last login, the names of the active MFA providers, and for a change its table, record, action and
@@ -756,6 +758,26 @@ exactly this connection.
 
 Revoking access means emptying the api key field, deleting the OAuth connection or disabling the backend user.
 A connection with read only access gets the reading tools alone.
+
+### Denied tables
+
+Some tables hold data a client should never see, whatever the backend user may do - personal data like the mails
+and answers of a form extension, addresses or applications. The setting `deniedTables` lists them, comma separated,
+and they are refused like `be_users`: for every user, administrators included, for reading and for writing.
+
+```
+deniedTables = tx_powermail_domain_model_*,tt_address
+```
+
+- a name ending with `*` denies every table that starts with it, so a table the extension adds later is denied
+  as well; an entry that is no table name (a `*` alone, a name with a dot or a space) is ignored
+- the setting is empty by default, so only the built-in tables are denied until an installation lists its own
+- while the setting is empty, the environment variable `IN2MCP_DENIED_TABLES` is read instead, in the same format -
+  empty the setting to manage the list in the environment
+- the tools that list tables (`get_schema`) leave denied tables out, and a client that asks for one is told that
+  the table is denied on purpose
+- deleting a page with `delete_record` still deletes the records of a denied table on it, exactly as the backend
+  does - the denial protects the content of those records, not the page from being deleted
 
 ### Rate limiting
 

@@ -55,6 +55,39 @@ final class RecordToolsTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
+    public function getRecordRefusesAConfiguredDeniedTableEvenForAnAdministrator(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['deniedTables'] = 'tt_cont*';
+        $this->loginAs(self::ADMIN);
+
+        $this->expectException(ClientFacingException::class);
+        $this->expectExceptionCode(1795509483);
+        $this->callTool('get_record', ['table' => 'tt_content', 'uid' => 1]);
+    }
+
+    #[Test]
+    public function findRecordsRefusesAConfiguredDeniedTable(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['deniedTables'] = 'tt_content';
+        $this->loginAs(self::EDITOR);
+
+        $this->expectException(ClientFacingException::class);
+        $this->expectExceptionCode(1795509483);
+        $this->callTool('find_records', ['table' => 'tt_content', 'pid' => 2]);
+    }
+
+    #[Test]
+    public function createRecordRefusesAConfiguredDeniedTable(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['deniedTables'] = 'tt_content';
+        $this->loginAs(self::ADMIN);
+
+        $this->expectException(ClientFacingException::class);
+        $this->expectExceptionCode(1795509483);
+        $this->callTool('create_record', ['table' => 'tt_content', 'pid' => 2, 'fields' => ['header' => 'x']]);
+    }
+
+    #[Test]
     public function getRecordNeverReturnsAPasswordField(): void
     {
         $this->loginAs(self::ADMIN);

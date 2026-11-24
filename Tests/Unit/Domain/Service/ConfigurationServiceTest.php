@@ -23,6 +23,7 @@ final class ConfigurationServiceTest extends UnitTestCase
         'oauthClientMetadataDocuments' => '0',
         'apiKeyAuthentication' => '1',
         'mcpServerAllowedIps' => '*',
+        'deniedTables' => '',
     ];
 
     private ConfigurationService $subject;
@@ -37,6 +38,7 @@ final class ConfigurationServiceTest extends UnitTestCase
     {
         unset($GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS'][ConfigurationService::EXTENSION_KEY]);
         unset($GLOBALS['TYPO3_CONF_VARS']['BE']['entryPoint']);
+        putenv(ConfigurationService::DENIED_TABLES_ENVIRONMENT_VARIABLE);
         parent::tearDown();
     }
 
@@ -238,6 +240,47 @@ final class ConfigurationServiceTest extends UnitTestCase
         $this->configure(['mcpServerAllowedIps' => $configuredIps]);
 
         self::assertSame($expectedIps, $this->subject->getMcpServerAllowedIps());
+    }
+
+    public static function deniedTablesDataProvider(): array
+    {
+        return [
+            'empty' => ['', []],
+            'one table' => ['tx_news', ['tx_news']],
+            'spaces and empty entries' => [' tx_news , ,tt_address ', ['tx_news', 'tt_address']],
+            'wildcard at the end' => ['tx_powermail_domain_model_*', ['tx_powermail_domain_model_*']],
+            'wildcard alone is ignored' => ['*,tx_news', ['tx_news']],
+            'wildcard inside is ignored' => ['tx_*_mail', []],
+            'record type is ignored' => ['tt_content.textmedia', []],
+            'quotes are ignored' => ['"tx_news"', []],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('deniedTablesDataProvider')]
+    public function getDeniedTablesReturnsValidEntries(string $configuredTables, array $expectedTables): void
+    {
+        $this->configure(['deniedTables' => $configuredTables]);
+
+        self::assertSame($expectedTables, $this->subject->getDeniedTables());
+    }
+
+    #[Test]
+    public function getDeniedTablesFallsBackToEnvironmentVariableWhileSettingIsEmpty(): void
+    {
+        putenv(ConfigurationService::DENIED_TABLES_ENVIRONMENT_VARIABLE . '=tx_news,tt_address');
+        $this->configure(['deniedTables' => ' ']);
+
+        self::assertSame(['tx_news', 'tt_address'], $this->subject->getDeniedTables());
+    }
+
+    #[Test]
+    public function getDeniedTablesPrefersSettingOverEnvironmentVariable(): void
+    {
+        putenv(ConfigurationService::DENIED_TABLES_ENVIRONMENT_VARIABLE . '=tt_address');
+        $this->configure(['deniedTables' => 'tx_news']);
+
+        self::assertSame(['tx_news'], $this->subject->getDeniedTables());
     }
 
     private function configure(array $configuration): void
