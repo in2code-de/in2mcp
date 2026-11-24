@@ -27,11 +27,7 @@ return [
         ],
     ],
     'EXTCONF' => [
-        'lang' => [
-            'availableLanguages' => [
-                'de',
-            ],
-        ],
+        'lang' => [],
     ],
     'EXTENSIONS' => [
         'backend' => [
@@ -97,6 +93,11 @@ return [
         'processor_effects' => false,
         'processor_enabled' => true,
         'processor_path' => '/usr/bin/',
+    ],
+    'LANG' => [
+        'availableLocales' => [
+            'de',
+        ],
     ],
     'LOG' => [
         'TYPO3' => [
