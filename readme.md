@@ -198,23 +198,23 @@ ddev composer test:functional               # run the functional tests (all four
 
 ## Changelog
 
-| Version | Date       | Description                                                                                                                        |
-|---------|------------|------------------------------------------------------------------------------------------------------------------------------------|
-| 6.0.2   | 2026-11-23 | Dynamic client registration gives a client secret to clients that ask for one (claude.ai could not connect without a client created in the backend), PKCE stays mandatory for them. Refused registrations are logged |
-| 6.0.1   | 2026-11-23 | Fix the installation of tailor in the TER release workflow |
-| 6.0.0 !!! | 2026-11-23 | OAuth 2.1 as second way to connect besides the api key: consent page with backend login and MFA, dynamic client registration, client id metadata documents, clients with secret for Gemini Enterprise, read only or read and write access, connections listed and revocable in the backend user record, rate limited OAuth endpoints, cleanup command in2mcp:oauth:cleanup. Extension configuration grouped in the tabs Connections and File. Breaking: api keys are off by default (setting apiKeyAuthentication) |
-| 5.0.0 !!! | 2026-11-18 | New tools get_workspaces, switch_workspace, add_file_from_content and create_file_upload with an upload endpoint, find records with empty fields and files with empty metadata, restrict the client addresses (mcpServerAllowedIps), MCP for editors per backend group, tool annotations (read only, destructive, open world), functional tests and PHP CS Fixer. Fixes: accept clients of the MCP revision 2026-07-28, refuse content types the backend groups do not allow, refuse files the file field does not accept, store children of a page on the page itself, refuse fields of a translation TYPO3 would not write, no warning for the navigation title in get_recently_changed_pages. Security Hardening |
-| 4.1.0   | 2026-11-12 | get_recently_changed_pages and get_recently_changed_content name the last editor (changedBy) for administrators |
-| 4.0.0   | 2026-11-12 | New tools get_recently_changed_pages and get_recently_changed_content, new administrator tools get_backend_users and get_recent_changes |
-| 3.0.1   | 2026-11-11 | Allow mcp/sdk 0.9 again, so the extension can be installed on TYPO3 13 (remove SdkCompatibility with TYPO3 13 support)             |
-| 3.0.0   | 2026-11-11 | New tool delete_file, added unit tests, small security improvent for importing images: refuse IPv6 addresses carrying an internal IPv4 in add_file_from_url                   |
-| 2.4.1   | 2026-11-11 | Security: update mcp/sdk to 0.10 (PKSA-s52d-n7sx-trsg), bind MCP sessions to the backend user                                      |
-| 2.4.0   | 2026-10-20 | Allowed values of select fields in get_schema (per page and record type), set fields of a new file reference in add_file_reference |
-| 2.3.0   | 2026-10-20 | Report allowed content elements per page in get_schema, some bugfixes to show usefull messages for permission problems             |
-| 2.2.0   | 2026-09-04 | Security: authenticate a request by its api key only, never by a backend session                                                   |
-| 2.1.0   | 2026-09-03 | Update extension icon, use schema API from TYPO3, update documentation                                                             |
-| 2.0.0   | 2026-09-02 | Allow creating of any records, adjust endpoint, allow inserting images, security reviews                                           |
-| 1.0.0   | 2026-09-02 | Initial extension release                                                                                                          |
+| Version | Date       | Status  | Description |
+|---------|------------|---------|-------------|
+| 6.0.2   | 2026-11-23 | Bugfix  | Dynamic client registration gives a client secret to clients that ask for one (claude.ai could not connect without a client created in the backend), PKCE stays mandatory for them. Refused registrations are logged |
+| 6.0.1   | 2026-11-23 | Bugfix  | Fix the installation of tailor in the TER release workflow |
+| 6.0.0 !!! | 2026-11-23 | Feature | OAuth 2.1 as second way to connect besides the api key: consent page with backend login and MFA, dynamic client registration, client id metadata documents, clients with secret for Gemini Enterprise, read only or read and write access, connections listed and revocable in the backend user record, rate limited OAuth endpoints, cleanup command in2mcp:oauth:cleanup. Extension configuration grouped in the tabs Connections and File. Breaking: api keys are off by default (setting apiKeyAuthentication) |
+| 5.0.0 !!! | 2026-11-18 | Feature | New tools get_workspaces, switch_workspace, add_file_from_content and create_file_upload with an upload endpoint, find records with empty fields and files with empty metadata, restrict the client addresses (mcpServerAllowedIps), MCP for editors per backend group, tool annotations (read only, destructive, open world), functional tests and PHP CS Fixer. Fixes: accept clients of the MCP revision 2026-07-28, refuse content types the backend groups do not allow, refuse files the file field does not accept, store children of a page on the page itself, refuse fields of a translation TYPO3 would not write, no warning for the navigation title in get_recently_changed_pages. Security Hardening |
+| 4.1.0   | 2026-11-12 | Feature | get_recently_changed_pages and get_recently_changed_content name the last editor (changedBy) for administrators |
+| 4.0.0   | 2026-11-12 | Feature | New tools get_recently_changed_pages and get_recently_changed_content, new administrator tools get_backend_users and get_recent_changes |
+| 3.0.1   | 2026-11-11 | Bugfix  | Allow mcp/sdk 0.9 again, so the extension can be installed on TYPO3 13 (remove SdkCompatibility with TYPO3 13 support)             |
+| 3.0.0   | 2026-11-11 | Feature | New tool delete_file, added unit tests, small security improvent for importing images: refuse IPv6 addresses carrying an internal IPv4 in add_file_from_url                   |
+| 2.4.1   | 2026-11-11 | Task    | Security: update mcp/sdk to 0.10 (PKSA-s52d-n7sx-trsg), bind MCP sessions to the backend user                                      |
+| 2.4.0   | 2026-10-20 | Feature | Allowed values of select fields in get_schema (per page and record type), set fields of a new file reference in add_file_reference |
+| 2.3.0   | 2026-10-20 | Feature | Report allowed content elements per page in get_schema, some bugfixes to show usefull messages for permission problems             |
+| 2.2.0   | 2026-09-04 | Task    | Security: authenticate a request by its api key only, never by a backend session                                                   |
+| 2.1.0   | 2026-09-03 | Task    | Update extension icon, use schema API from TYPO3, update documentation                                                             |
+| 2.0.0   | 2026-09-02 | Feature | Allow creating of any records, adjust endpoint, allow inserting images, security reviews                                           |
+| 1.0.0   | 2026-09-02 | Feature | Initial extension release                                                                                                          |
 
 ## Breaking Changes
 
