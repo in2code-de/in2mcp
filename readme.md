@@ -200,6 +200,7 @@ ddev composer test:functional               # run the functional tests (all four
 
 | Version | Date       | Status  | Description |
 |---------|------------|---------|-------------|
+| 7.0.0   | 2026-11-24 | Feature | New setting deniedTables (or environment variable IN2MCP_DENIED_TABLES) to deny further tables for every user, for example tables with personal data, with a trailing * as prefix. New PSR-14 event ModifyTableAccessEvent to change the built-in denied and read only tables in code. get_recent_changes leaves out the history of denied tables. Tool list of the readme as tables, status column in the changelog |
 | 6.0.2   | 2026-11-23 | Bugfix  | Dynamic client registration gives a client secret to clients that ask for one (claude.ai could not connect without a client created in the backend), PKCE stays mandatory for them. Refused registrations are logged |
 | 6.0.1   | 2026-11-23 | Bugfix  | Fix the installation of tailor in the TER release workflow |
 | 6.0.0 !!! | 2026-11-23 | Feature | OAuth 2.1 as second way to connect besides the api key: consent page with backend login and MFA, dynamic client registration, client id metadata documents, clients with secret for Gemini Enterprise, read only or read and write access, connections listed and revocable in the backend user record, rate limited OAuth endpoints, cleanup command in2mcp:oauth:cleanup. Extension configuration grouped in the tabs Connections and File. Breaking: api keys are off by default (setting apiKeyAuthentication) |
