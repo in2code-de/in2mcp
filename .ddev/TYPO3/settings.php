@@ -45,6 +45,7 @@ return [
         ],
         'in2mcp' => [
             'apiKeyAuthentication' => '1',
+            'deniedTables' => '',
             'fileImport' => '0',
             'fileImportAllowedHosts' => '',
             'fileImportMaximumSize' => '10485760',
