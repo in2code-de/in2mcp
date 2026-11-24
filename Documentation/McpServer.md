@@ -775,7 +775,8 @@ deniedTables = tx_powermail_domain_model_*,tt_address
 - while the setting is empty, the environment variable `IN2MCP_DENIED_TABLES` is read instead, in the same format -
   empty the setting to manage the list in the environment
 - the tools that list tables (`get_schema`) leave denied tables out, and a client that asks for one is told that
-  the table is denied on purpose
+  the table is denied on purpose; `get_recent_changes` leaves out the history of every denied table, the built-in
+  ones included
 - deleting a page with `delete_record` still deletes the records of a denied table on it, exactly as the backend
   does - the denial protects the content of those records, not the page from being deleted
 

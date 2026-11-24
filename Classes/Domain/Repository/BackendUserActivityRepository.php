@@ -111,11 +111,18 @@ readonly class BackendUserActivityRepository
     }
 
     /**
+     * @param list<string> $deniedTables table names, an entry ending with $wildcard stands for every table
+     *        starting with it
      * @return list<array<string, mixed>>
      * @throws Exception
      */
-    public function findRecentChanges(int $userUid, string $table, int $limit): array
-    {
+    public function findRecentChanges(
+        int $userUid,
+        string $table,
+        array $deniedTables,
+        string $wildcard,
+        int $limit
+    ): array {
         $queryBuilder = $this->getQueryBuilder(self::HISTORY_TABLE);
         $queryBuilder
             ->select(...self::HISTORY_FIELDS)
@@ -138,8 +145,37 @@ readonly class BackendUserActivityRepository
                 $queryBuilder->expr()->eq('tablename', $queryBuilder->createNamedParameter($table))
             );
         }
+        $this->excludeTables($queryBuilder, $deniedTables, $wildcard);
 
         return $queryBuilder->executeQuery()->fetchAllAssociative();
+    }
+
+    /**
+     * @param list<string> $tables
+     */
+    private function excludeTables(QueryBuilder $queryBuilder, array $tables, string $wildcard): void
+    {
+        $prefixes = array_filter($tables, static fn (string $table): bool => str_ends_with($table, $wildcard));
+        $names = array_values(array_diff($tables, $prefixes));
+
+        if ($names !== []) {
+            $queryBuilder->andWhere(
+                $queryBuilder->expr()->notIn(
+                    'tablename',
+                    $queryBuilder->createNamedParameter($names, Connection::PARAM_STR_ARRAY)
+                )
+            );
+        }
+        foreach ($prefixes as $prefix) {
+            $queryBuilder->andWhere(
+                $queryBuilder->expr()->notLike(
+                    'tablename',
+                    $queryBuilder->createNamedParameter(
+                        $queryBuilder->escapeLikeWildcards(substr($prefix, 0, -strlen($wildcard))) . '%'
+                    )
+                )
+            );
+        }
     }
 
     /**

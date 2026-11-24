@@ -7,6 +7,7 @@ namespace In2code\In2mcp\Tests\Unit\Domain\Service;
 use In2code\In2mcp\Domain\Repository\BackendUserActivityRepository;
 use In2code\In2mcp\Domain\Service\BackendUserActivityService;
 use In2code\In2mcp\Domain\Service\BackendUserService;
+use In2code\In2mcp\Domain\Service\TableAccessService;
 use In2code\In2mcp\Domain\Service\TcaService;
 use In2code\In2mcp\Exception\AdministratorRequiredException;
 use PHPUnit\Framework\Attributes\Test;
@@ -68,7 +69,8 @@ final class BackendUserActivityServiceTest extends UnitTestCase
         return new BackendUserActivityService(
             self::createStub(BackendUserActivityRepository::class),
             $backendUserService,
-            self::createStub(TcaService::class)
+            self::createStub(TcaService::class),
+            self::createStub(TableAccessService::class)
         );
     }
 }

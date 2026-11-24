@@ -57,6 +57,32 @@ final class SystemToolsTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
+    public function getRecentChangesLeavesOutDeniedTables(): void
+    {
+        $this->loginAs(self::EDITOR);
+        $this->callTool('update_content_element', ['contentUid' => 1, 'fields' => ['header' => 'Changed']]);
+        $this->callTool('update_page', ['pageUid' => 2, 'fields' => ['title' => 'Changed']]);
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['deniedTables'] = 'tt_cont*';
+        $this->loginAs(self::ADMIN);
+
+        $tables = array_column($this->callTool('get_recent_changes'), 'table');
+
+        self::assertContains('pages', $tables);
+        self::assertNotContains('tt_content', $tables);
+    }
+
+    #[Test]
+    public function getRecentChangesRefusesADeniedTable(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['in2mcp']['deniedTables'] = 'tt_content';
+        $this->loginAs(self::ADMIN);
+
+        $this->expectException(ClientFacingException::class);
+        $this->expectExceptionCode(1795509483);
+        $this->callTool('get_recent_changes', ['table' => 'tt_content']);
+    }
+
+    #[Test]
     public function getRecentChangesRefusesAnEditor(): void
     {
         $this->loginAs(self::EDITOR);

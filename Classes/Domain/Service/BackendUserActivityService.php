@@ -30,6 +30,7 @@ class BackendUserActivityService
         private readonly BackendUserActivityRepository $backendUserActivityRepository,
         private readonly BackendUserService $backendUserService,
         private readonly TcaService $tcaService,
+        private readonly TableAccessService $tableAccessService,
     ) {
     }
 
@@ -68,7 +69,16 @@ class BackendUserActivityService
     public function getRecentChanges(int $userUid, string $table, int $limit): array
     {
         $this->assertAdministrator();
-        $changes = $this->backendUserActivityRepository->findRecentChanges($userUid, $table, $limit);
+        if ($table !== '') {
+            $this->tableAccessService->assertNotDenied($table);
+        }
+        $changes = $this->backendUserActivityRepository->findRecentChanges(
+            $userUid,
+            $table,
+            $this->tableAccessService->getDeniedTables(),
+            TableAccessService::WILDCARD,
+            $limit
+        );
         $usernames = $this->backendUserActivityRepository->findUsernames(
             array_values(array_unique(array_map('intval', array_column($changes, 'userid'))))
         );
