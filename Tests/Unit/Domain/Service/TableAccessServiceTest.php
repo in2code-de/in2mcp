@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Tests\Unit\Domain\Service;
 
+use Closure;
+use In2code\In2mcp\Domain\Event\TableAccess\ModifyTableAccessEvent;
 use In2code\In2mcp\Domain\Service\BackendUserService;
 use In2code\In2mcp\Domain\Service\ConfigurationService;
 use In2code\In2mcp\Domain\Service\TableAccessService;
@@ -11,6 +13,7 @@ use In2code\In2mcp\Exception\TableNotAccessibleException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\DoesNotPerformAssertions;
 use PHPUnit\Framework\Attributes\Test;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use TYPO3\CMS\Core\Schema\SchemaCollection;
 use TYPO3\CMS\Core\Schema\SchemaInterface;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
@@ -218,6 +221,68 @@ final class TableAccessServiceTest extends UnitTestCase
     }
 
     #[Test]
+    #[DoesNotPerformAssertions]
+    public function listenerReleasesABuiltInDeniedTable(): void
+    {
+        $listener = static fn (ModifyTableAccessEvent $event) => $event->setDeniedTables(
+            array_diff($event->getDeniedTables(), ['fe_users'])
+        );
+
+        $this->createSubjectWithListener($listener)->assertWritable('fe_users');
+    }
+
+    #[Test]
+    public function listenerDeniesAFurtherTable(): void
+    {
+        $listener = static fn (ModifyTableAccessEvent $event) => $event->setDeniedTables(
+            [...$event->getDeniedTables(), 'tx_news']
+        );
+
+        $this->expectException(TableNotAccessibleException::class);
+        $this->expectExceptionCode(1756801012);
+        $this->createSubjectWithListener($listener)->assertReadable('tx_news');
+    }
+
+    #[Test]
+    #[DoesNotPerformAssertions]
+    public function listenerReleasesAReadOnlyTableForWriting(): void
+    {
+        $listener = static function (ModifyTableAccessEvent $event): void {
+            $readOnlyTables = $event->getReadOnlyTables();
+            unset($readOnlyTables['sys_template']);
+            $event->setReadOnlyTables($readOnlyTables);
+        };
+
+        $this->createSubjectWithListener($listener)->assertWritable('sys_template');
+    }
+
+    #[Test]
+    public function listenerMakesAFurtherTableReadOnly(): void
+    {
+        $listener = static fn (ModifyTableAccessEvent $event) => $event->setReadOnlyTables(
+            [...$event->getReadOnlyTables(), 'tx_news' => 'news are imported.']
+        );
+        $subject = $this->createSubjectWithListener($listener);
+
+        $subject->assertReadable('tx_news');
+        $this->expectException(TableNotAccessibleException::class);
+        $this->expectExceptionMessage('news are imported.');
+        $subject->assertWritable('tx_news');
+    }
+
+    #[Test]
+    public function listenerCanNotReleaseATableOfTheSetting(): void
+    {
+        $listener = static fn (ModifyTableAccessEvent $event) => $event->setDeniedTables([]);
+        $backendUserService = self::createStub(BackendUserService::class);
+        $backendUserService->method('isTableSelectAllowed')->willReturn(true);
+
+        $this->expectException(TableNotAccessibleException::class);
+        $this->expectExceptionCode(1795509483);
+        $this->createSubject($backendUserService, ['tx_news'], $listener)->assertReadable('tx_news');
+    }
+
+    #[Test]
     public function getWritableTablesReturnsSortedAllowedTablesWithoutDeniedAndReadOnlyTables(): void
     {
         $backendUserService = self::createStub(BackendUserService::class);
@@ -226,6 +291,15 @@ final class TableAccessServiceTest extends UnitTestCase
         );
 
         self::assertSame(['pages', 'tt_content'], $this->createSubject($backendUserService)->getWritableTables());
+    }
+
+    private function createSubjectWithListener(Closure $listener): TableAccessService
+    {
+        $backendUserService = self::createStub(BackendUserService::class);
+        $backendUserService->method('isTableSelectAllowed')->willReturn(true);
+        $backendUserService->method('isTableModifyAllowed')->willReturn(true);
+
+        return $this->createSubject($backendUserService, [], $listener);
     }
 
     /**
@@ -243,8 +317,18 @@ final class TableAccessServiceTest extends UnitTestCase
     /**
      * @param list<string> $deniedTables
      */
-    private function createSubject(BackendUserService $backendUserService, array $deniedTables = []): TableAccessService
-    {
+    private function createSubject(
+        BackendUserService $backendUserService,
+        array $deniedTables = [],
+        ?Closure $listener = null
+    ): TableAccessService {
+        $eventDispatcher = self::createStub(EventDispatcherInterface::class);
+        $eventDispatcher->method('dispatch')->willReturnCallback(
+            static function (object $event) use ($listener): object {
+                $listener?->__invoke($event);
+                return $event;
+            }
+        );
         $configurationService = self::createStub(ConfigurationService::class);
         $configurationService->method('getDeniedTables')->willReturn($deniedTables);
 
@@ -254,7 +338,7 @@ final class TableAccessServiceTest extends UnitTestCase
         );
         $tcaSchemaFactory->method('all')->willReturn($this->createSchemaCollection(self::CONFIGURED_TABLES));
 
-        return new TableAccessService($backendUserService, $tcaSchemaFactory, $configurationService);
+        return new TableAccessService($backendUserService, $tcaSchemaFactory, $configurationService, $eventDispatcher);
     }
 
     /**

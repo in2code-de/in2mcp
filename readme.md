@@ -130,7 +130,8 @@ leaked cannot create a backend user, widen permissions or schedule a command. Se
 
 Further tables - for example with personal data - are denied with the setting `deniedTables` (or the environment
 variable `IN2MCP_DENIED_TABLES` while the setting is empty), `tx_powermail_domain_model_*` denies every table that
-starts with it. The setting is empty by default.
+starts with it. The setting is empty by default. The built-in lists themselves can be changed in code with the PSR-14
+event `ModifyTableAccessEvent`.
 
 An api key has the form `<uid>.<secret>` and only the secret is stored, hashed. OAuth uses the authorization code
 flow with PKCE, the login on the consent page includes multi factor authentication, and tokens are stored as hash

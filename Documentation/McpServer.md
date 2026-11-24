@@ -738,7 +738,8 @@ initialized like in a regular backend request, and every read and write runs thr
   `sys_workspace`, `sys_workspace_stage` and `sys_template`, next to `sys_file`. This is the one deliberate deviation
   from "the client may do what the user may do": an api key lives in plain text in the configuration of a client, and
   one that leaked must not be able to create a backend user, widen the permissions of others, change where files are
-  written or schedule a command. The lists are `TableAccessService::DENIED_TABLES` and `READ_ONLY_TABLES`.
+  written or schedule a command. The lists are `TableAccessService::DENIED_TABLES` and `READ_ONLY_TABLES`, and
+  they can be changed in code, see [Changing the built-in tables](#changing-the-built-in-tables).
 - An installation **denies further tables** with the setting `deniedTables`, see [Denied tables](#denied-tables).
 - `get_backend_users` and `get_recent_changes` are the only tools that read `be_users` and `sys_history`, and
   they answer **administrators only**. They return a fixed set of fields - username, real name, admin and
@@ -779,6 +780,35 @@ deniedTables = tx_powermail_domain_model_*,tt_address
   ones included
 - deleting a page with `delete_record` still deletes the records of a denied table on it, exactly as the backend
   does - the denial protects the content of those records, not the page from being deleted
+
+### Changing the built-in tables
+
+The built-in lists of denied and read only tables are changed by a listener of the PSR-14 event
+`In2code\In2mcp\Domain\Event\TableAccess\ModifyTableAccessEvent` in an extension of the installation - on purpose
+in code and not by a setting, so that releasing a table takes a deployment and not a click in the backend.
+
+```php
+use In2code\In2mcp\Domain\Event\TableAccess\ModifyTableAccessEvent;
+use TYPO3\CMS\Core\Attribute\AsEventListener;
+
+final class ReleaseFrontendUsersListener
+{
+    #[AsEventListener(identifier: 'site-package/in2mcp-release-frontend-users')]
+    public function __invoke(ModifyTableAccessEvent $event): void
+    {
+        $event->setDeniedTables(array_diff($event->getDeniedTables(), ['fe_users', 'fe_groups']));
+        $event->setReadOnlyTables([...$event->getReadOnlyTables(), 'fe_groups' => 'groups are managed by the SSO.']);
+    }
+}
+```
+
+- `getDeniedTables()` / `setDeniedTables()` hold the denied tables, `getReadOnlyTables()` / `setReadOnlyTables()`
+  the read only tables with the reason the client is told when it tries to write one
+- a released table is still subject to the permissions of the backend user (`tables_select`, `tables_modify`)
+- the setting `deniedTables` is applied after the event - a listener can not release a table that is listed there
+- every table can be released, including `be_users`, the OAuth tables and `tx_scheduler_task`. Those protect the
+  installation against a leaked api key or token: releasing `be_users` lets it create an administrator, releasing
+  `tx_scheduler_task` lets it run any console command. Release them only if that is really intended
 
 ### Rate limiting
 

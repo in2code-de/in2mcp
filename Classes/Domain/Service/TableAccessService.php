@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace In2code\In2mcp\Domain\Service;
 
+use In2code\In2mcp\Domain\Event\TableAccess\ModifyTableAccessEvent;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
 use In2code\In2mcp\Exception\UserNotFoundException;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 
 /**
@@ -15,12 +17,13 @@ use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
  * for tables that hold authentication data or internal bookkeeping: an administrator may edit backend users in
  * the backend, but an api key that leaked must never be able to create one, and a client has no reason to write
  * the log or the reference index. An installation adds its own tables to that denial with the setting
- * "deniedTables", for example tables with personal data.
+ * "deniedTables", for example tables with personal data. Both built-in lists can be changed in code with the
+ * event ModifyTableAccessEvent.
  */
 class TableAccessService
 {
     /**
-     * Refused for every user, including administrators
+     * Refused for every user, including administrators, unless a listener of ModifyTableAccessEvent says otherwise
      */
     private const DENIED_TABLES = [
         'be_users',
@@ -58,10 +61,13 @@ class TableAccessService
         'sys_template' => 'TypoScript changes the output of the whole site. Change it in the backend.',
     ];
 
+    private ?ModifyTableAccessEvent $tableAccess = null;
+
     public function __construct(
         private readonly BackendUserService $backendUserService,
         private readonly TcaSchemaFactory $tcaSchemaFactory,
-        private readonly ConfigurationService $configurationService
+        private readonly ConfigurationService $configurationService,
+        private readonly EventDispatcherInterface $eventDispatcher
     ) {
     }
 
@@ -110,7 +116,7 @@ class TableAccessService
     {
         $tables = [];
         foreach ($this->tcaSchemaFactory->all()->getNames() as $table) {
-            if ($this->isDenied($table) || array_key_exists($table, self::READ_ONLY_TABLES)) {
+            if ($this->isDenied($table) || array_key_exists($table, $this->getReadOnlyTables())) {
                 continue;
             }
             if ($this->backendUserService->isTableModifyAllowed($table)) {
@@ -129,12 +135,12 @@ class TableAccessService
      */
     public function getDeniedTables(): array
     {
-        return [...self::DENIED_TABLES, ...$this->configurationService->getDeniedTables()];
+        return [...$this->getBuiltInDeniedTables(), ...$this->configurationService->getDeniedTables()];
     }
 
     public function isDenied(string $table): bool
     {
-        return in_array($table, self::DENIED_TABLES, true) || $this->isDeniedByConfiguration($table);
+        return in_array($table, $this->getBuiltInDeniedTables(), true) || $this->isDeniedByConfiguration($table);
     }
 
     /**
@@ -142,7 +148,7 @@ class TableAccessService
      */
     public function assertNotDenied(string $table): void
     {
-        if (in_array($table, self::DENIED_TABLES, true)) {
+        if (in_array($table, $this->getBuiltInDeniedTables(), true)) {
             throw new TableNotAccessibleException(
                 'The table "' . $table . '" holds users, sessions, internal bookkeeping or scheduled commands and'
                 . ' is never accessible through MCP, independent of the permissions of the backend user',
@@ -157,6 +163,31 @@ class TableAccessService
                 1795509483
             );
         }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getBuiltInDeniedTables(): array
+    {
+        return $this->getTableAccess()->getDeniedTables();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function getReadOnlyTables(): array
+    {
+        return $this->getTableAccess()->getReadOnlyTables();
+    }
+
+    // Dispatched once - the lists are code, they do not change during a request
+    private function getTableAccess(): ModifyTableAccessEvent
+    {
+        $this->tableAccess ??= $this->eventDispatcher->dispatch(
+            new ModifyTableAccessEvent(self::DENIED_TABLES, self::READ_ONLY_TABLES)
+        );
+        return $this->tableAccess;
     }
 
     private function isDeniedByConfiguration(string $table): bool
@@ -195,10 +226,10 @@ class TableAccessService
      */
     private function assertNotReadOnly(string $table): void
     {
-        if (array_key_exists($table, self::READ_ONLY_TABLES)) {
+        if (array_key_exists($table, $this->getReadOnlyTables())) {
             throw new TableNotAccessibleException(
                 'Records of the table "' . $table . '" are only read through MCP, not written: '
-                . self::READ_ONLY_TABLES[$table],
+                . $this->getReadOnlyTables()[$table],
                 1756802216
             );
         }
