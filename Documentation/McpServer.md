@@ -334,6 +334,16 @@ one call - translations of two pages, or a known set of uids. It holds 1 to 1000
 {"table": "pages", "filters": {"l10n_parent": [806, 833]}}
 ```
 
+### Part of a field
+
+`{"contains": "text"}` as a filter value finds records whose field contains the text anywhere, for example every
+content element that links to a page. `%` and `_` are searched literally. Password fields can not be filtered at
+all:
+
+```json
+{"table": "tt_content", "filters": {"bodytext": {"contains": "t3://page?uid=616"}}}
+```
+
 ### Empty fields
 
 `null` as a value in the `filters` of `find_records` finds records whose field is empty - pages without a meta

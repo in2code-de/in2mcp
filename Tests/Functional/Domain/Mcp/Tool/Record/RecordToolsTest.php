@@ -235,6 +235,29 @@ final class RecordToolsTest extends AbstractFunctionalTestCase
         self::assertSame([1], $this->getSortedUids($mounted['records']));
     }
 
+    #[Test]
+    public function findRecordsWithContainsMatchesAPartOfTheField(): void
+    {
+        $this->loginAs(self::ADMIN);
+        $text = $this->callTool(
+            'find_records',
+            ['table' => 'tt_content', 'filters' => ['bodytext' => ['contains' => 'Sec']]]
+        );
+        $wildcard = $this->callTool(
+            'find_records',
+            ['table' => 'tt_content', 'filters' => ['bodytext' => ['contains' => '%']]]
+        );
+        $this->loginAs(self::EDITOR);
+        $mounted = $this->callTool(
+            'find_records',
+            ['table' => 'tt_content', 'filters' => ['header' => ['contains' => ' element']]]
+        );
+
+        self::assertSame([2], $this->getSortedUids($text['records']));
+        self::assertSame([], $wildcard['records']);
+        self::assertSame([1, 2], $this->getSortedUids($mounted['records']));
+    }
+
     /**
      * @return array<string, array{0: mixed}>
      */
@@ -245,6 +268,10 @@ final class RecordToolsTest extends AbstractFunctionalTestCase
             'object' => [['uid' => 1]],
             'nested list' => [[[1, 2]]],
             'null in list' => [[1, null]],
+            'unknown operator' => [['startsWith' => 'First']],
+            'contains with a second key' => [['contains' => 'First', 'other' => 1]],
+            'contains without text' => [['contains' => '']],
+            'contains with a list' => [['contains' => ['First']]],
             'too many values' => [range(1, 1001)],
         ];
     }

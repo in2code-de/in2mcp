@@ -24,6 +24,7 @@ readonly class RecordRepository
     private const DEFAULT_LIMIT = 50;
     private const MAXIMUM_LIMIT = 500;
     private const MAXIMUM_FILTER_VALUES = 1000;
+    private const CONTAINS_OPERATOR = 'contains';
 
     public function __construct(
         private RecordQueryBuilderFactory $recordQueryBuilderFactory,
@@ -160,7 +161,9 @@ readonly class RecordRepository
     ): string|CompositeExpression {
         $condition = $queryBuilder->expr()->eq($fieldName, $queryBuilder->createNamedParameter($value));
         if (is_array($value)) {
-            $condition = $this->createListCondition($queryBuilder, $fieldName, $value);
+            $condition = array_is_list($value)
+                ? $this->createListCondition($queryBuilder, $fieldName, $value)
+                : $this->createContainsCondition($queryBuilder, $fieldName, $value);
         }
         if ($value === null) {
             $emptyValue = $this->emptyFieldService->getEmptyValue($table, $fieldName);
@@ -176,6 +179,29 @@ readonly class RecordRepository
             );
         }
         return $condition;
+    }
+
+    /**
+     * @param array<mixed> $operator
+     * @throws ToolExecutionException
+     */
+    private function createContainsCondition(QueryBuilder $queryBuilder, string $fieldName, array $operator): string
+    {
+        $searchTerm = $operator[self::CONTAINS_OPERATOR] ?? null;
+        $isValidOperator = count($operator) === 1 && is_scalar($searchTerm) && (string)$searchTerm !== '';
+        if ($isValidOperator === false) {
+            throw new ToolExecutionException(
+                'The filter of "' . $fieldName . '" has to be a value, a list of values or {"'
+                . self::CONTAINS_OPERATOR . '": "text"} for a part of the field, for example {"bodytext": {"'
+                . self::CONTAINS_OPERATOR . '": "t3://page?uid=12"}}',
+                1764080700
+            );
+        }
+
+        return $queryBuilder->expr()->like(
+            $fieldName,
+            $queryBuilder->createNamedParameter('%' . $queryBuilder->escapeLikeWildcards((string)$searchTerm) . '%')
+        );
     }
 
     /**
