@@ -125,6 +125,27 @@ final class RecordToolsTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
+    public function findRecordsPagesThroughEveryRecordWithNextOffset(): void
+    {
+        $this->loginAs(self::ADMIN);
+        self::assertSame([1, 2, 3], $this->findAllUidsPageByPage('tt_content'));
+
+        $this->loginAs(self::EDITOR);
+        self::assertSame([1, 2], $this->findAllUidsPageByPage('tt_content'));
+    }
+
+    #[Test]
+    public function findRecordsReportsTheLimitItApplies(): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        $result = $this->callTool('find_records', ['table' => 'tt_content', 'limit' => 5000]);
+
+        self::assertSame(500, $result['limit']);
+        self::assertNull($result['nextOffset']);
+    }
+
+    #[Test]
     public function findRecordsFiltersByField(): void
     {
         $this->loginAs(self::ADMIN);
@@ -390,6 +411,24 @@ final class RecordToolsTest extends AbstractFunctionalTestCase
      * @param list<array<string, mixed>> $records
      * @return list<int>
      */
+    /**
+     * @return list<int>
+     */
+    private function findAllUidsPageByPage(string $table): array
+    {
+        $uids = [];
+        $offset = 0;
+        $calls = 0;
+        do {
+            $result = $this->callTool('find_records', ['table' => $table, 'limit' => 1, 'offset' => $offset]);
+            $uids = [...$uids, ...array_map('intval', array_column($result['records'], 'uid'))];
+            $offset = $result['nextOffset'];
+            $calls++;
+        } while ($offset !== null && $calls < 10);
+        sort($uids);
+        return $uids;
+    }
+
     private function getSortedUids(array $records): array
     {
         $uids = array_map('intval', array_column($records, 'uid'));

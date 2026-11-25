@@ -40,7 +40,8 @@ class FindRecordsTool extends AbstractTool
         return 'Searches the records of a table by page, by field values and by language. Use it to look at an'
             . ' existing record before creating a comparable one, and to find a record whose page is unknown -'
             . ' searching by a field like {"form": 57} is the way to do that, not trying one page after the'
-            . ' other. Records on pages outside the page mounts of the user are not returned.';
+            . ' other. Records on pages outside the page mounts of the user are not returned. When "nextOffset"'
+            . ' is not null there are more records: call it again with that value as "offset".';
     }
 
     public function getParameters(): array
@@ -73,8 +74,13 @@ class FindRecordsTool extends AbstractTool
             ],
             'limit' => [
                 'type' => 'integer',
-                'description' => 'Maximum number of records to return',
+                'description' => 'Maximum number of records to return, at most 500',
                 'default' => 50,
+            ],
+            'offset' => [
+                'type' => 'integer',
+                'description' => 'Where to continue a previous search: its "nextOffset"',
+                'default' => 0,
             ],
         ];
     }
@@ -110,43 +116,45 @@ class FindRecordsTool extends AbstractTool
             $limit,
             $offset
         );
-        $records = $this->collectReachableRecords($table, $findBatch, $limit);
+        $offset = max(0, $this->getIntArgument($arguments, 'offset'));
+        $result = $this->collectReachableRecords($table, $findBatch, $limit, $offset);
 
         return [
             'table' => $table,
-            'count' => count($records),
-            'records' => array_values($records),
+            'count' => count($result['records']),
+            'limit' => $limit,
+            'nextOffset' => $result['nextOffset'],
+            'records' => $result['records'],
         ];
     }
 
     /**
+     * The offset counts the records in the database, the unreachable ones included, so a following call
+     * continues exactly after the last record that was looked at.
+     *
      * @param callable(int): array<int, array<string, mixed>> $findBatch
-     * @return array<int, array<string, mixed>>
+     * @return array{records: list<array<string, mixed>>, nextOffset: ?int}
      * @throws UserNotFoundException
      */
-    private function collectReachableRecords(string $table, callable $findBatch, int $limit): array
+    private function collectReachableRecords(string $table, callable $findBatch, int $limit, int $offset): array
     {
         $records = [];
-        $offset = 0;
+        $scanLimit = $offset + self::MAXIMUM_SCANNED_RECORDS;
         do {
             $batch = $findBatch($offset);
-            $offset += count($batch);
-            $records = array_merge($records, $this->removeUnreachableRecords($table, $batch));
-        } while (count($batch) === $limit && count($records) < $limit && $offset < self::MAXIMUM_SCANNED_RECORDS);
+            $isLastBatch = count($batch) < $limit;
+            foreach ($batch as $record) {
+                if (count($records) === $limit) {
+                    $isLastBatch = false;
+                    break;
+                }
+                $offset++;
+                if ($this->recordAccessService->isRecordReadable($table, $record)) {
+                    $records[] = $record;
+                }
+            }
+        } while ($isLastBatch === false && count($records) < $limit && $offset < $scanLimit);
 
-        return array_slice($records, 0, $limit);
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $records
-     * @return array<int, array<string, mixed>>
-     * @throws UserNotFoundException
-     */
-    private function removeUnreachableRecords(string $table, array $records): array
-    {
-        return array_filter(
-            $records,
-            fn (array $record): bool => $this->recordAccessService->isRecordReadable($table, $record)
-        );
+        return ['records' => $records, 'nextOffset' => $isLastBatch ? null : $offset];
     }
 }

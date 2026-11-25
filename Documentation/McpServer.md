@@ -297,6 +297,13 @@ asks first does not have to guess field names - and unknown field names are reje
 back to `get_schema` instead of being dropped silently. Call it with a `table` to get the fields of that table
 before writing a record with `create_record`.
 
+### Paging
+
+`find_records` returns at most 500 records per call and says which `limit` it applied. While `nextOffset` is not
+null there are more records - the same call with `"offset": <nextOffset>` continues after the last record that was
+looked at. The offset counts the records in the database, those the user may not see included, so a page can hold
+fewer records than the limit and the last page can be empty.
+
 ### Lists of values
 
 A list as a value in the `filters` of `find_records` matches any of its values, so several records are found in
