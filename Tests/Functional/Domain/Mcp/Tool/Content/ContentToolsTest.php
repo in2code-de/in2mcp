@@ -6,6 +6,7 @@ namespace In2code\In2mcp\Tests\Functional\Domain\Mcp\Tool\Content;
 
 use In2code\In2mcp\Exception\ClientFacingException;
 use In2code\In2mcp\Tests\Functional\AbstractFunctionalTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
 final class ContentToolsTest extends AbstractFunctionalTestCase
@@ -161,6 +162,59 @@ final class ContentToolsTest extends AbstractFunctionalTestCase
     /**
      * @return list<int>
      */
+    #[Test]
+    public function sortContentElementsPutsAColumnIntoTheGivenOrder(): void
+    {
+        foreach ([self::ADMIN, self::EDITOR] as $user) {
+            $this->loginAs($user);
+            $third = $this->callTool('create_content_element', ['pageUid' => 2, 'contentType' => 'text']);
+            $uids = $this->getContentUidsOfPage(2);
+            $reversed = array_reverse($uids);
+
+            $this->callTool('sort_content_elements', ['contentUids' => $reversed]);
+            self::assertSame($reversed, $this->getContentUidsOfPage(2));
+
+            $this->callTool('sort_content_elements', ['contentUids' => [$third['contentUid'], $uids[0]]]);
+            self::assertSame($third['contentUid'], $this->getContentUidsOfPage(2)[0]);
+            self::assertSame($uids[0], $this->getContentUidsOfPage(2)[1]);
+        }
+    }
+
+    /**
+     * @return array<string, array{0: int, 1: list<int>, 2: int}>
+     */
+    public static function refusedSortingDataProvider(): array
+    {
+        return [
+            'one element' => [self::ADMIN, [1], 1764081600],
+            'an element twice' => [self::ADMIN, [1, 2, 1], 1764081600],
+            'elements of different pages' => [self::ADMIN, [1, 3], 1764081608],
+            'an element outside of the mount' => [self::EDITOR, [1, 3], 1764081604],
+            'an element that does not exist' => [self::ADMIN, [1, 999], 1764081604],
+        ];
+    }
+
+    /**
+     * @param list<int> $contentUids
+     */
+    #[Test]
+    #[DataProvider('refusedSortingDataProvider')]
+    public function sortContentElementsRefusesElementsThatDoNotShareAColumn(
+        int $user,
+        array $contentUids,
+        int $code
+    ): void {
+        $this->loginAs($user);
+
+        try {
+            $this->callTool('sort_content_elements', ['contentUids' => $contentUids]);
+            self::fail('The sorting has to be refused');
+        } catch (ClientFacingException $exception) {
+            self::assertSame($code, $exception->getCode());
+            self::assertSame([1, 2], $this->getContentUidsOfPage(2));
+        }
+    }
+
     private function getContentUidsOfPage(int $pageUid): array
     {
         $result = $this->callTool('get_page', ['pageUid' => $pageUid]);

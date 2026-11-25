@@ -96,6 +96,7 @@ offers the reading tools alone.
 | `add_child_record`       | Create a record inside an inline field of a parent, for example a page of a form                            |
 | `localize_record`        | Translate a page, content element or record, connected ("Translate") or free ("Copy") like the backend       |
 | `move_record`            | Move a record into a page or behind another record, also into another column or container                   |
+| `sort_content_elements`  | Put the content elements of one column into a given order in one call                                       |
 | `delete_record`          | Delete a record of any table (restorable in the recycler), a page with its subpages and content             |
 | `add_file_from_url`      | Download a file from a public url into the file storage - **off by default** (setting `fileImport`)         |
 | `add_file_from_content`  | Store a small file passed as base64 - **off by default** (setting `fileUpload`)                             |

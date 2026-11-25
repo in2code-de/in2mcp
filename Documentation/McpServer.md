@@ -291,6 +291,7 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `delete_file`            | Delete a file that is not used anymore, through the file storage |
 | `delete_record`          | Delete a record of any table (recoverable)                       |
 | `move_record`            | Move a record, including into another column or container        |
+| `sort_content_elements`  | Put the content elements of one column into a given order        |
 | `switch_workspace`       | Change the workspace, like the workspace selector of the backend  |
 
 `get_schema` exists because page types, content types, tables and fields differ per installation. A client that
@@ -490,7 +491,9 @@ switch the field to `custom` with an update that contains only `l10n_state`.
 `sorting` is readable on every record and on the content elements of `get_page`, so a client can tell in which
 order records actually are. It cannot be written: the sorting is the result of a position, and the position is
 set with `move_record`. Moving into a page appends at the end by default, `"position": "start"` puts the record
-first.
+first. `sort_content_elements` sorts a whole column in one call: it places every listed element behind the one
+before it, so a list of every element of the column gives exactly that order. The elements have to share page,
+column, language and container.
 
 ### Content elements in containers
 
