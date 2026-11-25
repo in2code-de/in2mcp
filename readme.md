@@ -65,7 +65,7 @@ offers the reading tools alone.
 |--------------------------------|---------------------------------------------------------------------------------------------------|
 | `get_backend_user`             | The backend user of this connection with its permissions, page mounts and allowed tables           |
 | `get_page_tree`                | The page tree as a nested structure, only pages the user may see                                  |
-| `get_page`                     | A single page with all its fields and its content elements grouped by column                      |
+| `get_page`                     | A single page with its fields, content elements by column, page translation and translation mode  |
 | `search_pages`                 | Search pages by title, navigation title, subtitle or slug                                         |
 | `get_schema`                   | Page types, content types and fields, allowed values of select fields per page and record type    |
 | `get_record`                   | A single record of any table                                                                      |

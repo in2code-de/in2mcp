@@ -258,7 +258,7 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 |---------------------|--------------------------------------------------------------------------------|
 | `get_backend_user`  | Which user the connection acts as, its page mounts and its table permissions    |
 | `get_page_tree`     | The page tree as a nested structure, rooted at the page mounts of the user, at most 500 pages and depth 10 (`truncated` tells when it was cut) |
-| `get_page`          | One page with all fields plus its content elements grouped by column position, a hint for a deleted page |
+| `get_page`          | One page with all fields plus its content elements grouped by column position; in a language also the page translation and the translation mode (`connected`, `free`, `mixed`, `empty`); a hint for a deleted page |
 | `search_pages`      | Pages by title, navigation title, subtitle or slug                              |
 | `get_schema`        | Page types, content element types of a page, writable tables, fields and values |
 | `get_record`        | One record of any table                                                         |

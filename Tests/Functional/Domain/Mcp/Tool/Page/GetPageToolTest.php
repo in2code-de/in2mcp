@@ -86,6 +86,41 @@ final class GetPageToolTest extends AbstractFunctionalTestCase
         self::assertArrayNotHasKey('content', $result);
     }
 
+    #[Test]
+    public function returnsNoTranslationAndNoTranslationModeInTheDefaultLanguage(): void
+    {
+        $this->loginAs(self::EDITOR);
+
+        $result = $this->callTool('get_page', ['pageUid' => 2]);
+
+        self::assertArrayNotHasKey('translation', $result);
+        self::assertArrayNotHasKey('translationMode', $result);
+    }
+
+    #[Test]
+    public function returnsThePageTranslationAndTheTranslationModeOfALanguage(): void
+    {
+        $this->loginAs(self::ADMIN);
+        $untranslated = $this->callTool('get_page', ['pageUid' => 2, 'languageId' => 1]);
+
+        $pageTranslation = $this->callTool('localize_record', ['table' => 'pages', 'uid' => 2, 'languageId' => 1]);
+        $this->callTool('localize_record', ['table' => 'tt_content', 'uid' => 1, 'languageId' => 1]);
+        $connected = $this->callTool('get_page', ['pageUid' => 2, 'languageId' => 1]);
+
+        $this->callTool(
+            'create_content_element',
+            ['pageUid' => 2, 'contentType' => 'text', 'fields' => ['sys_language_uid' => 1, 'header' => 'Free']]
+        );
+        $mixed = $this->callTool('get_page', ['pageUid' => 2, 'languageId' => 1]);
+
+        self::assertNull($untranslated['translation']);
+        self::assertSame('empty', $untranslated['translationMode']);
+        self::assertSame((int)$pageTranslation['record']['uid'], (int)$connected['translation']['uid']);
+        self::assertSame('About', $connected['page']['title']);
+        self::assertSame('connected', $connected['translationMode']);
+        self::assertSame('mixed', $mixed['translationMode']);
+    }
+
     /**
      * @return array<string, array{0: int, 1: int, 2: int}>
      */

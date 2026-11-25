@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Mcp\Tool\Page;
 
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
+use In2code\In2mcp\Domain\Model\TranslationMode;
 use In2code\In2mcp\Domain\Repository\ContentRepository;
 use In2code\In2mcp\Domain\Repository\PageRepository;
 use In2code\In2mcp\Domain\Service\RecordAccessService;
 use In2code\In2mcp\Domain\Service\TableAccessService;
+use In2code\In2mcp\Domain\Service\TcaService;
 use In2code\In2mcp\Exception\ToolExecutionException;
 
 class GetPageTool extends AbstractTool
@@ -20,6 +22,7 @@ class GetPageTool extends AbstractTool
         private readonly ContentRepository $contentRepository,
         private readonly TableAccessService $tableAccessService,
         private readonly RecordAccessService $recordAccessService,
+        private readonly TcaService $tcaService,
     ) {
     }
 
@@ -32,7 +35,9 @@ class GetPageTool extends AbstractTool
     {
         return 'Returns a single TYPO3 page with all its fields and its content elements grouped by column'
             . ' position. Use this to study how comparable pages of this installation are built before'
-            . ' creating a new one.';
+            . ' creating a new one. With a "languageId" above 0 it adds the page translation of that language'
+            . ' ("translation", null when there is none) and how its content is translated ("translationMode":'
+            . ' "connected" to the default language, "free", "mixed" or "empty").';
     }
 
     public function getParameters(): array
@@ -45,7 +50,8 @@ class GetPageTool extends AbstractTool
             ],
             'languageId' => [
                 'type' => 'integer',
-                'description' => 'Language of the content elements, 0 is the default language',
+                'description' => 'Language of the content elements and of the page translation, 0 is the'
+                    . ' default language',
                 'default' => 0,
             ],
             'withContent' => [
@@ -68,15 +74,35 @@ class GetPageTool extends AbstractTool
             $this->throwPageNotFound($pageUid);
         }
 
+        $languageId = $this->getIntArgument($arguments, 'languageId');
+        $this->recordAccessService->assertLanguageReadable($languageId);
+        $isTranslation = $languageId > 0;
+
         $result = ['page' => $page];
+        if ($isTranslation) {
+            $result['translation'] = $this->pageRepository->findTranslation($pageUid, $languageId);
+        }
         if ((bool)$this->getArgument($arguments, 'withContent')) {
-            $languageId = $this->getIntArgument($arguments, 'languageId');
             $this->tableAccessService->assertReadable(ContentRepository::TABLE_NAME);
-            $this->recordAccessService->assertLanguageReadable($languageId);
-            $result['content'] = $this->getContentByColumn($pageUid, $languageId);
+            $contentElements = $this->contentRepository->findByPage($pageUid, $languageId);
+            $result['content'] = $this->groupByColumn($contentElements);
+            if ($isTranslation) {
+                $result['translationMode'] = $this->getTranslationMode($contentElements)->value;
+            }
         }
 
         return $result;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $contentElements
+     */
+    private function getTranslationMode(array $contentElements): TranslationMode
+    {
+        $parentField = (string)$this->tcaService->getTranslationParentField(ContentRepository::TABLE_NAME);
+        return TranslationMode::fromTranslationParents(
+            array_map(static fn (array $element): int => (int)($element[$parentField] ?? 0), $contentElements)
+        );
     }
 
     /**
@@ -97,10 +123,14 @@ class GetPageTool extends AbstractTool
         );
     }
 
-    private function getContentByColumn(int $pageUid, int $languageId): array
+    /**
+     * @param list<array<string, mixed>> $contentElements
+     * @return array<string, list<array<string, mixed>>>
+     */
+    private function groupByColumn(array $contentElements): array
     {
         $contentByColumn = [];
-        foreach ($this->contentRepository->findByPage($pageUid, $languageId) as $contentElement) {
+        foreach ($contentElements as $contentElement) {
             $contentByColumn['colPos_' . (int)($contentElement['colPos'] ?? 0)][] = $contentElement;
         }
         return $contentByColumn;

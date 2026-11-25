@@ -67,10 +67,51 @@ readonly class PageRepository
             return null;
         }
 
+        return $this->prepareRecord($page);
+    }
+
+    /**
+     * @param array<string, mixed> $page
+     * @return array<string, mixed>
+     */
+    private function prepareRecord(array $page): array
+    {
         return $this->inlineRelationService->resolveRecord(
             self::TABLE_NAME,
             $this->tcaService->cleanUpRecord(self::TABLE_NAME, $page)
         );
+    }
+
+    /**
+     * The translation of a page in a language, null when there is none. The caller has checked the page itself
+     * and the language already.
+     *
+     * @throws Exception
+     */
+    public function findTranslation(int $pageUid, int $languageId): ?array
+    {
+        $queryBuilder = $this->getQueryBuilder();
+        $translation = $queryBuilder
+            ->select('*')
+            ->from(self::TABLE_NAME)
+            ->where(
+                $queryBuilder->expr()->eq(
+                    (string)$this->tcaService->getTranslationParentField(self::TABLE_NAME),
+                    $queryBuilder->createNamedParameter($pageUid, Connection::PARAM_INT)
+                ),
+                $queryBuilder->expr()->eq(
+                    (string)$this->tcaService->getLanguageField(self::TABLE_NAME),
+                    $queryBuilder->createNamedParameter($languageId, Connection::PARAM_INT)
+                )
+            )
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchAssociative();
+
+        $translation = $translation === false
+            ? null
+            : $this->workspaceService->overlayRecord(self::TABLE_NAME, $translation);
+        return $translation === null ? null : $this->prepareRecord($translation);
     }
 
     /**
