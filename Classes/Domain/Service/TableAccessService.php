@@ -89,6 +89,20 @@ class TableAccessService
     }
 
     /**
+     * @throws UserNotFoundException
+     */
+    public function isReadable(string $table): bool
+    {
+        try {
+            $this->assertReadable($table);
+            $isReadable = true;
+        } catch (TableNotAccessibleException) {
+            $isReadable = false;
+        }
+        return $isReadable;
+    }
+
+    /**
      * @throws TableNotAccessibleException
      * @throws UserNotFoundException
      */

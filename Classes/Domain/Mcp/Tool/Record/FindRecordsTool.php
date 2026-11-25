@@ -9,6 +9,7 @@ use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\RecordRepository;
 use In2code\In2mcp\Domain\Service\BackendUserService;
 use In2code\In2mcp\Domain\Service\FieldSelectionService;
+use In2code\In2mcp\Domain\Service\PagedScanService;
 use In2code\In2mcp\Domain\Service\RecordAccessService;
 use In2code\In2mcp\Domain\Service\TableAccessService;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
@@ -21,7 +22,6 @@ class FindRecordsTool extends AbstractTool
 
     private const ANY_PAGE = -1;
     private const ANY_LANGUAGE = -1;
-    private const MAXIMUM_SCANNED_RECORDS = 5000;
 
     public function __construct(
         private readonly RecordRepository $recordRepository,
@@ -29,6 +29,7 @@ class FindRecordsTool extends AbstractTool
         private readonly BackendUserService $backendUserService,
         private readonly RecordAccessService $recordAccessService,
         private readonly FieldSelectionService $fieldSelectionService,
+        private readonly PagedScanService $pagedScanService,
     ) {
     }
 
@@ -124,47 +125,21 @@ class FindRecordsTool extends AbstractTool
             $offset
         );
         $offset = max(0, $this->getIntArgument($arguments, 'offset'));
-        $result = $this->collectReachableRecords($table, $findBatch, $limit, $offset);
+        $result = $this->pagedScanService->collect(
+            $findBatch,
+            fn (array $record): ?array => $this->recordAccessService->isRecordReadable($table, $record)
+                ? $this->fieldSelectionService->selectFields($record, $returnFields)
+                : null,
+            $limit,
+            $offset
+        );
 
         return [
             'table' => $table,
-            'count' => count($result['records']),
+            'count' => count($result['items']),
             'limit' => $limit,
             'nextOffset' => $result['nextOffset'],
-            'records' => array_map(
-                fn (array $record): ?array => $this->fieldSelectionService->selectFields($record, $returnFields),
-                $result['records']
-            ),
+            'records' => $result['items'],
         ];
-    }
-
-    /**
-     * The offset counts the records in the database, the unreachable ones included, so a following call
-     * continues exactly after the last record that was looked at.
-     *
-     * @param callable(int): array<int, array<string, mixed>> $findBatch
-     * @return array{records: list<array<string, mixed>>, nextOffset: ?int}
-     * @throws UserNotFoundException
-     */
-    private function collectReachableRecords(string $table, callable $findBatch, int $limit, int $offset): array
-    {
-        $records = [];
-        $scanLimit = $offset + self::MAXIMUM_SCANNED_RECORDS;
-        do {
-            $batch = $findBatch($offset);
-            $isLastBatch = count($batch) < $limit;
-            foreach ($batch as $record) {
-                if (count($records) === $limit) {
-                    $isLastBatch = false;
-                    break;
-                }
-                $offset++;
-                if ($this->recordAccessService->isRecordReadable($table, $record)) {
-                    $records[] = $record;
-                }
-            }
-        } while ($isLastBatch === false && count($records) < $limit && $offset < $scanLimit);
-
-        return ['records' => $records, 'nextOffset' => $isLastBatch ? null : $offset];
     }
 }

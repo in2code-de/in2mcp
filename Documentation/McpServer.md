@@ -263,6 +263,7 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `get_schema`        | Page types, content element types of a page, writable tables, fields and values |
 | `get_record`        | One record of any table                                                         |
 | `find_records`      | Records of a table by page, by field values and by language                     |
+| `find_references`   | Records that point to a record - relations, file references, translations and links in texts - from the reference index, also for a deleted record |
 | `search_files`      | Files of the file abstraction layer by name, path or title, or by empty metadata |
 | `get_recently_changed_pages`   | Pages changed most recently (properties, translations or content), optionally below one page |
 | `get_recently_changed_content` | Content elements changed most recently with their page, optionally below one page            |
@@ -303,6 +304,15 @@ before writing a record with `create_record`.
 null there are more records - the same call with `"offset": <nextOffset>` continues after the last record that was
 looked at. The offset counts the records in the database, those the user may not see included, so a page can hold
 fewer records than the limit and the last page can be empty.
+
+### References
+
+`sys_refindex` stays denied, but `find_references` answers the question it is needed for: which records point to
+this one? It lists relations, file references, translations and links in texts such as `t3://page?uid=616`, so a
+page can be checked before it is deleted - and still afterwards, to find what points to a deleted page. A reference
+is only listed when the user may read the table, the record and the field it is stored in; it pages with `offset`
+and `nextOffset` like `find_records`. The index is maintained by the DataHandler - after an import that bypassed
+it, update it in the backend first.
 
 ### Fewer fields
 
@@ -905,6 +915,10 @@ not name the internal address a host resolved to.
 | `Service\UploadTokenService`   | One-time tokens of the upload endpoint, stored as hash                          |
 | `Service\UrlValidationService` | The only guard on the one outgoing request this extension makes                 |
 | `Service\InlineRelationService`| Translates between the child counter and the list of child uids                 |
+| `Repository\ReferenceRepository` | Reads `sys_refindex` for `find_references`, which filters by permissions     |
+| `Service\PagedScanService`     | Pages through rows that are filtered by permissions after reading them          |
+| `Service\FieldSelectionService`| Reduces a returned record to the requested fields                               |
+| `Service\SystemInformationService` | Application context, server url and sites for `get_backend_user`          |
 | `Middleware\McpProtectedResourceMetadata` | Protected resource metadata below the endpoint                      |
 | `Middleware\McpAuthorizationServerMetadata` | Authorization server metadata, the one middleware in the frontend stack |
 | `Middleware\McpClientRegistration` | Dynamic client registration                                              |

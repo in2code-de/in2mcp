@@ -70,6 +70,7 @@ offers the reading tools alone.
 | `get_schema`                   | Page types, content types and fields, allowed values of select fields per page and record type    |
 | `get_record`                   | A single record of any table                                                                      |
 | `find_records`                 | Search records of a table by page, field values (also empty ones) and language                    |
+| `find_references`              | Records that point to a record (relations, translations, links in texts), from the reference index |
 | `search_files`                 | Search existing files by name, path or title, also files with empty metadata                      |
 | `get_recently_changed_pages`   | Pages changed most recently - page properties, translations or content                            |
 | `get_recently_changed_content` | Content elements changed most recently, with title and slug of their page                         |

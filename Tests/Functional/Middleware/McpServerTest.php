@@ -24,7 +24,7 @@ final class McpServerTest extends AbstractMiddlewareTestCase
     private const PROTOCOL_VERSION = '2025-06-18';
     private const STATELESS_PROTOCOL_VERSION = '2026-07-28';
     private const SESSION_HEADER = 'Mcp-Session-Id';
-    private const REGISTERED_TOOLS = 30;
+    private const REGISTERED_TOOLS = 31;
     private const RATE_LIMITED_ADDRESS = '203.0.113.20';
     private const FAILED_AUTHENTICATIONS_LIMIT = 3;
     private const RATE_LIMITER_CACHE = 'ratelimiter';
