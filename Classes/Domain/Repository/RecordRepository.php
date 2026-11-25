@@ -23,6 +23,7 @@ readonly class RecordRepository
     public const LOCALIZATION_STATE_FIELD = 'l10n_state';
     private const DEFAULT_LIMIT = 50;
     private const MAXIMUM_LIMIT = 500;
+    private const MAXIMUM_FILTER_VALUES = 1000;
 
     public function __construct(
         private RecordQueryBuilderFactory $recordQueryBuilderFactory,
@@ -158,6 +159,9 @@ readonly class RecordRepository
         mixed $value
     ): string|CompositeExpression {
         $condition = $queryBuilder->expr()->eq($fieldName, $queryBuilder->createNamedParameter($value));
+        if (is_array($value)) {
+            $condition = $this->createListCondition($queryBuilder, $fieldName, $value);
+        }
         if ($value === null) {
             $emptyValue = $this->emptyFieldService->getEmptyValue($table, $fieldName);
             $condition = $queryBuilder->expr()->or(
@@ -172,6 +176,34 @@ readonly class RecordRepository
             );
         }
         return $condition;
+    }
+
+    /**
+     * @param array<mixed> $values
+     * @throws ToolExecutionException
+     */
+    private function createListCondition(QueryBuilder $queryBuilder, string $fieldName, array $values): string
+    {
+        $isValidList = $values !== []
+            && array_is_list($values)
+            && count($values) <= self::MAXIMUM_FILTER_VALUES
+            && array_filter($values, static fn (mixed $value): bool => is_scalar($value)) === $values;
+        if ($isValidList === false) {
+            throw new ToolExecutionException(
+                'The filter of "' . $fieldName . '" has to be a single value or a list of 1 to '
+                . self::MAXIMUM_FILTER_VALUES . ' numbers or texts, for example {"' . $fieldName . '": [12, 15]}',
+                1764079200
+            );
+        }
+
+        $isNumberList = array_filter($values, 'is_int') === $values;
+        return $queryBuilder->expr()->in(
+            $fieldName,
+            $queryBuilder->createNamedParameter(
+                $values,
+                $isNumberList ? Connection::PARAM_INT_ARRAY : Connection::PARAM_STR_ARRAY
+            )
+        );
     }
 
     /**

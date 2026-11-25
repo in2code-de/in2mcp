@@ -6,6 +6,7 @@ namespace In2code\In2mcp\Tests\Functional\Domain\Mcp\Tool\Record;
 
 use In2code\In2mcp\Exception\ClientFacingException;
 use In2code\In2mcp\Tests\Functional\AbstractFunctionalTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
 final class RecordToolsTest extends AbstractFunctionalTestCase
@@ -134,6 +135,47 @@ final class RecordToolsTest extends AbstractFunctionalTestCase
         );
 
         self::assertSame([2], array_map('intval', array_column($result['records'], 'uid')));
+    }
+
+    #[Test]
+    public function findRecordsWithAListMatchesAnyOfItsValues(): void
+    {
+        $this->loginAs(self::ADMIN);
+        $numbers = $this->callTool('find_records', ['table' => 'tt_content', 'filters' => ['uid' => [1, 3]]]);
+        $texts = $this->callTool(
+            'find_records',
+            ['table' => 'tt_content', 'filters' => ['header' => ['First element', 'Second element']]]
+        );
+        $this->loginAs(self::EDITOR);
+        $mounted = $this->callTool('find_records', ['table' => 'tt_content', 'filters' => ['uid' => [1, 3]]]);
+
+        self::assertSame([1, 3], $this->getSortedUids($numbers['records']));
+        self::assertSame([1, 2], $this->getSortedUids($texts['records']));
+        self::assertSame([1], $this->getSortedUids($mounted['records']));
+    }
+
+    /**
+     * @return array<string, array{0: mixed}>
+     */
+    public static function invalidFilterListDataProvider(): array
+    {
+        return [
+            'empty list' => [[]],
+            'object' => [['uid' => 1]],
+            'nested list' => [[[1, 2]]],
+            'null in list' => [[1, null]],
+            'too many values' => [range(1, 1001)],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('invalidFilterListDataProvider')]
+    public function findRecordsRefusesAnInvalidList(mixed $value): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        $this->expectException(ClientFacingException::class);
+        $this->callTool('find_records', ['table' => 'tt_content', 'filters' => ['uid' => $value]]);
     }
 
     #[Test]

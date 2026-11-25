@@ -297,6 +297,15 @@ asks first does not have to guess field names - and unknown field names are reje
 back to `get_schema` instead of being dropped silently. Call it with a `table` to get the fields of that table
 before writing a record with `create_record`.
 
+### Lists of values
+
+A list as a value in the `filters` of `find_records` matches any of its values, so several records are found in
+one call - translations of two pages, or a known set of uids. It holds 1 to 1000 numbers or texts:
+
+```json
+{"table": "pages", "filters": {"l10n_parent": [806, 833]}}
+```
+
 ### Empty fields
 
 `null` as a value in the `filters` of `find_records` finds records whose field is empty - pages without a meta
