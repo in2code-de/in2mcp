@@ -233,6 +233,14 @@ readonly class RecordRepository
                 1756801702
             );
         }
+
+        if ($this->tcaService->isPasswordField($table, $fieldName)) {
+            throw new ToolExecutionException(
+                'The field "' . $fieldName . '" of "' . $table . '" holds a password and can not be used as a'
+                . ' filter',
+                1764080400
+            );
+        }
     }
 
     /**

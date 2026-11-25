@@ -115,6 +115,16 @@ final class RecordToolsTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
+    public function findRecordsRefusesAPasswordFieldAsFilter(): void
+    {
+        $this->loginAs(self::ADMIN);
+        $this->writeSecret(1, 'very secret');
+
+        $this->expectException(ClientFacingException::class);
+        $this->callTool('find_records', ['table' => 'tt_content', 'filters' => [self::PASSWORD_FIELD => 'x']]);
+    }
+
+    #[Test]
     public function findRecordsReturnsOnlyRecordsOfTheMount(): void
     {
         $this->loginAs(self::EDITOR);

@@ -188,7 +188,7 @@ class TcaService
     /**
      * Never returned, not even a mask: a client that sends a record back would store the mask as new password
      */
-    private function isPasswordField(string $table, string $fieldName): bool
+    public function isPasswordField(string $table, string $fieldName): bool
     {
         return $this->isFieldOfTable($table, $fieldName)
             && $this->getSchema($table)?->getField($fieldName) instanceof PasswordFieldType;
