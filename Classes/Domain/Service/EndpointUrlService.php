@@ -22,6 +22,12 @@ class EndpointUrlService
             . $this->configurationService->getFileUploadPath();
     }
 
+    public function getCurrentMcpServerUrl(): string
+    {
+        return $this->getRequestHost($GLOBALS['TYPO3_REQUEST'] ?? null)
+            . $this->configurationService->getMcpServerPath();
+    }
+
     // The resource an OAuth token is bound to, and the issuer of the tokens at the same time
     public function getMcpServerUrl(ServerRequestInterface $request): string
     {

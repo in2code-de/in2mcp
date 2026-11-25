@@ -6,6 +6,7 @@ namespace In2code\In2mcp\Domain\Mcp\Tool\System;
 
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Service\BackendUserService;
+use In2code\In2mcp\Domain\Service\SystemInformationService;
 use In2code\In2mcp\Exception\UserNotFoundException;
 
 /**
@@ -18,8 +19,10 @@ class GetBackendUserTool extends AbstractTool
 
     private const RELEVANT_TABLES = ['pages', 'tt_content', 'sys_file_reference'];
 
-    public function __construct(private readonly BackendUserService $backendUserService)
-    {
+    public function __construct(
+        private readonly BackendUserService $backendUserService,
+        private readonly SystemInformationService $systemInformationService,
+    ) {
     }
 
     public function getName(): string
@@ -30,7 +33,9 @@ class GetBackendUserTool extends AbstractTool
     public function getDescription(): string
     {
         return 'Returns the TYPO3 backend user this connection acts as, including its permissions, its page'
-            . ' mounts and the tables it may read or write. Every other tool is restricted to these permissions.';
+            . ' mounts and the tables it may read or write. Every other tool is restricted to these permissions.'
+            . ' "system" tells which TYPO3 this is: the url of this server, the application context - in'
+            . ' "Production" every change in live is public at once - and the sites with their languages.';
     }
 
     /**
@@ -50,6 +55,7 @@ class GetBackendUserTool extends AbstractTool
             'allowedLanguages' => $this->backendUserService->getAllowedLanguageIds() ?? 'all',
             'pageMounts' => $this->getPageMounts(),
             'tablePermissions' => $this->getTablePermissions(),
+            'system' => $this->systemInformationService->getSystemInformation(),
         ];
     }
 

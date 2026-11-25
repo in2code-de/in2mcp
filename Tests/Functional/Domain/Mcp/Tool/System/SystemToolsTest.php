@@ -23,6 +23,23 @@ final class SystemToolsTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
+    public function getBackendUserDescribesTheSystem(): void
+    {
+        $this->loginAs(self::ADMIN);
+        $administrator = $this->callTool('get_backend_user')['system'];
+        $this->loginAs(self::EDITOR);
+        $editor = $this->callTool('get_backend_user')['system'];
+
+        self::assertSame('Testing', $administrator['applicationContext']);
+        self::assertFalse($administrator['isProduction']);
+        self::assertSame(['main'], array_column($administrator['sites'], 'identifier'));
+        self::assertSame([0, 1], array_column($administrator['sites'][0]['languages'], 'languageId'));
+        self::assertSame('strict', $administrator['sites'][0]['languages'][1]['fallbackType']);
+        self::assertSame(['main'], array_column($editor['sites'], 'identifier'));
+        self::assertSame([0], array_column($editor['sites'][0]['languages'], 'languageId'));
+    }
+
+    #[Test]
     public function getBackendUsersListsUsersForAnAdministrator(): void
     {
         $this->loginAs(self::ADMIN);

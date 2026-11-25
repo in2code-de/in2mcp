@@ -63,7 +63,7 @@ offers the reading tools alone.
 
 | Tool                           | Description                                                                                       |
 |--------------------------------|---------------------------------------------------------------------------------------------------|
-| `get_backend_user`             | The backend user of this connection with its permissions, page mounts and allowed tables           |
+| `get_backend_user`             | The backend user of this connection with its permissions, plus context, server url and sites       |
 | `get_page_tree`                | The page tree as a nested structure, only pages the user may see                                  |
 | `get_page`                     | A single page with its fields, content elements by column, page translation and translation mode  |
 | `search_pages`                 | Search pages by title, navigation title, subtitle or slug                                         |
