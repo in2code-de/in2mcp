@@ -29,6 +29,44 @@ final class RecordToolsTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
+    public function getRecordReadsTheTranslationOfAPage(): void
+    {
+        $this->loginAs(self::ADMIN);
+        $translation = $this->callTool('localize_record', ['table' => 'pages', 'uid' => 2, 'languageId' => 1]);
+        $translationUid = (int)$translation['record']['uid'];
+
+        $record = $this->callTool('get_record', ['table' => 'pages', 'uid' => $translationUid]);
+        $found = $this->callTool('find_records', ['table' => 'pages', 'filters' => ['uid' => $translationUid]]);
+
+        self::assertSame(2, (int)$record['record']['l10n_parent']);
+        self::assertSame(1, (int)$record['record']['sys_language_uid']);
+        self::assertSame($translationUid, (int)$found['records'][0]['uid']);
+    }
+
+    #[Test]
+    public function returnFieldsNeverReturnAPasswordField(): void
+    {
+        $this->loginAs(self::ADMIN);
+        $this->writeSecret(1, 'very secret');
+
+        $result = $this->callTool(
+            'get_record',
+            ['table' => 'tt_content', 'uid' => 1, 'returnFields' => [self::PASSWORD_FIELD, 'header']]
+        );
+
+        self::assertSame(['uid', 'pid', 'header'], array_keys($result['record']));
+    }
+
+    #[Test]
+    public function getRecordRefusesAnUnknownReturnField(): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        $this->expectException(ClientFacingException::class);
+        $this->callTool('get_record', ['table' => 'tt_content', 'uid' => 1, 'returnFields' => ['no_such_field']]);
+    }
+
+    #[Test]
     public function getRecordRefusesARecordOutsideOfTheMount(): void
     {
         $this->loginAs(self::EDITOR);

@@ -71,6 +71,21 @@ final class FindReferencesToolTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
+    public function linksToADeletedPageAreFoundWithFindRecordsInstead(): void
+    {
+        $this->callTool('delete_record', ['table' => 'pages', 'uid' => 3]);
+
+        $references = $this->callTool('find_references', ['table' => 'pages', 'uid' => 3]);
+        $links = $this->callTool(
+            'find_records',
+            ['table' => 'tt_content', 'filters' => ['bodytext' => ['contains' => 't3://page?uid=3"']]]
+        );
+
+        self::assertSame([], $references['references']);
+        self::assertSame([1, 3], array_map('intval', array_column($links['records'], 'uid')));
+    }
+
+    #[Test]
     public function findReferencesRefusesADeniedTable(): void
     {
         $this->expectException(ClientFacingException::class);

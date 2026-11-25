@@ -129,6 +129,7 @@ final class GetPageToolTest extends AbstractFunctionalTestCase
         return [
             'editor, page in the mount' => [self::EDITOR, 3, self::DELETED_PAGE],
             'editor, page outside of the mount' => [self::EDITOR, 4, self::MISSING_PAGE],
+            'editor, page without read permission' => [self::EDITOR, 5, self::MISSING_PAGE],
             'administrator, page outside of every mount' => [self::ADMIN, 4, self::DELETED_PAGE],
         ];
     }
