@@ -7,11 +7,14 @@ namespace In2code\In2mcp\Tests\Functional\Domain\Mcp\Tool\Page;
 use In2code\In2mcp\Exception\ClientFacingException;
 use In2code\In2mcp\Exception\ToolExecutionException;
 use In2code\In2mcp\Tests\Functional\AbstractFunctionalTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
 final class GetPageToolTest extends AbstractFunctionalTestCase
 {
     private const EDITOR_GROUP = 1;
+    private const DELETED_PAGE = 1764079500;
+    private const MISSING_PAGE = 1756800700;
 
     #[Test]
     public function returnsPageWithContentGroupedByColumn(): void
@@ -81,6 +84,33 @@ final class GetPageToolTest extends AbstractFunctionalTestCase
 
         self::assertSame('About', $result['page']['title']);
         self::assertArrayNotHasKey('content', $result);
+    }
+
+    /**
+     * @return array<string, array{0: int, 1: int, 2: int}>
+     */
+    public static function deletedPageDataProvider(): array
+    {
+        return [
+            'editor, page in the mount' => [self::EDITOR, 3, self::DELETED_PAGE],
+            'editor, page outside of the mount' => [self::EDITOR, 4, self::MISSING_PAGE],
+            'administrator, page outside of every mount' => [self::ADMIN, 4, self::DELETED_PAGE],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('deletedPageDataProvider')]
+    public function explainsADeletedPageOnlyToAUserWhoCouldReadIt(int $user, int $pageUid, int $code): void
+    {
+        $this->getConnectionPool()->getConnectionForTable('pages')->update(
+            'pages',
+            ['deleted' => 1],
+            ['uid' => $pageUid]
+        );
+        $this->loginAs($user);
+
+        $this->expectExceptionCode($code);
+        $this->callTool('get_page', ['pageUid' => $pageUid]);
     }
 
     private function allowEditorsOnlyPages(): void

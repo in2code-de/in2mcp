@@ -65,10 +65,7 @@ class GetPageTool extends AbstractTool
         $page = $this->pageRepository->findByUid($pageUid);
 
         if ($page === null) {
-            throw new ToolExecutionException(
-                'Page ' . $pageUid . ' does not exist or the backend user is not allowed to see it',
-                1756800700
-            );
+            $this->throwPageNotFound($pageUid);
         }
 
         $result = ['page' => $page];
@@ -80,6 +77,24 @@ class GetPageTool extends AbstractTool
         }
 
         return $result;
+    }
+
+    /**
+     * @throws ToolExecutionException
+     */
+    private function throwPageNotFound(int $pageUid): never
+    {
+        if ($this->pageRepository->isDeletedPageReadable($pageUid)) {
+            throw new ToolExecutionException(
+                'Page ' . $pageUid . ' is deleted. It can be restored in the recycler of the backend, and a'
+                . ' translation that still points to it with "l10n_parent" is left over from it.',
+                1764079500
+            );
+        }
+        throw new ToolExecutionException(
+            'Page ' . $pageUid . ' does not exist or the backend user is not allowed to see it',
+            1756800700
+        );
     }
 
     private function getContentByColumn(int $pageUid, int $languageId): array

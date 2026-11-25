@@ -13,6 +13,7 @@ use In2code\In2mcp\Domain\Service\WorkspaceService;
 use In2code\In2mcp\Exception\UserNotFoundException;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
+use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 
 /**
  * Reads pages restricted to what the authenticated backend user is allowed to see
@@ -70,6 +71,32 @@ readonly class PageRepository
             self::TABLE_NAME,
             $this->tcaService->cleanUpRecord(self::TABLE_NAME, $page)
         );
+    }
+
+    /**
+     * Whether the page is deleted and would be readable otherwise - the recycler of the backend shows it under the
+     * same conditions, so telling a client about it reveals nothing the user could not see.
+     *
+     * @throws Exception
+     * @throws UserNotFoundException
+     */
+    public function isDeletedPageReadable(int $uid): bool
+    {
+        $queryBuilder = $this->getQueryBuilder();
+        $queryBuilder->getRestrictions()->removeByType(DeletedRestriction::class);
+        $parentUid = $queryBuilder
+            ->select('pid')
+            ->from(self::TABLE_NAME)
+            ->where(
+                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, Connection::PARAM_INT)),
+                $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(1, Connection::PARAM_INT)),
+                $queryBuilder->expr()->and($this->backendUserService->getPagePermissionClause())
+            )
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchOne();
+
+        return $parentUid !== false && $this->backendUserService->isInWebMount((int)$parentUid);
     }
 
     /**
