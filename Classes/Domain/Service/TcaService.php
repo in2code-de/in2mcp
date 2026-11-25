@@ -13,6 +13,7 @@ use TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability;
 use TYPO3\CMS\Core\Schema\Field\FieldTranslationBehaviour;
 use TYPO3\CMS\Core\Schema\Field\FieldTypeInterface;
 use TYPO3\CMS\Core\Schema\Field\FileFieldType;
+use TYPO3\CMS\Core\Schema\Field\FlexFormFieldType;
 use TYPO3\CMS\Core\Schema\Field\InlineFieldType;
 use TYPO3\CMS\Core\Schema\Field\PasswordFieldType;
 use TYPO3\CMS\Core\Schema\Field\StaticSelectFieldType;
@@ -192,6 +193,12 @@ class TcaService
     {
         return $this->isFieldOfTable($table, $fieldName)
             && $this->getSchema($table)?->getField($fieldName) instanceof PasswordFieldType;
+    }
+
+    public function isFlexFormField(string $table, string $fieldName): bool
+    {
+        return $this->isFieldOfTable($table, $fieldName)
+            && $this->getSchema($table)?->getField($fieldName) instanceof FlexFormFieldType;
     }
 
     private function isAccessControlledField(string $table, string $fieldName): bool

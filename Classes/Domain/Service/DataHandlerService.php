@@ -63,6 +63,7 @@ class DataHandlerService
         private readonly ContentTypeService $contentTypeService,
         private readonly ContentRepository $contentRepository,
         private readonly TranslationFieldService $translationFieldService,
+        private readonly FlexFormValueService $flexFormValueService,
     ) {
     }
 
@@ -105,6 +106,7 @@ class DataHandlerService
     public function createRecord(string $table, int $pid, array $fields): int
     {
         $this->tableAccessService->assertWritable($table);
+        $fields = $this->flexFormValueService->expandShortForm($table, $fields);
         $this->assertKnownFields($table, $fields);
         $this->assertWritableValues($table, $fields, 0);
         if ($table === ContentRepository::TABLE_NAME && isset($fields[self::CONTENT_TYPE_FIELD])) {
@@ -138,6 +140,7 @@ class DataHandlerService
     public function updateRecord(string $table, int $uid, array $fields): void
     {
         $this->tableAccessService->assertWritable($table);
+        $fields = $this->flexFormValueService->expandShortForm($table, $fields);
         $recordFields = $this->translationFieldService->withoutStateField($fields);
         $this->assertKnownFields($table, $recordFields);
         $this->assertPermittedFields($table, $recordFields);

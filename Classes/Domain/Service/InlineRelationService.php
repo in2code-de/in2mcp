@@ -101,17 +101,12 @@ class InlineRelationService
      */
     public function assertWritableValue(string $table, string $fieldName, mixed $value, int $parentUid): void
     {
-        $givenUids = $this->getUidList($value);
-        if ($givenUids === []) {
-            return;
-        }
-
         $relation = $this->tcaService->getInlineRelation($table, $fieldName);
         if ($relation === null) {
             return;
         }
 
-        foreach ($givenUids as $childUid) {
+        foreach ($this->getUidList($value) as $childUid) {
             $child = $this->findChild($relation, $childUid);
 
             if ($child === null) {

@@ -449,6 +449,17 @@ parent table in `foreign_table_field` and the values of `foreign_match_fields`. 
 tables or fields (like `sys_file_reference`, which tells its parents apart by `tablenames` and `fieldname`)
 therefore never mixes up the children of `tt_content:5` and `pages:5`.
 
+### FlexForm fields
+
+A FlexForm such as `pi_flexform` is returned as XML. Sending XML back replaces the whole FlexForm; sending an object
+changes only the fields that are named, the DataHandler keeps all others. The short form names the sheet and its
+fields, the complete structure with `data`, `lDEF` and `vDEF` works as well:
+
+```json
+{"contentUid": 57, "fields": {"pi_flexform": {"sDEF": {"settings.orderDirection": "desc"}}}}
+{"contentUid": 57, "fields": {"pi_flexform": {"data": {"sDEF": {"lDEF": {"settings.limit": {"vDEF": "5"}}}}}}}
+```
+
 ### Free translations
 
 `localize_record` creates a connected translation like the "Translate" button of the backend. A site that keeps a
