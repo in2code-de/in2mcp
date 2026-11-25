@@ -7,12 +7,14 @@ namespace In2code\In2mcp\Domain\Mcp\Tool\Page;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\PageRepository;
 use In2code\In2mcp\Domain\Service\DataHandlerService;
+use In2code\In2mcp\Domain\Service\FieldSelectionService;
 
 class UpdatePageTool extends AbstractTool
 {
     public function __construct(
         private readonly DataHandlerService $dataHandlerService,
         private readonly PageRepository $pageRepository,
+        private readonly FieldSelectionService $fieldSelectionService,
     ) {
     }
 
@@ -40,12 +42,17 @@ class UpdatePageTool extends AbstractTool
                 'description' => 'Fields to write, for example title, nav_title, slug, description or hidden',
                 'required' => true,
             ],
+            'returnFields' => $this->getReturnFieldsParameter('["title", "slug"]'),
         ];
     }
 
     public function execute(array $arguments): array
     {
         $pageUid = $this->getIntArgument($arguments, 'pageUid');
+        $returnFields = $this->fieldSelectionService->getSelectedFields(
+            PageRepository::TABLE_NAME,
+            $this->getArrayArgument($arguments, 'returnFields')
+        );
         $this->dataHandlerService->updateRecord(
             PageRepository::TABLE_NAME,
             $pageUid,
@@ -55,7 +62,10 @@ class UpdatePageTool extends AbstractTool
         return [
             'updated' => true,
             'pageUid' => $pageUid,
-            'page' => $this->pageRepository->findByUid($pageUid),
+            'page' => $this->fieldSelectionService->selectFields(
+                $this->pageRepository->findByUid($pageUid),
+                $returnFields
+            ),
         ];
     }
 }

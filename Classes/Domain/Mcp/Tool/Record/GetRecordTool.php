@@ -7,6 +7,7 @@ namespace In2code\In2mcp\Domain\Mcp\Tool\Record;
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\RecordRepository;
+use In2code\In2mcp\Domain\Service\FieldSelectionService;
 use In2code\In2mcp\Domain\Service\RecordAccessService;
 use In2code\In2mcp\Domain\Service\TableAccessService;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
@@ -21,6 +22,7 @@ class GetRecordTool extends AbstractTool
         private readonly RecordRepository $recordRepository,
         private readonly TableAccessService $tableAccessService,
         private readonly RecordAccessService $recordAccessService,
+        private readonly FieldSelectionService $fieldSelectionService,
     ) {
     }
 
@@ -48,6 +50,7 @@ class GetRecordTool extends AbstractTool
                 'description' => 'Uid of the record',
                 'required' => true,
             ],
+            'returnFields' => $this->getReturnFieldsParameter('["title", "hidden"]'),
         ];
     }
 
@@ -62,6 +65,10 @@ class GetRecordTool extends AbstractTool
         $table = $this->getStringArgument($arguments, 'table');
         $uid = $this->getIntArgument($arguments, 'uid');
         $this->tableAccessService->assertReadable($table);
+        $returnFields = $this->fieldSelectionService->getSelectedFields(
+            $table,
+            $this->getArrayArgument($arguments, 'returnFields')
+        );
 
         $record = $this->recordRepository->findByUid($table, $uid);
         if ($record === null) {
@@ -79,6 +86,6 @@ class GetRecordTool extends AbstractTool
             );
         }
 
-        return ['table' => $table, 'record' => $record];
+        return ['table' => $table, 'record' => $this->fieldSelectionService->selectFields($record, $returnFields)];
     }
 }

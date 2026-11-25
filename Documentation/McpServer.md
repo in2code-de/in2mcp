@@ -304,6 +304,17 @@ null there are more records - the same call with `"offset": <nextOffset>` contin
 looked at. The offset counts the records in the database, those the user may not see included, so a page can hold
 fewer records than the limit and the last page can be empty.
 
+### Fewer fields
+
+Records carry every field, FlexForms included, which fills the context of a client quickly. `returnFields` of
+`find_records`, `get_record`, `update_record`, `update_content_element` and `update_page`, and `contentFields` of
+`get_page`, reduce the returned records to the fields that are named - `uid` and `pid` are always returned. An
+unknown field name is refused before anything is written:
+
+```json
+{"table": "pages", "languageId": 0, "returnFields": ["title", "slug", "hidden"]}
+```
+
 ### Lists of values
 
 A list as a value in the `filters` of `find_records` matches any of its values, so several records are found in

@@ -8,6 +8,7 @@ use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\RecordRepository;
 use In2code\In2mcp\Domain\Service\DataHandlerService;
+use In2code\In2mcp\Domain\Service\FieldSelectionService;
 use In2code\In2mcp\Exception\DataHandlerException;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
 use In2code\In2mcp\Exception\ToolExecutionException;
@@ -18,6 +19,7 @@ class UpdateRecordTool extends AbstractTool
     public function __construct(
         private readonly DataHandlerService $dataHandlerService,
         private readonly RecordRepository $recordRepository,
+        private readonly FieldSelectionService $fieldSelectionService,
     ) {
     }
 
@@ -51,6 +53,7 @@ class UpdateRecordTool extends AbstractTool
                 'description' => 'Fields to change. Unknown field names are reported instead of ignored.',
                 'required' => true,
             ],
+            'returnFields' => $this->getReturnFieldsParameter('["title"]'),
         ];
     }
 
@@ -65,6 +68,10 @@ class UpdateRecordTool extends AbstractTool
     {
         $table = $this->getStringArgument($arguments, 'table');
         $uid = $this->getIntArgument($arguments, 'uid');
+        $returnFields = $this->fieldSelectionService->getSelectedFields(
+            $table,
+            $this->getArrayArgument($arguments, 'returnFields')
+        );
 
         $this->dataHandlerService->updateRecord($table, $uid, $this->getArrayArgument($arguments, 'fields'));
 
@@ -72,7 +79,10 @@ class UpdateRecordTool extends AbstractTool
             'updated' => true,
             'table' => $table,
             'uid' => $uid,
-            'record' => $this->recordRepository->findByUid($table, $uid),
+            'record' => $this->fieldSelectionService->selectFields(
+                $this->recordRepository->findByUid($table, $uid),
+                $returnFields
+            ),
         ];
     }
 }

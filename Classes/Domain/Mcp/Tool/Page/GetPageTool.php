@@ -8,6 +8,7 @@ use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Model\TranslationMode;
 use In2code\In2mcp\Domain\Repository\ContentRepository;
 use In2code\In2mcp\Domain\Repository\PageRepository;
+use In2code\In2mcp\Domain\Service\FieldSelectionService;
 use In2code\In2mcp\Domain\Service\RecordAccessService;
 use In2code\In2mcp\Domain\Service\TableAccessService;
 use In2code\In2mcp\Domain\Service\TcaService;
@@ -23,6 +24,7 @@ class GetPageTool extends AbstractTool
         private readonly TableAccessService $tableAccessService,
         private readonly RecordAccessService $recordAccessService,
         private readonly TcaService $tcaService,
+        private readonly FieldSelectionService $fieldSelectionService,
     ) {
     }
 
@@ -59,6 +61,13 @@ class GetPageTool extends AbstractTool
                 'description' => 'Whether the content elements of the page are included',
                 'default' => true,
             ],
+            'contentFields' => [
+                'type' => 'array',
+                'items' => ['type' => 'string'],
+                'description' => 'Fields of the content elements to return, for example ["CType", "header"]. uid'
+                    . ' and pid are always returned. Leave it out to get every field.',
+                'default' => [],
+            ],
         ];
     }
 
@@ -84,8 +93,12 @@ class GetPageTool extends AbstractTool
         }
         if ((bool)$this->getArgument($arguments, 'withContent')) {
             $this->tableAccessService->assertReadable(ContentRepository::TABLE_NAME);
+            $contentFields = $this->fieldSelectionService->getSelectedFields(
+                ContentRepository::TABLE_NAME,
+                $this->getArrayArgument($arguments, 'contentFields')
+            );
             $contentElements = $this->contentRepository->findByPage($pageUid, $languageId);
-            $result['content'] = $this->groupByColumn($contentElements);
+            $result['content'] = $this->groupByColumn($contentElements, $contentFields);
             if ($isTranslation) {
                 $result['translationMode'] = $this->getTranslationMode($contentElements)->value;
             }
@@ -125,13 +138,15 @@ class GetPageTool extends AbstractTool
 
     /**
      * @param list<array<string, mixed>> $contentElements
+     * @param list<string> $contentFields
      * @return array<string, list<array<string, mixed>>>
      */
-    private function groupByColumn(array $contentElements): array
+    private function groupByColumn(array $contentElements, array $contentFields): array
     {
         $contentByColumn = [];
         foreach ($contentElements as $contentElement) {
-            $contentByColumn['colPos_' . (int)($contentElement['colPos'] ?? 0)][] = $contentElement;
+            $contentByColumn['colPos_' . (int)($contentElement['colPos'] ?? 0)][]
+                = $this->fieldSelectionService->selectFields($contentElement, $contentFields);
         }
         return $contentByColumn;
     }

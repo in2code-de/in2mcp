@@ -7,12 +7,14 @@ namespace In2code\In2mcp\Domain\Mcp\Tool\Content;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\ContentRepository;
 use In2code\In2mcp\Domain\Service\DataHandlerService;
+use In2code\In2mcp\Domain\Service\FieldSelectionService;
 
 class UpdateContentElementTool extends AbstractTool
 {
     public function __construct(
         private readonly DataHandlerService $dataHandlerService,
         private readonly ContentRepository $contentRepository,
+        private readonly FieldSelectionService $fieldSelectionService,
     ) {
     }
 
@@ -39,12 +41,17 @@ class UpdateContentElementTool extends AbstractTool
                 'description' => 'Fields to write, for example header, bodytext, colPos or hidden',
                 'required' => true,
             ],
+            'returnFields' => $this->getReturnFieldsParameter('["header", "colPos"]'),
         ];
     }
 
     public function execute(array $arguments): array
     {
         $contentUid = $this->getIntArgument($arguments, 'contentUid');
+        $returnFields = $this->fieldSelectionService->getSelectedFields(
+            ContentRepository::TABLE_NAME,
+            $this->getArrayArgument($arguments, 'returnFields')
+        );
         $this->dataHandlerService->updateRecord(
             ContentRepository::TABLE_NAME,
             $contentUid,
@@ -54,7 +61,10 @@ class UpdateContentElementTool extends AbstractTool
         return [
             'updated' => true,
             'contentUid' => $contentUid,
-            'contentElement' => $this->contentRepository->findByUid($contentUid),
+            'contentElement' => $this->fieldSelectionService->selectFields(
+                $this->contentRepository->findByUid($contentUid),
+                $returnFields
+            ),
         ];
     }
 }

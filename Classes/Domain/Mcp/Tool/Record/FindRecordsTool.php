@@ -8,6 +8,7 @@ use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\RecordRepository;
 use In2code\In2mcp\Domain\Service\BackendUserService;
+use In2code\In2mcp\Domain\Service\FieldSelectionService;
 use In2code\In2mcp\Domain\Service\RecordAccessService;
 use In2code\In2mcp\Domain\Service\TableAccessService;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
@@ -27,6 +28,7 @@ class FindRecordsTool extends AbstractTool
         private readonly TableAccessService $tableAccessService,
         private readonly BackendUserService $backendUserService,
         private readonly RecordAccessService $recordAccessService,
+        private readonly FieldSelectionService $fieldSelectionService,
     ) {
     }
 
@@ -77,6 +79,7 @@ class FindRecordsTool extends AbstractTool
                 'description' => 'Maximum number of records to return, at most 500',
                 'default' => 50,
             ],
+            'returnFields' => $this->getReturnFieldsParameter('["title", "sys_language_uid"]'),
             'offset' => [
                 'type' => 'integer',
                 'description' => 'Where to continue a previous search: its "nextOffset"',
@@ -104,6 +107,10 @@ class FindRecordsTool extends AbstractTool
             );
         }
 
+        $returnFields = $this->fieldSelectionService->getSelectedFields(
+            $table,
+            $this->getArrayArgument($arguments, 'returnFields')
+        );
         $languageId = $this->getIntArgument($arguments, 'languageId');
         $filters = $this->getArrayArgument($arguments, 'filters');
         $limit = $this->recordRepository->getLimit($this->getIntArgument($arguments, 'limit'));
@@ -124,7 +131,10 @@ class FindRecordsTool extends AbstractTool
             'count' => count($result['records']),
             'limit' => $limit,
             'nextOffset' => $result['nextOffset'],
-            'records' => $result['records'],
+            'records' => array_map(
+                fn (array $record): ?array => $this->fieldSelectionService->selectFields($record, $returnFields),
+                $result['records']
+            ),
         ];
     }
 

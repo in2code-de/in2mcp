@@ -37,6 +37,22 @@ abstract class AbstractTool implements ToolInterface
     }
 
     /**
+     * Definition of the parameter that reduces a returned record to some of its fields
+     *
+     * @return array<string, mixed>
+     */
+    protected function getReturnFieldsParameter(string $example): array
+    {
+        return [
+            'type' => 'array',
+            'items' => ['type' => 'string'],
+            'description' => 'Fields to return, for example ' . $example . '. uid and pid are always returned.'
+                . ' Leave it out to get every field.',
+            'default' => [],
+        ];
+    }
+
+    /**
      * @param array<string, mixed> $arguments
      * @throws ToolExecutionException
      */

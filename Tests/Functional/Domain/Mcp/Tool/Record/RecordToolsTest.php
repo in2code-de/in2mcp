@@ -146,6 +146,56 @@ final class RecordToolsTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
+    public function readingToolsReturnOnlyTheRequestedFields(): void
+    {
+        $this->loginAs(self::EDITOR);
+
+        $found = $this->callTool('find_records', ['table' => 'tt_content', 'returnFields' => ['header']]);
+        $record = $this->callTool('get_record', ['table' => 'tt_content', 'uid' => 1, 'returnFields' => ['header']]);
+        $page = $this->callTool('get_page', ['pageUid' => 2, 'contentFields' => ['header']]);
+
+        self::assertSame(['uid', 'pid', 'header'], array_keys($found['records'][0]));
+        self::assertSame(['uid', 'pid', 'header'], array_keys($record['record']));
+        self::assertSame(['uid', 'pid', 'header'], array_keys($page['content']['colPos_0'][0]));
+        self::assertArrayHasKey('title', $page['page']);
+    }
+
+    #[Test]
+    public function updatingToolsReturnOnlyTheRequestedFields(): void
+    {
+        $this->loginAs(self::EDITOR);
+        $fields = ['fields' => ['header' => 'Changed'], 'returnFields' => ['header']];
+
+        $record = $this->callTool('update_record', ['table' => 'tt_content', 'uid' => 1, ...$fields]);
+        $content = $this->callTool('update_content_element', ['contentUid' => 2, ...$fields]);
+        $page = $this->callTool(
+            'update_page',
+            ['pageUid' => 2, 'fields' => ['title' => 'Changed'], 'returnFields' => ['title']]
+        );
+
+        self::assertSame(['uid' => 1, 'pid' => 2, 'header' => 'Changed'], $this->toInts($record['record']));
+        self::assertSame(['uid' => 2, 'pid' => 2, 'header' => 'Changed'], $this->toInts($content['contentElement']));
+        self::assertSame(['uid' => 2, 'pid' => 1, 'title' => 'Changed'], $this->toInts($page['page']));
+    }
+
+    #[Test]
+    public function updateRecordRefusesAnUnknownReturnFieldBeforeWriting(): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        try {
+            $this->callTool(
+                'update_record',
+                ['table' => 'tt_content', 'uid' => 1, 'fields' => ['header' => 'Changed'], 'returnFields' => ['x']]
+            );
+            self::fail('An unknown return field has to be refused');
+        } catch (ClientFacingException) {
+            $record = $this->callTool('get_record', ['table' => 'tt_content', 'uid' => 1])['record'];
+            self::assertSame('First element', $record['header']);
+        }
+    }
+
+    #[Test]
     public function findRecordsFiltersByField(): void
     {
         $this->loginAs(self::ADMIN);
@@ -427,6 +477,15 @@ final class RecordToolsTest extends AbstractFunctionalTestCase
         } while ($offset !== null && $calls < 10);
         sort($uids);
         return $uids;
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     * @return array<string, mixed>
+     */
+    private function toInts(array $record): array
+    {
+        return array_map(static fn (mixed $value): mixed => is_numeric($value) ? (int)$value : $value, $record);
     }
 
     private function getSortedUids(array $records): array
