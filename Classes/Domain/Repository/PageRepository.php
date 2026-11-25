@@ -7,6 +7,7 @@ namespace In2code\In2mcp\Domain\Repository;
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Model\PageTreeBudget;
 use In2code\In2mcp\Domain\Service\BackendUserService;
+use In2code\In2mcp\Domain\Service\InlineRelationService;
 use In2code\In2mcp\Domain\Service\TcaService;
 use In2code\In2mcp\Domain\Service\WorkspaceService;
 use In2code\In2mcp\Exception\UserNotFoundException;
@@ -38,6 +39,7 @@ readonly class PageRepository
         private BackendUserService $backendUserService,
         private TcaService $tcaService,
         private WorkspaceService $workspaceService,
+        private InlineRelationService $inlineRelationService,
     ) {
     }
 
@@ -64,7 +66,10 @@ readonly class PageRepository
             return null;
         }
 
-        return $this->tcaService->cleanUpRecord(self::TABLE_NAME, $page);
+        return $this->inlineRelationService->resolveRecord(
+            self::TABLE_NAME,
+            $this->tcaService->cleanUpRecord(self::TABLE_NAME, $page)
+        );
     }
 
     /**

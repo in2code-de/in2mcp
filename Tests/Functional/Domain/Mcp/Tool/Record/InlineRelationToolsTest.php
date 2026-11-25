@@ -256,6 +256,35 @@ final class InlineRelationToolsTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
+    public function getPageListsTheChildUidsOfAFileFieldLikeFindRecords(): void
+    {
+        foreach ([self::ADMIN, self::EDITOR] as $user) {
+            $this->loginAs($user);
+
+            $result = $this->callTool('get_page', ['pageUid' => 2]);
+            $found = $this->callTool('find_records', ['table' => 'pages', 'filters' => ['uid' => 2]]);
+            $contentElement = $this->findContentElement($result['content'], self::CONTENT_WITH_IMAGE);
+
+            self::assertSame([self::REFERENCE_OF_PAGE], $this->getUids($result['page']['media']));
+            self::assertSame($found['records'][0]['media'], $result['page']['media']);
+            self::assertSame([self::REFERENCE_IN_IMAGE_FIELD], $this->getUids($contentElement['image']));
+        }
+    }
+
+    #[Test]
+    public function updateContentElementReturnsTheChildUidsOfAFileField(): void
+    {
+        $this->loginAs(self::EDITOR);
+
+        $result = $this->callTool(
+            'update_content_element',
+            ['contentUid' => self::CONTENT_WITH_IMAGE, 'fields' => ['header' => 'Changed']]
+        );
+
+        self::assertSame([self::REFERENCE_IN_IMAGE_FIELD], $this->getUids($result['contentElement']['image']));
+    }
+
+    #[Test]
     public function fileReferenceOfAPageIsStoredOnThePageItself(): void
     {
         $this->loginAs(self::EDITOR);
@@ -299,6 +328,16 @@ final class InlineRelationToolsTest extends AbstractFunctionalTestCase
     /**
      * @return list<int>
      */
+    /**
+     * @param array<string, list<array<string, mixed>>> $contentByColumn
+     * @return array<string, mixed>
+     */
+    private function findContentElement(array $contentByColumn, int $uid): array
+    {
+        $contentElements = array_merge(...array_values($contentByColumn));
+        return $contentElements[array_search($uid, array_column($contentElements, 'uid'))];
+    }
+
     private function getUids(mixed $value): array
     {
         $uids = is_array($value) ? $value : explode(',', (string)$value);

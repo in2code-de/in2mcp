@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Repository;
 
 use Doctrine\DBAL\Exception;
+use In2code\In2mcp\Domain\Service\InlineRelationService;
 use In2code\In2mcp\Domain\Service\TcaService;
 use In2code\In2mcp\Domain\Service\WorkspaceService;
 use TYPO3\CMS\Core\Database\Connection;
@@ -26,6 +27,7 @@ readonly class ContentRepository
         private RecordQueryBuilderFactory $recordQueryBuilderFactory,
         private TcaService $tcaService,
         private WorkspaceService $workspaceService,
+        private InlineRelationService $inlineRelationService,
     ) {
     }
 
@@ -55,7 +57,7 @@ readonly class ContentRepository
             ->fetchAllAssociative();
 
         return array_map(
-            fn (array $contentElement): array => $this->tcaService->cleanUpRecord(self::TABLE_NAME, $contentElement),
+            fn (array $contentElement): array => $this->prepareContentElement($contentElement),
             $this->workspaceService->overlayRecords(self::TABLE_NAME, $contentElements)
         );
     }
@@ -203,6 +205,18 @@ readonly class ContentRepository
             ? null
             : $this->workspaceService->overlayRecord(self::TABLE_NAME, $contentElement);
 
-        return $contentElement === null ? null : $this->tcaService->cleanUpRecord(self::TABLE_NAME, $contentElement);
+        return $contentElement === null ? null : $this->prepareContentElement($contentElement);
+    }
+
+    /**
+     * @param array<string, mixed> $contentElement
+     * @return array<string, mixed>
+     */
+    private function prepareContentElement(array $contentElement): array
+    {
+        return $this->inlineRelationService->resolveRecord(
+            self::TABLE_NAME,
+            $this->tcaService->cleanUpRecord(self::TABLE_NAME, $contentElement)
+        );
     }
 }
