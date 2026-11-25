@@ -8,7 +8,11 @@
 	},
 	"extra": {
 		"typo3/cms": {
-			"extension-key": "in2mcp_fixture"
+			"extension-key": "in2mcp_fixture",
+			"version": "1.0.0",
+			"Package": {
+				"providesPackages": {}
+			}
 		}
 	}
 }

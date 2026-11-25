@@ -30,6 +30,15 @@ jobs:
             exit 1
           fi
 
+      # TYPO3 14 reads the version from composer.json, tailor and the TER from ext_emconf.php
+      - name: "Check version in composer.json"
+        run: |
+          COMPOSER_VERSION=$(jq -r '.extra["typo3/cms"].version' composer.json)
+          if [ "$COMPOSER_VERSION" != "$VERSION" ]; then
+            echo "::error::composer.json has version \"$COMPOSER_VERSION\", the tag is \"$VERSION\" - nothing is published"
+            exit 1
+          fi
+
       - name: "Install PHP"
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:

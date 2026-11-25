@@ -83,7 +83,11 @@
 		"typo3/cms": {
 			"cms-package-dir": "{$vendor-dir}/typo3/cms",
 			"web-dir": ".Build/public",
-			"extension-key": "in2mcp"
+			"extension-key": "in2mcp",
+			"version": "8.0.0",
+			"Package": {
+				"providesPackages": {}
+			}
 		}
 	},
 	"config": {
