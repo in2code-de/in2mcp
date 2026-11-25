@@ -26,6 +26,7 @@ readonly class WorkspaceService
     private const VERSION_STATE_FIELD = 't3ver_state';
     private const WORKSPACES_PACKAGE = 'workspaces';
     private const LIVE_WORKSPACE_TITLE = 'Live';
+    private const LIVE_ONLY_DESCRIPTION = 'EXT:workspaces is not installed, every change is made in live';
 
     public function __construct(
         private Context $context,
@@ -84,16 +85,33 @@ readonly class WorkspaceService
 
     /**
      * Live and every workspace the backend user may enter, decided by the core exactly as for the workspace
-     * selector of the backend
+     * selector of the backend. Without EXT:workspaces that is live alone.
      *
      * @return list<array{uid: int, title: string, description: string, current: bool}>
      * @throws Exception
-     * @throws ToolExecutionException
      * @throws UserNotFoundException
      */
     public function findAccessibleWorkspaces(): array
     {
-        $this->assertWorkspacesInstalled();
+        $workspaces = [[
+            'uid' => self::LIVE_WORKSPACE,
+            'title' => self::LIVE_WORKSPACE_TITLE,
+            'description' => self::LIVE_ONLY_DESCRIPTION,
+            'current' => true,
+        ]];
+        if ($this->isWorkspacesInstalled()) {
+            $workspaces = $this->findWorkspacesOfBackendUser();
+        }
+        return $workspaces;
+    }
+
+    /**
+     * @return list<array{uid: int, title: string, description: string, current: bool}>
+     * @throws Exception
+     * @throws UserNotFoundException
+     */
+    private function findWorkspacesOfBackendUser(): array
+    {
         $backendUser = $this->backendUserService->getBackendUser();
         $candidates = [
             ['uid' => self::LIVE_WORKSPACE, 'title' => self::LIVE_WORKSPACE_TITLE],

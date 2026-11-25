@@ -185,11 +185,25 @@ final class SystemToolsTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
-    public function workspaceToolsExplainThatWorkspacesAreNotInstalled(): void
+    public function getWorkspacesListsLiveAloneWithoutWorkspaces(): void
+    {
+        foreach ([self::ADMIN, self::EDITOR] as $user) {
+            $this->loginAs($user);
+
+            $result = $this->callTool('get_workspaces');
+
+            self::assertSame(0, $result['currentWorkspace']);
+            self::assertSame([0], array_column($result['workspaces'], 'uid'));
+            self::assertTrue($result['workspaces'][0]['current']);
+        }
+    }
+
+    #[Test]
+    public function switchWorkspaceExplainsThatWorkspacesAreNotInstalled(): void
     {
         $this->loginAs(self::ADMIN);
 
         $this->expectException(ClientFacingException::class);
-        $this->callTool('get_workspaces');
+        $this->callTool('switch_workspace', ['workspaceId' => 1]);
     }
 }

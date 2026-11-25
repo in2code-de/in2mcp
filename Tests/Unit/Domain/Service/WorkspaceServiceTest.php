@@ -47,10 +47,12 @@ final class WorkspaceServiceTest extends UnitTestCase
     }
 
     #[Test]
-    public function workspacesCanNotBeListedWithoutTheExtension(): void
+    public function workspacesListLiveAloneWithoutTheExtension(): void
     {
-        $this->expectExceptionCode(1756802404);
-        $this->createSubject(0)->findAccessibleWorkspaces();
+        $workspaces = $this->createSubject(0)->findAccessibleWorkspaces();
+
+        self::assertSame([0], array_column($workspaces, 'uid'));
+        self::assertTrue($workspaces[0]['current']);
     }
 
     #[Test]

@@ -7,7 +7,6 @@ namespace In2code\In2mcp\Domain\Mcp\Tool\Workspace;
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Service\WorkspaceService;
-use In2code\In2mcp\Exception\ToolExecutionException;
 use In2code\In2mcp\Exception\UserNotFoundException;
 
 class GetWorkspacesTool extends AbstractTool
@@ -32,7 +31,6 @@ class GetWorkspacesTool extends AbstractTool
 
     /**
      * @throws Exception
-     * @throws ToolExecutionException
      * @throws UserNotFoundException
      */
     public function execute(array $arguments): array

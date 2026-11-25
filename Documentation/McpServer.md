@@ -711,7 +711,8 @@ initialized like in a regular backend request, and every read and write runs thr
   filters and searches compare the live values, and a record moved inside the workspace is still listed on its
   live page. `get_workspaces` lists the workspaces the user may enter, and `switch_workspace` changes the
   workspace exactly like the selector of the backend: the choice is stored at the backend user, so the backend
-  follows after its next reload. Without EXT:workspaces both tools answer with an error and everything is live.
+  follows after its next reload. Without EXT:workspaces everything is live: `get_workspaces` lists live alone
+  and `switch_workspace` answers with an error.
 - **Writing** goes through the **DataHandler**, so page permissions, `tables_modify`, `non_exclude_fields`, web
   mounts, hooks, reference index, slug generation, workspaces and the record history all apply unchanged. A
   refused write is reported back to the client with the reason TYPO3 gave. An update of an exclude field the
