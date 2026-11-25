@@ -263,7 +263,7 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `get_schema`        | Page types, content element types of a page, writable tables, fields and values |
 | `get_record`        | One record of any table                                                         |
 | `find_records`      | Records of a table by page, by field values and by language                     |
-| `find_references`   | Records that point to a record - relations, file references, translations and links in texts - from the reference index, also for a deleted record |
+| `find_references`   | Records that point to a record - relations, file references, translations and links in texts - from the reference index |
 | `search_files`      | Files of the file abstraction layer by name, path or title, or by empty metadata |
 | `get_recently_changed_pages`   | Pages changed most recently (properties, translations or content), optionally below one page |
 | `get_recently_changed_content` | Content elements changed most recently with their page, optionally below one page            |
@@ -310,8 +310,9 @@ fewer records than the limit and the last page can be empty.
 
 `sys_refindex` stays denied, but `find_references` answers the question it is needed for: which records point to
 this one? It lists relations, file references, translations and links in texts such as `t3://page?uid=616`, so a
-page can be checked before it is deleted - and still afterwards, to find what points to a deleted page. A reference
-is only listed when the user may read the table, the record and the field it is stored in; it pages with `offset`
+page can be checked before it is deleted. TYPO3 drops the references to a record from the index as soon as it is
+deleted; links to a page that is gone already are found with `find_records` and `{"contains": "t3://page?uid=616"}`
+on the text fields. A reference is only listed when the user may read the table, the record and the field it is stored in; it pages with `offset`
 and `nextOffset` like `find_records`. The index is maintained by the DataHandler - after an import that bypassed
 it, update it in the backend first.
 

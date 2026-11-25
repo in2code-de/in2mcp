@@ -40,8 +40,9 @@ class FindReferencesTool extends AbstractTool
     {
         return 'Lists the records that point to a record, from the reference index of TYPO3: relations, file'
             . ' references, translations and links in texts like t3://page?uid=12. Call it before deleting a'
-            . ' record or a page to find what would break. It also works for a record that is deleted already.'
-            . ' References from records the user may not read are left out. When "nextOffset" is not null there'
+            . ' record or a page to find what would break - TYPO3 drops the references to a record from the index'
+            . ' when it is deleted, so for a deleted page search the texts with "find_records" and {"contains":'
+            . ' "t3://page?uid=12"} instead. References from records the user may not read are left out. When "nextOffset" is not null there'
             . ' are more: call it again with that value as "offset".';
     }
 
