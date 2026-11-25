@@ -281,7 +281,7 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `update_content_element` | Change fields of a content element                               |
 | `create_record`          | New record of any other table, for example a form or a news entry |
 | `add_child_record`       | New record inside an inline field of another record               |
-| `localize_record`        | Translation of a record in a language                             |
+| `localize_record`        | Translation of a record in a language, connected or free          |
 | `clear_cache`            | Clear the cache so changes show up in the frontend                |
 | `update_record`          | Change fields of a record of any table                           |
 | `add_file_from_url`      | Download a file from a public url into the file storage           |
@@ -448,6 +448,18 @@ Whose child a record is, is decided by the uid of the parent **and** - where the
 parent table in `foreign_table_field` and the values of `foreign_match_fields`. A child table shared by several
 tables or fields (like `sys_file_reference`, which tells its parents apart by `tablenames` and `fieldname`)
 therefore never mixes up the children of `tt_content:5` and `pages:5`.
+
+### Free translations
+
+`localize_record` creates a connected translation like the "Translate" button of the backend. A site that keeps a
+language in free mode (`fallbackType: strict`, content written for that language) needs copies without a
+connection instead - `"mode": "free"` does that, like the "Copy" button of the backend. Pages are always translated
+connected. `get_page` with a `languageId` tells which mode the content of a page is in (`translationMode`), and
+`get_backend_user` shows the `fallbackType` of every language of a site.
+
+```json
+{"table": "tt_content", "uid": 806, "languageId": 1, "mode": "free"}
+```
 
 ### Fields of a translation
 

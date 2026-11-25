@@ -471,6 +471,46 @@ final class RecordToolsTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
+    public function localizeRecordCopiesARecordIntoALanguageInFreeMode(): void
+    {
+        $this->loginAs(self::ADMIN);
+        $this->callTool('localize_record', ['table' => 'pages', 'uid' => 2, 'languageId' => 1]);
+
+        $result = $this->callTool(
+            'localize_record',
+            ['table' => 'tt_content', 'uid' => 1, 'languageId' => 1, 'mode' => 'free']
+        );
+        $page = $this->callTool('get_page', ['pageUid' => 2, 'languageId' => 1]);
+
+        self::assertSame('free', $result['mode']);
+        self::assertSame(1, (int)$result['record']['sys_language_uid']);
+        self::assertSame(0, (int)($result['record']['l18n_parent'] ?? 0));
+        self::assertSame('free', $page['translationMode']);
+    }
+
+    /**
+     * @return array<string, array{0: string, 1: string}>
+     */
+    public static function refusedTranslationModeDataProvider(): array
+    {
+        return [
+            'page in free mode' => ['pages', 'free'],
+            'unknown mode' => ['tt_content', 'mixed'],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('refusedTranslationModeDataProvider')]
+    public function localizeRecordRefusesAModeThatDoesNotFit(string $table, string $mode): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        $this->expectException(ClientFacingException::class);
+        $this->expectExceptionCode(1764081000);
+        $this->callTool('localize_record', ['table' => $table, 'uid' => 2, 'languageId' => 1, 'mode' => $mode]);
+    }
+
+    #[Test]
     public function localizeRecordRefusesALanguageTheEditorMayNotAccess(): void
     {
         $this->loginAs(self::EDITOR);

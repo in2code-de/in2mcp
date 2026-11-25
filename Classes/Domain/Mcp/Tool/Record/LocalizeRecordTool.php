@@ -6,6 +6,8 @@ namespace In2code\In2mcp\Domain\Mcp\Tool\Record;
 
 use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
+use In2code\In2mcp\Domain\Model\TranslationMode;
+use In2code\In2mcp\Domain\Repository\PageRepository;
 use In2code\In2mcp\Domain\Repository\RecordRepository;
 use In2code\In2mcp\Domain\Service\DataHandlerService;
 use In2code\In2mcp\Domain\Service\TcaService;
@@ -39,7 +41,10 @@ class LocalizeRecordTool extends AbstractTool
         return 'Creates the translation of a page, a content element or any other translatable record in a'
             . ' language, the way the "Translate" button of the backend does. The translation starts as a copy'
             . ' of the original; change its fields afterwards with "update_record" or "update_page". Read'
-            . ' existing translations with the "languageId" of "get_page" and "find_records".';
+            . ' existing translations with the "languageId" of "get_page" and "find_records". With "mode"'
+            . ' "free" a record that is no page becomes a copy in the language without a connection to its'
+            . ' original, like the "Copy" button of the backend - use it for a page whose "translationMode" in'
+            . ' "get_page" is "free".';
     }
 
     public function getParameters(): array
@@ -59,6 +64,13 @@ class LocalizeRecordTool extends AbstractTool
                 'type' => 'integer',
                 'description' => 'Language the record is translated into, as configured in the site',
                 'required' => true,
+            ],
+            'mode' => [
+                'type' => 'string',
+                'description' => '"connected" keeps the translation connected to its original, "free" makes it an'
+                    . ' independent copy in the language (not for pages)',
+                'enum' => [TranslationMode::Connected->value, TranslationMode::Free->value],
+                'default' => TranslationMode::Connected->value,
             ],
         ];
     }
@@ -90,7 +102,8 @@ class LocalizeRecordTool extends AbstractTool
             );
         }
 
-        $translatedUid = $this->dataHandlerService->localizeRecord($table, $uid, $languageId);
+        $mode = $this->getMode($table, $this->getStringArgument($arguments, 'mode'));
+        $translatedUid = $this->dataHandlerService->localizeRecord($table, $uid, $languageId, $mode);
 
         return [
             'localized' => true,
@@ -98,7 +111,25 @@ class LocalizeRecordTool extends AbstractTool
             'uid' => $translatedUid,
             'originalUid' => $uid,
             'languageId' => $languageId,
+            'mode' => $mode->value,
             'record' => $this->recordRepository->findByUid($table, $translatedUid),
         ];
+    }
+
+    /**
+     * @throws ToolExecutionException
+     */
+    private function getMode(string $table, string $value): TranslationMode
+    {
+        $mode = TranslationMode::tryFrom($value);
+        $isAllowed = in_array($mode, [TranslationMode::Connected, TranslationMode::Free], true)
+            && ($mode === TranslationMode::Connected || $table !== PageRepository::TABLE_NAME);
+        if ($isAllowed === false) {
+            throw new ToolExecutionException(
+                'The mode of a translation is "connected" or "free", and a page is always translated connected',
+                1764081000
+            );
+        }
+        return $mode;
     }
 }

@@ -94,7 +94,7 @@ offers the reading tools alone.
 | `create_record`          | Create a record of any other table the user may write, for example a form or a news entry                   |
 | `update_record`          | Change fields of a record of any other table                                                                |
 | `add_child_record`       | Create a record inside an inline field of a parent, for example a page of a form                            |
-| `localize_record`        | Translate a page, content element or record like the "Translate" button of the backend                      |
+| `localize_record`        | Translate a page, content element or record, connected ("Translate") or free ("Copy") like the backend       |
 | `move_record`            | Move a record into a page or behind another record, also into another column or container                   |
 | `delete_record`          | Delete a record of any table (restorable in the recycler), a page with its subpages and content             |
 | `add_file_from_url`      | Download a file from a public url into the file storage - **off by default** (setting `fileImport`)         |

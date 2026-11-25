@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace In2code\In2mcp\Domain\Service;
 
 use Doctrine\DBAL\Exception;
+use In2code\In2mcp\Domain\Model\TranslationMode;
 use In2code\In2mcp\Domain\Repository\ContentRepository;
 use In2code\In2mcp\Exception\DataHandlerException;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
@@ -51,6 +52,8 @@ class DataHandlerService
         't3ver_stage',
     ];
     private const CONTENT_TYPE_FIELD = 'CType';
+    private const LOCALIZE_COMMAND = 'localize';
+    private const COPY_TO_LANGUAGE_COMMAND = 'copyToLanguage';
 
     public function __construct(
         private readonly BackendUserService $backendUserService,
@@ -335,7 +338,8 @@ class DataHandlerService
     }
 
     /**
-     * Creates the translation of a record in a language, which is the "Translate" button of the backend.
+     * Creates the translation of a record in a language: connected is the "Translate" button of the backend, free
+     * is its "Copy" button, which leaves the translation without a pointer to its original.
      *
      * @return int Uid of the translated record
      * @throws DataHandlerException
@@ -343,15 +347,20 @@ class DataHandlerService
      * @throws ToolExecutionException
      * @throws UserNotFoundException
      */
-    public function localizeRecord(string $table, int $uid, int $languageId): int
-    {
+    public function localizeRecord(
+        string $table,
+        int $uid,
+        int $languageId,
+        TranslationMode $mode = TranslationMode::Connected
+    ): int {
+        $command = $mode === TranslationMode::Free ? self::COPY_TO_LANGUAGE_COMMAND : self::LOCALIZE_COMMAND;
         $this->tableAccessService->assertWritable($table);
         $this->assertLanguageFieldWritable($table);
 
         $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
         $dataHandler->start(
             [],
-            [$table => [$uid => ['localize' => $languageId]]],
+            [$table => [$uid => [$command => $languageId]]],
             $this->backendUserService->getBackendUser()
         );
         $dataHandler->process_cmdmap();
