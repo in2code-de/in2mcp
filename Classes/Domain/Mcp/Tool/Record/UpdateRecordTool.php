@@ -9,6 +9,7 @@ use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\RecordRepository;
 use In2code\In2mcp\Domain\Service\DataHandlerService;
 use In2code\In2mcp\Domain\Service\FieldSelectionService;
+use In2code\In2mcp\Domain\Service\LinkTargetService;
 use In2code\In2mcp\Exception\DataHandlerException;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
 use In2code\In2mcp\Exception\ToolExecutionException;
@@ -17,6 +18,7 @@ use In2code\In2mcp\Exception\UserNotFoundException;
 class UpdateRecordTool extends AbstractTool
 {
     public function __construct(
+        private readonly LinkTargetService $linkTargetService,
         private readonly DataHandlerService $dataHandlerService,
         private readonly RecordRepository $recordRepository,
         private readonly FieldSelectionService $fieldSelectionService,
@@ -32,7 +34,8 @@ class UpdateRecordTool extends AbstractTool
     {
         return 'Changes fields of a record of any table of this installation. Use "update_page" for pages and'
             . ' "update_content_element" for content elements. Only the given fields are written, every other'
-            . ' field keeps its value.';
+            . ' field keeps its value.'
+            . self::LINK_REPORT_DESCRIPTION;
     }
 
     public function getParameters(): array
@@ -83,6 +86,6 @@ class UpdateRecordTool extends AbstractTool
                 $this->recordRepository->findByUid($table, $uid),
                 $returnFields
             ),
-        ];
+        ] + $this->linkTargetService->getLinkReport($table, $this->getArrayArgument($arguments, 'fields'));
     }
 }

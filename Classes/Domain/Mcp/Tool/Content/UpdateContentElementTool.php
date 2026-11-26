@@ -8,10 +8,12 @@ use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\ContentRepository;
 use In2code\In2mcp\Domain\Service\DataHandlerService;
 use In2code\In2mcp\Domain\Service\FieldSelectionService;
+use In2code\In2mcp\Domain\Service\LinkTargetService;
 
 class UpdateContentElementTool extends AbstractTool
 {
     public function __construct(
+        private readonly LinkTargetService $linkTargetService,
         private readonly DataHandlerService $dataHandlerService,
         private readonly ContentRepository $contentRepository,
         private readonly FieldSelectionService $fieldSelectionService,
@@ -25,7 +27,8 @@ class UpdateContentElementTool extends AbstractTool
 
     public function getDescription(): string
     {
-        return 'Changes fields of an existing content element. Only the given fields are written.';
+        return 'Changes fields of an existing content element. Only the given fields are written.'
+            . self::LINK_REPORT_DESCRIPTION;
     }
 
     public function getParameters(): array
@@ -65,6 +68,9 @@ class UpdateContentElementTool extends AbstractTool
                 $this->contentRepository->findByUid($contentUid),
                 $returnFields
             ),
-        ];
+        ] + $this->linkTargetService->getLinkReport(
+            ContentRepository::TABLE_NAME,
+            $this->getArrayArgument($arguments, 'fields')
+        );
     }
 }

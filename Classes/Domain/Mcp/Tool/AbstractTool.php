@@ -16,6 +16,9 @@ abstract class AbstractTool implements ToolInterface
     protected const DESTRUCTIVE = true;
     protected const OPEN_WORLD = false;
 
+    protected const LINK_REPORT_DESCRIPTION = ' Every written link field is described in "links": whether its page'
+        . ' or file exists for this backend user, and where it points to.';
+
     public function getParameters(): array
     {
         return [];

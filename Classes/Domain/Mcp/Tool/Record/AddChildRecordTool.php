@@ -8,6 +8,7 @@ use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\RecordRepository;
 use In2code\In2mcp\Domain\Service\DataHandlerService;
+use In2code\In2mcp\Domain\Service\LinkTargetService;
 use In2code\In2mcp\Domain\Service\RecordAccessService;
 use In2code\In2mcp\Domain\Service\TableAccessService;
 use In2code\In2mcp\Domain\Service\TcaService;
@@ -25,6 +26,7 @@ class AddChildRecordTool extends AbstractTool
     protected const DESTRUCTIVE = false;
 
     public function __construct(
+        private readonly LinkTargetService $linkTargetService,
         private readonly DataHandlerService $dataHandlerService,
         private readonly RecordRepository $recordRepository,
         private readonly TcaService $tcaService,
@@ -44,7 +46,8 @@ class AddChildRecordTool extends AbstractTool
             . ' field of such a page. Use this instead of "create_record" whenever the new record belongs into'
             . ' a field of a parent: it writes the child and the list of the parent in one step, which is what'
             . ' keeps the child counter of the parent correct. A child created with "create_record" leaves that'
-            . ' counter at zero, and the parent then behaves as if it had no children at all.';
+            . ' counter at zero, and the parent then behaves as if it had no children at all.'
+            . self::LINK_REPORT_DESCRIPTION;
     }
 
     public function getParameters(): array
@@ -114,6 +117,9 @@ class AddChildRecordTool extends AbstractTool
             'uid' => $uid,
             'record' => $this->recordRepository->findByUid($relation['foreignTable'] ?? '', $uid),
             'parent' => $this->recordRepository->findByUid($parentTable, $parentUid),
-        ];
+        ] + $this->linkTargetService->getLinkReport(
+            $relation['foreignTable'] ?? '',
+            $this->getArrayArgument($arguments, 'fields')
+        );
     }
 }

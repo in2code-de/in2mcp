@@ -7,6 +7,7 @@ namespace In2code\In2mcp\Domain\Mcp\Tool\Content;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\ContentRepository;
 use In2code\In2mcp\Domain\Service\DataHandlerService;
+use In2code\In2mcp\Domain\Service\LinkTargetService;
 use In2code\In2mcp\Exception\ToolExecutionException;
 
 class CreateContentElementTool extends AbstractTool
@@ -14,6 +15,7 @@ class CreateContentElementTool extends AbstractTool
     protected const DESTRUCTIVE = false;
 
     public function __construct(
+        private readonly LinkTargetService $linkTargetService,
         private readonly DataHandlerService $dataHandlerService,
         private readonly ContentRepository $contentRepository,
     ) {
@@ -29,7 +31,8 @@ class CreateContentElementTool extends AbstractTool
         return 'Creates a content element on a page. Call "get_schema" with the "pageUid" of the page for the'
             . ' content element types an editor may choose there, and read a comparable page with "get_page" to see'
             . ' which types and column positions are used. To put an element inside a container element, pass the'
-            . ' uid of the container as "containerParentUid" together with the column position of that container.';
+            . ' uid of the container as "containerParentUid" together with the column position of that container.'
+            . self::LINK_REPORT_DESCRIPTION;
     }
 
     public function getParameters(): array
@@ -113,7 +116,7 @@ class CreateContentElementTool extends AbstractTool
             'created' => true,
             'contentUid' => $uid,
             'contentElement' => $this->contentRepository->findByUid($uid),
-        ];
+        ] + $this->linkTargetService->getLinkReport(ContentRepository::TABLE_NAME, $fields);
     }
 
     /**

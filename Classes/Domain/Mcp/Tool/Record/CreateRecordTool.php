@@ -8,6 +8,7 @@ use Doctrine\DBAL\Exception;
 use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\RecordRepository;
 use In2code\In2mcp\Domain\Service\DataHandlerService;
+use In2code\In2mcp\Domain\Service\LinkTargetService;
 use In2code\In2mcp\Domain\Service\TcaService;
 use In2code\In2mcp\Exception\DataHandlerException;
 use In2code\In2mcp\Exception\TableNotAccessibleException;
@@ -24,6 +25,7 @@ class CreateRecordTool extends AbstractTool
     protected const DESTRUCTIVE = false;
 
     public function __construct(
+        private readonly LinkTargetService $linkTargetService,
         private readonly DataHandlerService $dataHandlerService,
         private readonly RecordRepository $recordRepository,
         private readonly TcaService $tcaService,
@@ -40,7 +42,8 @@ class CreateRecordTool extends AbstractTool
         return 'Creates a record of any table of this installation, for example a form, a news entry or an'
             . ' address. Use "create_page" for pages and "create_content_element" for content elements. Call'
             . ' "get_schema" with the table name first to learn its fields, and look at a comparable existing'
-            . ' record with "find_records" to follow the conventions of this installation.';
+            . ' record with "find_records" to follow the conventions of this installation.'
+            . self::LINK_REPORT_DESCRIPTION;
     }
 
     public function getParameters(): array
@@ -96,7 +99,7 @@ class CreateRecordTool extends AbstractTool
             'table' => $table,
             'uid' => $uid,
             'record' => $this->recordRepository->findByUid($table, $uid),
-        ];
+        ] + $this->linkTargetService->getLinkReport($table, $fields);
     }
 
     /**

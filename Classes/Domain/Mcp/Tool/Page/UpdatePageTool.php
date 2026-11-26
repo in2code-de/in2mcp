@@ -8,10 +8,12 @@ use In2code\In2mcp\Domain\Mcp\Tool\AbstractTool;
 use In2code\In2mcp\Domain\Repository\PageRepository;
 use In2code\In2mcp\Domain\Service\DataHandlerService;
 use In2code\In2mcp\Domain\Service\FieldSelectionService;
+use In2code\In2mcp\Domain\Service\LinkTargetService;
 
 class UpdatePageTool extends AbstractTool
 {
     public function __construct(
+        private readonly LinkTargetService $linkTargetService,
         private readonly DataHandlerService $dataHandlerService,
         private readonly PageRepository $pageRepository,
         private readonly FieldSelectionService $fieldSelectionService,
@@ -26,7 +28,8 @@ class UpdatePageTool extends AbstractTool
     public function getDescription(): string
     {
         return 'Changes fields of an existing page. Only the given fields are written, everything else stays'
-            . ' untouched.';
+            . ' untouched.'
+            . self::LINK_REPORT_DESCRIPTION;
     }
 
     public function getParameters(): array
@@ -66,6 +69,9 @@ class UpdatePageTool extends AbstractTool
                 $this->pageRepository->findByUid($pageUid),
                 $returnFields
             ),
-        ];
+        ] + $this->linkTargetService->getLinkReport(
+            PageRepository::TABLE_NAME,
+            $this->getArrayArgument($arguments, 'fields')
+        );
     }
 }

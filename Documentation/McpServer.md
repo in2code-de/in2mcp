@@ -301,6 +301,26 @@ back to `get_schema` instead of being dropped silently. Without `table` it lists
 included, before writing a record with `create_record` or `update_record`. A link field lists its `allowedLinkTypes`
 (`["*"]` allows every type), so a client knows whether `t3://file?uid=45` or a plain url fits into it.
 
+### Links
+
+The DataHandler stores any value in a link field, a link to a page or file that does not exist included - as the
+backend form does. Writing is therefore never refused, but every tool that writes a record (`create_record`,
+`update_record`, `add_child_record`, `create_page`, `update_page`, `create_content_element`,
+`update_content_element`) describes each written link field in `links`:
+
+```json
+"links": {
+    "uri": {"link": "t3://file?uid=45", "type": "file", "exists": true,
+            "target": {"fileUid": 45, "identifier": "/downloads/flyer.pdf", "url": "/fileadmin/downloads/flyer.pdf"}}
+}
+```
+
+A page link names the page with its title and whether it is hidden, a file link the file and its public url.
+Only what the backend user may see counts: a page outside the page mounts or without read permission and a file
+outside the file mounts are reported as `"exists": false`, exactly like a missing one, so the answer reveals no uids.
+An external url is not requested (no outgoing request), other link types (email, record, ...) are not checked - both
+have no `exists`.
+
 ### Paging
 
 `find_records` returns at most 500 records per call and says which `limit` it applied. While `nextOffset` is not
