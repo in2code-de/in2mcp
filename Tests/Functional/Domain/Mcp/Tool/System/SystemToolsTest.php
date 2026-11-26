@@ -184,6 +184,28 @@ final class SystemToolsTest extends AbstractFunctionalTestCase
     }
 
     #[Test]
+    public function schemaOverviewPointsToTheFieldsOfOtherTables(): void
+    {
+        $this->loginAs(self::EDITOR);
+
+        $result = $this->callTool('get_schema');
+
+        self::assertStringContainsString('"table"', $result['hint']);
+    }
+
+    #[Test]
+    public function schemaOfATableListsTheAllowedLinkTypesOfALinkField(): void
+    {
+        $this->loginAs(self::ADMIN);
+
+        $result = $this->callTool('get_schema', ['table' => 'tt_content', 'pageUid' => 2]);
+
+        self::assertSame('link', $result['fields']['header_link']['type']);
+        self::assertSame(['*'], $result['fields']['header_link']['allowedLinkTypes']);
+        self::assertArrayNotHasKey('allowedLinkTypes', $result['fields']['header']);
+    }
+
+    #[Test]
     public function schemaRefusesATableTheEditorMayNotRead(): void
     {
         $this->loginAs(self::EDITOR);

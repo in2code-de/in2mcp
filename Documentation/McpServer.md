@@ -296,8 +296,10 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 
 `get_schema` exists because page types, content types, tables and fields differ per installation. A client that
 asks first does not have to guess field names - and unknown field names are rejected with a message that points
-back to `get_schema` instead of being dropped silently. Call it with a `table` to get the fields of that table
-before writing a record with `create_record`.
+back to `get_schema` instead of being dropped silently. Without `table` it lists only the fields of `pages` and
+`tt_content` and says so in `hint` - call it with a `table` to get the fields of any other table, an extension table
+included, before writing a record with `create_record` or `update_record`. A link field lists its `allowedLinkTypes`
+(`["*"]` allows every type), so a client knows whether `t3://file?uid=45` or a plain url fits into it.
 
 ### Paging
 

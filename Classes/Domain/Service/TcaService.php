@@ -15,6 +15,7 @@ use TYPO3\CMS\Core\Schema\Field\FieldTypeInterface;
 use TYPO3\CMS\Core\Schema\Field\FileFieldType;
 use TYPO3\CMS\Core\Schema\Field\FlexFormFieldType;
 use TYPO3\CMS\Core\Schema\Field\InlineFieldType;
+use TYPO3\CMS\Core\Schema\Field\LinkFieldType;
 use TYPO3\CMS\Core\Schema\Field\PasswordFieldType;
 use TYPO3\CMS\Core\Schema\Field\StaticSelectFieldType;
 use TYPO3\CMS\Core\Schema\TcaSchema;
@@ -104,7 +105,7 @@ class TcaService
      * All fields of a table with their type and label, so a client knows what it may write. With a record type
      * only the fields of that type are returned, with the "columnsOverrides" of the type applied.
      *
-     * @return array<string, array{type: string, label: string, required: bool}>
+     * @return array<string, array{type: string, label: string, required: bool, allowedLinkTypes?: list<string>}>
      */
     public function getFields(string $table, string $recordType = ''): array
     {
@@ -118,6 +119,9 @@ class TcaService
                 'label' => $this->getFieldLabel($field),
                 'required' => $field->isRequired(),
             ];
+            if ($field instanceof LinkFieldType) {
+                $fields[$field->getName()]['allowedLinkTypes'] = array_values($field->getAllowedLinkTypes());
+            }
         }
         return $fields;
     }

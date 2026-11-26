@@ -31,6 +31,9 @@ class GetSchemaTool extends AbstractTool
         ContentRepository::TABLE_NAME => ['CType'],
     ];
 
+    private const HINT_TABLE_FIELDS = 'Only the fields of pages and content elements are listed here. Call'
+        . ' "get_schema" with "table" for the fields of any other table, for example one of "writableTables".';
+
     public function __construct(
         private readonly TcaService $tcaService,
         private readonly TableAccessService $tableAccessService,
@@ -59,8 +62,12 @@ class GetSchemaTool extends AbstractTool
             . ' Values can differ per page and per type, so pass "pageUid" and "recordType" (for content elements'
             . ' the content type, for example "textmedia") to get exactly the values an editor sees in the backend'
             . ' form. Fields marked "disabled" are hidden from the editors of that page. Select fields that point to'
-            . ' records of another table list no items. The values of "CType" and "doktype" are the "contentTypes"'
-            . ' and "pageTypes" of the call without "table".';
+            . ' records of another table list no items. Link fields list their "allowedLinkTypes" ("page", "file",'
+            . ' "url", "email", "record", ... - "*" allows every type), written as "t3://page?uid=123",'
+            . ' "t3://file?uid=45" or a plain url. The values of "CType" and "doktype" are the "contentTypes" and'
+            . ' "pageTypes" of the call without "table". Without "table" only the fields of pages and content'
+            . ' elements are listed - every other table, for example a table of an extension, needs its own call'
+            . ' with "table".';
     }
 
     public function getParameters(): array
@@ -92,7 +99,8 @@ class GetSchemaTool extends AbstractTool
             ],
             'withFields' => [
                 'type' => 'boolean',
-                'description' => 'Whether the field definitions of pages and content elements are included',
+                'description' => 'Whether the field definitions of pages and content elements are included. The'
+                    . ' fields of every other table come with "table".',
                 'default' => true,
             ],
             'withTables' => [
@@ -159,6 +167,7 @@ class GetSchemaTool extends AbstractTool
 
         if ((bool)$this->getArgument($arguments, 'withTables')) {
             $schema['writableTables'] = $this->tableAccessService->getWritableTables();
+            $schema['hint'] = self::HINT_TABLE_FIELDS;
         }
 
         return $schema;
