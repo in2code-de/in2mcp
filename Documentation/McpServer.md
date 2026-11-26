@@ -260,6 +260,7 @@ MCP_URL=https://your-domain.org/typo3/mcp Tests/Manual/mcpclient.sh <key> \
 | `get_page_tree`     | The page tree as a nested structure, rooted at the page mounts of the user, at most 500 pages and depth 10 (`truncated` tells when it was cut) |
 | `get_page`          | One page with all fields plus its content elements grouped by column position; in a language also the page translation and the translation mode (`connected`, `free`, `mixed`, `empty`); a hint for a deleted page |
 | `search_pages`      | Pages by title, navigation title, subtitle or slug                              |
+| `resolve_url`       | Site, language, redirect and page of a frontend url, and why it ends in a 404   |
 | `get_schema`        | Page types, content element types of a page, writable tables, fields and values |
 | `get_record`        | One record of any table                                                         |
 | `find_records`      | Records of a table by page, by field values and by language                     |
@@ -320,6 +321,27 @@ Only what the backend user may see counts: a page outside the page mounts or wit
 outside the file mounts are reported as `"exists": false`, exactly like a missing one, so the answer reveals no uids.
 An external url is not requested (no outgoing request), other link types (email, record, ...) are not checked - both
 have no `exists`.
+
+### Urls
+
+`resolve_url` answers "which page is behind this url, and why does it end in a 404" without requesting the url -
+there is no outgoing request. It takes the order of the frontend:
+
+1. site and language of the url, with `enabled` and `fallbackType` of the language
+2. a redirect of EXT:redirects (only when that extension is installed), with `target`, `statusCode` and
+   `targetLink` - the description of the target as for [links](#links). It is applied before any page is looked
+   at. `redirectUid` is only added for a user who may read `sys_redirect`
+3. the page of the slug: `pageUid` in the default language, `recordUid` of the translation for a language above
+   0, and `reasonsForMissingOutput` - hidden, start or end time, frontend user groups, a page type without output
+   (folder, spacer, recycler) or a disabled language. Only the page itself is looked at, not its parents
+
+`status` sums it up: `redirect`, `page`, `unavailable` (the page exists, but a visitor gets none) or `not_found`.
+For a missing page in a language above 0 the answer says whether the slug belongs to a page of the default
+language: a url of a translation uses the slug of the translation, so `/en/news/` fails when the English page
+has a slug of its own or there is no translation at all, and `fallbackType: strict` shows no fallback.
+
+A page outside the page mounts, without read permission or in a language the user may not use is reported as
+`not_found`, like a missing one.
 
 ### Paging
 
@@ -978,6 +1000,10 @@ not name the internal address a host resolved to.
 | `Service\PagedScanService`     | Pages through rows that are filtered by permissions after reading them          |
 | `Service\FieldSelectionService`| Reduces a returned record to the requested fields                               |
 | `Service\SystemInformationService` | Application context, server url and sites for `get_backend_user`          |
+| `Service\LinkTargetService`    | Describes where a link field points to after a write                            |
+| `Service\UrlResolutionService` | Site, language, redirect and page of a frontend url for `resolve_url`           |
+| `Service\PageAvailabilityService` | Reasons why a visitor gets no page                                          |
+| `Service\RedirectMatchService` | Matches a redirect of EXT:redirects, null while that extension is missing       |
 | `Middleware\McpProtectedResourceMetadata` | Protected resource metadata below the endpoint                      |
 | `Middleware\McpAuthorizationServerMetadata` | Authorization server metadata, the one middleware in the frontend stack |
 | `Middleware\McpClientRegistration` | Dynamic client registration                                              |

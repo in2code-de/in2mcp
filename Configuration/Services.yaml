@@ -37,3 +37,8 @@ services:
   In2code\In2mcp\Domain\Service\AuthorizationService:
     arguments:
       $oAuthCache: '@cache.in2mcp_oauth'
+
+  # EXT:redirects is optional, without it there is no redirect to report
+  In2code\In2mcp\Domain\Service\RedirectMatchService:
+    arguments:
+      $redirectService: '@?TYPO3\CMS\Redirects\Service\RedirectService'

@@ -67,6 +67,7 @@ offers the reading tools alone.
 | `get_page_tree`                | The page tree as a nested structure, only pages the user may see                                  |
 | `get_page`                     | A single page with its fields, content elements by column, page translation and translation mode  |
 | `search_pages`                 | Search pages by title, navigation title, subtitle or slug                                         |
+| `resolve_url`                  | Site, language, redirect and page behind a frontend url, and why a visitor gets no page           |
 | `get_schema`                   | Page types, content types and fields, allowed values of select fields per page and record type    |
 | `get_record`                   | A single record of any table                                                                      |
 | `find_records`                 | Search records of a table by page, field values (also empty ones) and language                    |

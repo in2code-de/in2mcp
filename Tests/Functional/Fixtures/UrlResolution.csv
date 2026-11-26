@@ -1,0 +1,10 @@
+"pages"
+,"uid","pid","sorting","title","slug","doktype","hidden","perms_userid","perms_groupid","perms_user","perms_group","perms_everybody","sys_language_uid","l10n_parent"
+,6,1,1024,"Hidden page","/hidden-page",1,1,1,1,31,31,0,0,0
+,7,1,1280,"News","/news",1,0,1,1,31,31,0,0,0
+,8,1,1280,"Neuigkeiten","/neuigkeiten",1,0,1,1,31,31,0,1,7
+,9,1,1536,"Only in the default language","/only-default",1,0,1,1,31,31,0,0,0
+,10,1,1792,"Folder","/folder",254,0,1,1,31,31,0,0,0
+"sys_redirect"
+,"uid","pid","source_host","source_path","target","target_statuscode","disabled"
+,1,0,"*","/old-page","t3://page?uid=2",301,0
