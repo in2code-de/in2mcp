@@ -383,6 +383,47 @@ readonly class PageRepository
         ];
     }
 
+    /**
+     * Uids in the default language of the pages with this slug, with and without a trailing slash
+     *
+     * @return list<int>
+     * @throws Exception
+     * @throws UserNotFoundException
+     */
+    public function findUidsBySlug(string $slug, int $languageId): array
+    {
+        $slug = '/' . trim($slug, '/');
+        $translationParentField = (string)$this->tcaService->getTranslationParentField(self::TABLE_NAME);
+        $queryBuilder = $this->getQueryBuilder();
+        $rows = $queryBuilder
+            ->select('uid', $translationParentField)
+            ->from(self::TABLE_NAME)
+            ->where(
+                $queryBuilder->expr()->in(
+                    'slug',
+                    $queryBuilder->createNamedParameter(
+                        array_unique([$slug, rtrim($slug, '/') . '/']),
+                        Connection::PARAM_STR_ARRAY
+                    )
+                ),
+                $queryBuilder->expr()->eq(
+                    (string)$this->tcaService->getLanguageField(self::TABLE_NAME),
+                    $queryBuilder->createNamedParameter($languageId, Connection::PARAM_INT)
+                ),
+                $queryBuilder->expr()->and($this->backendUserService->getPagePermissionClause())
+            )
+            ->orderBy('uid')
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        return array_map(
+            static fn (array $row): int => (int)$row[$translationParentField] > 0
+                ? (int)$row[$translationParentField]
+                : (int)$row['uid'],
+            $rows
+        );
+    }
+
     private function getQueryBuilder(): QueryBuilder
     {
         return $this->recordQueryBuilderFactory->create(self::TABLE_NAME);

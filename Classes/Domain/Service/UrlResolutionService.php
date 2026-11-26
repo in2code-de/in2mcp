@@ -130,7 +130,10 @@ class UrlResolutionService
         ServerRequest $request,
         SiteRouteResult $routeResult
     ): array {
-        $pageUid = $this->matchPageUid($site, $request, $routeResult);
+        $routedPageUid = $this->matchPageUid($site, $request, $routeResult);
+        $pageUid = $routedPageUid > 0
+            ? $routedPageUid
+            : $this->findPageUidOfSlugOutsideOfRouting($site, $language, $routeResult);
         $page = $this->findReadablePage($pageUid, $language);
         $description = $page === null
             ? $this->describeMissingPage($site, $language, $request, $routeResult)
@@ -140,12 +143,22 @@ class UrlResolutionService
                 'recordUid' => (int)($page['uid'] ?? $pageUid),
                 'title' => (string)($page['title'] ?? ''),
                 'slug' => (string)($page['slug'] ?? ''),
-                'reasonsForMissingOutput' => $this->pageAvailabilityService->getReasonsForMissingOutput(
-                    $page,
-                    $language
-                ),
+                'reasonsForMissingOutput' => $this->getReasonsForMissingOutput($page, $language, $routedPageUid > 0),
             ];
         return $description;
+    }
+
+    /**
+     * @param array<string, mixed> $page
+     * @return list<string>
+     */
+    private function getReasonsForMissingOutput(array $page, SiteLanguage $language, bool $isRouted): array
+    {
+        $reasons = $this->pageAvailabilityService->getReasonsForMissingOutput($page, $language);
+        if ($isRouted === false && $reasons === []) {
+            $reasons[] = 'The page has this slug, but the routing of TYPO3 does not deliver it for this url';
+        }
+        return $reasons;
     }
 
     private function matchPageUid(Site $site, ServerRequest $request, SiteRouteResult $routeResult): int
@@ -157,6 +170,35 @@ class UrlResolutionService
             $pageUid = 0;
         }
         return $pageUid;
+    }
+
+    /**
+     * TYPO3 14.3.12 and newer leave pages without output (folder, spacer, recycler) out of the routing, while
+     * earlier versions route them and answer with a 404 later - the page is looked up by its slug to explain both
+     *
+     * @throws Exception
+     * @throws UserNotFoundException
+     */
+    private function findPageUidOfSlugOutsideOfRouting(
+        Site $site,
+        SiteLanguage $language,
+        SiteRouteResult $routeResult
+    ): int {
+        $pageUids = array_filter(
+            $this->pageRepository->findUidsBySlug($routeResult->getTail(), $language->getLanguageId()),
+            fn (int $pageUid): bool => $this->isPageOfSite($pageUid, $site)
+        );
+        return (int)(reset($pageUids) ?: 0);
+    }
+
+    private function isPageOfSite(int $pageUid, Site $site): bool
+    {
+        try {
+            $isPageOfSite = $this->siteMatcher->matchByPageId($pageUid)->getRootPageId() === $site->getRootPageId();
+        } catch (Throwable) {
+            $isPageOfSite = false;
+        }
+        return $isPageOfSite;
     }
 
     /**

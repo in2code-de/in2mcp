@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ddev describe:*)",
+      "Bash(ddev exec:*)",
+      "Bash(ddev composer:*)",
+      "Bash(ddev xdebug:*)",
+      "Bash(ls:*)",
+      "Bash(curl:*)",
+      "Bash(xargs:*)",
+      "WebFetch(domain:in2mcp.ddev.site)",
+      "Bash(grep -v \"^$\")",
+      "Bash(grep -v \"ext_emconf\\\\|Triggered by\\\\|GetPageToolTest.php:14\\\\|PageToolsTest.php:1[0-9]$\\\\|^\\\\* \")",
+      "Bash(grep -v \"ext_emconf\\\\|Triggered by\\\\|Test.php:[0-9]*$\\\\|^\\\\* \\\\|PackageManager\")",
+      "Bash(rm *)",
+      "Bash(python3 -)",
+      "Bash(sed *)",
+      "Bash(python3 -c \"import yaml,sys;[yaml.safe_load\\(open\\(f\\)\\) for f in sys.argv[1:]];print\\('yaml ok'\\)\" .github/workflows/*.yaml)",
+      "Bash(git tag *)",
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --msg-filter 'sed -E \"1s/^\\\\[TASK\\\\] \\(List live alone in get_workspaces|Return inline fields of pages|Match a list of values|Page through the results\\)/[BUGFIX] \\\\1/\"' origin/main..HEAD >/dev/null 2>&1; git log --oneline origin/main..HEAD; git status --short; rm -rf .git/refs/original)",
+      "Bash(gh run *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  }
+}
